@@ -6,7 +6,7 @@ BOSH_JOBS_DIR=${BOSH_JOBS_DIR:-/var/vcap/jobs}
 GOLANG_CPI_CALLS=()
 REGEXP="\"method\":\"([^\"]*)\""
 
-read STDIN
+STDIN=$(cat /dev/stdin)
 
 if [[ ${STDIN} =~ ${REGEXP} ]]
 then
@@ -14,23 +14,12 @@ then
     do
         if [[ $element == ${BASH_REMATCH[1]} ]]
         then
-            echo ${STDIN} | ${BOSH_JOBS_DIR}/openstack_cpi_golang/bin/cpi-golang
+            ${BOSH_JOBS_DIR}/openstack_cpi_golang/bin/cpi-golang <<< ${STDIN}
             exit $?
         fi
     done
-    echo ${stdin} | ${BOSH_JOBS_DIR}/openstack_cpi_golang/bin/cpi-ruby
+    ${BOSH_JOBS_DIR}/openstack_cpi_golang/bin/cpi-ruby <<< ${STDIN}
 else
     echo "input stream is not defining a method"
     exit 1
 fi
-
-
-
-
-
-
-
-
-
-
-
