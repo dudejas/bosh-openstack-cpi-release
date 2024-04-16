@@ -1,0 +1,11 @@
+#!/bin/bash
+
+script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+
+cd "${script_dir}/.."
+
+echo "building the cpi executable ..."
+go build
+
+echo "running tests ..."
+go test ./integration/...

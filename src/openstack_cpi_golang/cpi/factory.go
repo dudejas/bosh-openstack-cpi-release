@@ -2,8 +2,8 @@ package cpi
 
 import (
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
-	"github.com/cloudfoundry/bosh-golang-openstack-cpi-go/src/bosh-golang-openstack-cpi/config"
-	"github.com/cloudfoundry/bosh-golang-openstack-cpi-go/src/bosh-golang-openstack-cpi/cpi/methods"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/methods"
 	boshlog "github.com/cloudfoundry/bosh-utils/logger"
 	boshsys "github.com/cloudfoundry/bosh-utils/system"
 	boshuuid "github.com/cloudfoundry/bosh-utils/uuid"
