@@ -10,6 +10,10 @@ fi
 
 source ${pkg_dir}/bosh/compile.env
 
+# Set GOCACHE since compile.env.generic hardcodes GOCACHE to /var/vcap/data
+mkdir -p /tmp/go/.cache
+export GOCACHE=${GOPATH}/.cache
+
 mkdir ../src && cp -a * ../src/ && mv ../src ./src
 
 mkdir -p $BOSH_INSTALL_TARGET/bin
