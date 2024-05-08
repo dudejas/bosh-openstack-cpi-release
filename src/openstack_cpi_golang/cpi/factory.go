@@ -4,16 +4,16 @@ import (
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/methods"
-	boshlog "github.com/cloudfoundry/bosh-utils/logger"
-	boshsys "github.com/cloudfoundry/bosh-utils/system"
-	boshuuid "github.com/cloudfoundry/bosh-utils/uuid"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services/facades"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/stemcell"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/stemcell/root_image"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 )
 
 type Factory struct {
-	fs              boshsys.FileSystem
-	uuidGen         boshuuid.Generator
 	openstackConfig config.OpenstackConfig
-	logger          boshlog.Logger
+	logger          utils.Logger
 }
 
 type CPI struct {
@@ -43,25 +43,27 @@ type CPI struct {
 }
 
 func NewFactory(
-	fs boshsys.FileSystem,
-	uuidGen boshuuid.Generator,
 	openstackConfig config.OpenstackConfig,
-	logger boshlog.Logger,
+	logger utils.Logger,
 ) Factory {
-	return Factory{fs, uuidGen, openstackConfig, logger}
+	return Factory{openstackConfig, logger}
 }
 
 func (cpiFactory Factory) New(ctx apiv1.CallContext) (apiv1.CPI, error) {
+	openstackService := services.NewOpenstackService(facades.NewOpenstackFacade(), utils.NewEnvVar())
 	openstackConfig := cpiFactory.openstackConfig
-	err := openstackConfig.Validate()
-	if err != nil {
-		return CPI{}, err
-	}
 
 	return CPI{
 		methods.NewInfoMethod(),
 
-		methods.NewCreateStemcellMethod(),
+		methods.NewCreateStemcellMethod(
+			services.NewImageServiceBuilder(openstackService, openstackConfig),
+			stemcell.NewHeavyStemcellCreator(openstackConfig),
+			stemcell.NewLightStemcellCreator(openstackConfig),
+			root_image.NewRootImage(),
+			cpiFactory.openstackConfig,
+			cpiFactory.logger,
+		),
 		methods.NewDeleteStemcellMethod(),
 
 		methods.NewCreateVMMethod(),

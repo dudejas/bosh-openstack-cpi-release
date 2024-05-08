@@ -2,8 +2,10 @@ package config
 
 import (
 	"encoding/json"
-	bosherr "github.com/cloudfoundry/bosh-utils/errors"
-	boshsys "github.com/cloudfoundry/bosh-utils/system"
+	"fmt"
+	"io"
+	"io/fs"
+	"strings"
 )
 
 type CpiConfig struct {
@@ -35,7 +37,7 @@ type OpenstackConfig struct {
 	ProjectName                  string   `json:"project"`
 	Tenant                       string   `json:"tenant"`
 	StateTimeOut                 int      `json:"state_timeout"`
-	StemcellPublicVisibility     bool     `json:"stemcell_public_visibility"`
+	StemcellPubliclyVisible      bool     `json:"stemcell_public_visibility"`
 	VM                           struct {
 		Stemcell struct {
 			APIVersion int `json:"api_version"`
@@ -46,7 +48,7 @@ type OpenstackConfig struct {
 func (cpiConfig CpiConfig) Validate() error {
 	err := cpiConfig.Cloud.Properties.Openstack.Validate()
 	if err != nil {
-		return bosherr.WrapError(err, "Validating Config configuration")
+		return fmt.Errorf("failed to validate the configuration: %w", err)
 	}
 
 	return nil
@@ -58,22 +60,28 @@ func (openstackConfig OpenstackConfig) Validate() error {
 	return nil
 }
 
-func NewConfigFromPath(path string, fs boshsys.FileSystem) (CpiConfig, error) {
+func NewConfigFromPath(filesystem fs.FS, path string) (CpiConfig, error) {
 	var config CpiConfig
 
-	bytes, err := fs.ReadFile(path)
+	file, err := filesystem.Open(strings.TrimPrefix(path, "/"))
 	if err != nil {
-		return config, bosherr.WrapErrorf(err, "Reading config '%s'", path)
+		return config, fmt.Errorf("failed to open configuration file: %w", err)
+	}
+	defer file.Close()
+
+	data, err := io.ReadAll(file)
+	if err != nil {
+		return config, fmt.Errorf("failed to read configuration file: %w", err)
 	}
 
-	err = json.Unmarshal(bytes, &config)
+	err = json.Unmarshal(data, &config)
 	if err != nil {
-		return config, bosherr.WrapError(err, "Unmarshalling config")
+		return config, fmt.Errorf("failed to unmarshall configuration file: %s, err: %w", path, err)
 	}
 
 	err = config.Validate()
 	if err != nil {
-		return config, bosherr.WrapError(err, "Validating config")
+		return config, fmt.Errorf("failed to validate configuration file: %s, err: %w", path, err)
 	}
 
 	return config, nil

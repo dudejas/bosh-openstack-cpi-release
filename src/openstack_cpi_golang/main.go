@@ -2,12 +2,10 @@ package main
 
 import (
 	"flag"
-	"github.com/cloudfoundry/bosh-cpi-go/rpc"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	boshlog "github.com/cloudfoundry/bosh-utils/logger"
-	boshsys "github.com/cloudfoundry/bosh-utils/system"
-	boshuuid "github.com/cloudfoundry/bosh-utils/uuid"
 	"os"
 )
 
@@ -17,32 +15,22 @@ var (
 )
 
 func main() {
-	logger, fs, _, uuidGen := basicDeps()
-	defer logger.HandlePanic("Main")
+	boshLogger := boshlog.NewWriterLogger(boshlog.LevelDebug, os.Stderr)
+	cpiLogger := utils.NewLogger(boshLogger)
+	fileSystem := os.DirFS("/")
+	defer cpiLogger.HandlePanic("Main")
 
 	flag.Parse()
 
-	config, err := config.NewConfigFromPath(*configPathOpt, fs)
+	cpiConfig, err := config.NewConfigFromPath(fileSystem, *configPathOpt)
 	if err != nil {
-		logger.Error("main", "Loading config %s", err.Error())
+		cpiLogger.Error("main", "failed loading the configuration: %w", err)
 		os.Exit(1)
 	}
 
-	cpiFactory := cpi.NewFactory(fs, uuidGen, config.Cloud.Properties.Openstack, logger)
-
-	cli := rpc.NewFactory(logger).NewCLI(cpiFactory)
-
-	err = cli.ServeOnce()
+	err = cpi.Execute(cpiConfig, cpiLogger)
 	if err != nil {
-		logger.Error("main", "Serving once %s", err)
+		cpiLogger.Error("main", "execution failed with: %w", err)
 		os.Exit(1)
 	}
-}
-
-func basicDeps() (boshlog.Logger, boshsys.FileSystem, boshsys.CmdRunner, boshuuid.Generator) {
-	logger := boshlog.NewWriterLogger(boshlog.LevelDebug, os.Stderr)
-	fs := boshsys.NewOsFileSystem(logger)
-	cmdRunner := boshsys.NewExecCmdRunner(logger)
-	uuidGen := boshuuid.NewGenerator()
-	return logger, fs, cmdRunner, uuidGen
 }

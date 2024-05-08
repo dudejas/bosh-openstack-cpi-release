@@ -1,0 +1,140 @@
+package services
+
+import (
+	"bytes"
+	"fmt"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/clients"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/cloud_properties"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services/facades"
+	"github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/gophercloud/openstack/imageservice/v2/images"
+	"io"
+	"net/http"
+	"os"
+)
+
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ImageService
+type ImageService interface {
+	CreateImage(
+		cloudProps cloud_properties.CreateStemcell,
+		config config.OpenstackConfig,
+	) (string, error)
+
+	GetImage(
+		imageID string,
+	) (string, error)
+
+	UploadImage(
+		imageID string,
+		imageFilePath string,
+	) error
+}
+
+type imageService struct {
+	serviceClient *gophercloud.ServiceClient
+	imagesFacade  facades.ImagesFacade
+	httpClient    clients.HttpClient
+}
+
+func NewImageService(serviceClient *gophercloud.ServiceClient, imagesFacade facades.ImagesFacade, httpClient clients.HttpClient) imageService {
+	return imageService{
+		serviceClient: serviceClient,
+		imagesFacade:  imagesFacade,
+		httpClient:    httpClient,
+	}
+}
+
+func (c imageService) CreateImage(cloudProps cloud_properties.CreateStemcell, config config.OpenstackConfig) (string, error) {
+	createOpts := images.CreateOpts{
+		Name:            fmt.Sprintf("%s/%s", cloudProps.Name, cloudProps.Version),
+		Visibility:      c.getImageVisibility(config.StemcellPubliclyVisible),
+		DiskFormat:      cloudProps.DiskFormat,
+		ContainerFormat: cloudProps.ContainerFormat,
+		Properties:      c.getProperties(cloudProps),
+	}
+
+	r := c.imagesFacade.Create(c.serviceClient, createOpts)
+	image, err := r.Extract()
+	if err != nil {
+		return "", fmt.Errorf("failed to create image: %w", err)
+	}
+
+	return image.ID, nil
+}
+
+func (c imageService) GetImage(imageID string) (string, error) {
+	getResult := c.imagesFacade.Get(c.serviceClient, imageID)
+	image, err := getResult.Extract()
+	if err != nil {
+		return "", fmt.Errorf("could not find the image %s, that is referenced by the light stemcell, in OpenStack: %w", imageID, err)
+	}
+	if image.Status != images.ImageStatusActive {
+		return "", fmt.Errorf("image %s is not in active state, it is in state: %s", imageID, image.Status)
+	}
+
+	return image.ID, nil
+}
+
+func (c imageService) UploadImage(imageID string, imageFilePath string) error {
+	imageData, err := os.ReadFile(imageFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to read image file: %w", err)
+	}
+
+	endpoint := gophercloud.NormalizeURL(c.serviceClient.Endpoint)
+	imageURL := endpoint + "v2/images/" + imageID + "/file"
+
+	req, err := c.httpClient.NewRequest("PUT", imageURL, bytes.NewReader(imageData))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Add("X-Auth-Token", c.serviceClient.TokenID)
+	req.Header.Set("Content-Type", "application/octet-stream")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil || resp.StatusCode != http.StatusNoContent {
+		errMessage := ""
+		if err != nil {
+			errMessage += fmt.Sprintf("err: %s", err)
+		}
+
+		if resp.StatusCode != http.StatusNoContent {
+			defer resp.Body.Close()
+			bodyBytes, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return fmt.Errorf("failed to read response body: %w", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+			errMessage += fmt.Sprintf("response-status: '%s', response-body:'%s'\n", resp.Status, string(bodyBytes))
+		}
+		return fmt.Errorf("failed to upload stemcell image to %s, %s", imageURL, errMessage)
+	}
+	return nil
+}
+
+func (c imageService) getImageVisibility(stemcellPubliclyVisible bool) *images.ImageVisibility {
+	var visibility images.ImageVisibility
+	if stemcellPubliclyVisible {
+		visibility = images.ImageVisibilityPublic
+	} else {
+		visibility = images.ImageVisibilityPrivate
+	}
+	return &visibility
+}
+
+func (c imageService) getProperties(cloudProps cloud_properties.CreateStemcell) map[string]string {
+	properties := make(map[string]string)
+	properties["version"] = cloudProps.Version
+	properties["os_type"] = cloudProps.OsType
+	properties["os_distro"] = cloudProps.OsDistro
+	properties["architecture"] = cloudProps.Architecture
+	properties["auto_disk_config"] = cloudProps.AutoDiskConfig
+	properties["hw_vif_model"] = cloudProps.HwVifModel
+	properties["hypervisor"] = cloudProps.HyperVisorType
+	properties["vmware_adaptertype"] = cloudProps.VmwareAdapterType
+	properties["vmware_disktype"] = cloudProps.VmwareDiskType
+	properties["vmware_linked_clone"] = cloudProps.VmwareLinkedClone
+	properties["vmware_ostype"] = cloudProps.VmvareOsType
+	return properties
+}

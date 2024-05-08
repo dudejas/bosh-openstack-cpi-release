@@ -1,0 +1,40 @@
+package utils
+
+import boshlog "github.com/cloudfoundry/bosh-utils/logger"
+
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Logger
+type Logger interface {
+	Info(tag, msg string, args ...interface{})
+
+	Error(tag, msg string, args ...interface{})
+
+	HandlePanic(tag string)
+
+	TargetLogger() boshlog.Logger
+}
+
+type logger struct {
+	logger boshlog.Logger
+}
+
+func NewLogger(log boshlog.Logger) logger {
+	return logger{
+		logger: log,
+	}
+}
+
+func (l logger) Info(tag, msg string, args ...interface{}) {
+	l.logger.Info(tag, msg, args)
+}
+
+func (l logger) HandlePanic(tag string) {
+	l.logger.HandlePanic(tag)
+}
+
+func (l logger) Error(tag, msg string, args ...interface{}) {
+	l.logger.Error(tag, msg, args)
+}
+
+func (l logger) TargetLogger() boshlog.Logger {
+	return l.logger
+}
