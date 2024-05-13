@@ -46,7 +46,7 @@ var _ = Describe("CreateStemcellMethod", func() {
 		})
 
 		It("returns a stemcell ID", func() {
-			imageServiceBuilder.BuildReturns(services.NewImageService(nil, nil, nil), nil)
+			imageServiceBuilder.BuildReturns(services.NewImageService(nil, nil, nil, nil), nil)
 			heavyStemcellCreator.CreateReturns("123-456", nil)
 			props := &MockStemcellCloudProps{}
 			stemcellCID, err := NewCreateStemcellMethod(
@@ -63,7 +63,7 @@ var _ = Describe("CreateStemcellMethod", func() {
 		})
 
 		It("returns an error if the stemcell creation fails", func() {
-			imageServiceBuilder.BuildReturns(services.NewImageService(nil, nil, nil), nil)
+			imageServiceBuilder.BuildReturns(services.NewImageService(nil, nil, nil, nil), nil)
 			heavyStemcellCreator.CreateReturns("", errors.New("boom"))
 			props := &MockStemcellCloudProps{}
 			stemcellCID, err := NewCreateStemcellMethod(
@@ -96,7 +96,7 @@ var _ = Describe("CreateStemcellMethod", func() {
 		})
 
 		It("uses the light stemcell creation if cloud properties are containing an imageID", func() {
-			theImageService := services.NewImageService(nil, nil, nil)
+			theImageService := services.NewImageService(nil, nil, nil, nil)
 			imageServiceBuilder.BuildReturns(theImageService, nil)
 			lightStemcellCreator.CreateReturns("123-456", nil)
 
@@ -118,7 +118,7 @@ var _ = Describe("CreateStemcellMethod", func() {
 		})
 
 		It("uses the heavy stemcell creation if cloud properties are NOT containing an imageID", func() {
-			theImageService := services.NewImageService(nil, nil, nil)
+			theImageService := services.NewImageService(nil, nil, nil, nil)
 			imageServiceBuilder.BuildReturns(theImageService, nil)
 			heavyStemcellCreator.CreateReturns("123-456", nil)
 			rootImageProvider.GetReturns("rootImagePath", nil)
@@ -142,7 +142,7 @@ var _ = Describe("CreateStemcellMethod", func() {
 		})
 
 		It("returns an error if root.img cannot be retrieved", func() {
-			theImageService := services.NewImageService(nil, nil, nil)
+			theImageService := services.NewImageService(nil, nil, nil, nil)
 			imageServiceBuilder.BuildReturns(theImageService, nil)
 			rootImageProvider.GetReturns("", errors.New("boom"))
 
@@ -162,7 +162,7 @@ var _ = Describe("CreateStemcellMethod", func() {
 		})
 
 		It("extracts the rootImage to a temp dir path", func() {
-			theImageService := services.NewImageService(nil, nil, nil)
+			theImageService := services.NewImageService(nil, nil, nil, nil)
 			imageServiceBuilder.BuildReturns(theImageService, nil)
 			rootImageProvider.GetReturns("", errors.New("boom"))
 

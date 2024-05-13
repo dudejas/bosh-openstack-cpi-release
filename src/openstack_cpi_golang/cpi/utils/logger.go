@@ -6,6 +6,8 @@ import boshlog "github.com/cloudfoundry/bosh-utils/logger"
 type Logger interface {
 	Info(tag, msg string, args ...interface{})
 
+	Warn(tag, msg string, args ...interface{})
+
 	Error(tag, msg string, args ...interface{})
 
 	HandlePanic(tag string)
@@ -27,12 +29,16 @@ func (l logger) Info(tag, msg string, args ...interface{}) {
 	l.logger.Info(tag, msg, args)
 }
 
-func (l logger) HandlePanic(tag string) {
-	l.logger.HandlePanic(tag)
+func (l logger) Warn(tag, msg string, args ...interface{}) {
+	l.logger.Warn(tag, msg, args)
 }
 
 func (l logger) Error(tag, msg string, args ...interface{}) {
 	l.logger.Error(tag, msg, args)
+}
+
+func (l logger) HandlePanic(tag string) {
+	l.logger.HandlePanic(tag)
 }
 
 func (l logger) TargetLogger() boshlog.Logger {

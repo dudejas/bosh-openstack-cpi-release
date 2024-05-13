@@ -7,6 +7,7 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/cloud_properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services/facades"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/imageservice/v2/images"
 	"io"
@@ -35,13 +36,15 @@ type imageService struct {
 	serviceClient *gophercloud.ServiceClient
 	imagesFacade  facades.ImagesFacade
 	httpClient    clients.HttpClient
+	logger        utils.Logger
 }
 
-func NewImageService(serviceClient *gophercloud.ServiceClient, imagesFacade facades.ImagesFacade, httpClient clients.HttpClient) imageService {
+func NewImageService(serviceClient *gophercloud.ServiceClient, imagesFacade facades.ImagesFacade, httpClient clients.HttpClient, logger utils.Logger) imageService {
 	return imageService{
 		serviceClient: serviceClient,
 		imagesFacade:  imagesFacade,
 		httpClient:    httpClient,
+		logger:        logger,
 	}
 }
 
@@ -64,7 +67,10 @@ func (c imageService) CreateImage(cloudProps cloud_properties.CreateStemcell, co
 }
 
 func (c imageService) GetImage(imageID string) (string, error) {
-	getResult := c.imagesFacade.Get(c.serviceClient, imageID)
+	serviceClient := c.serviceClient
+	serviceClient.RetryFunc = RetryOnError(c.logger)
+
+	getResult := c.imagesFacade.Get(serviceClient, imageID)
 	image, err := getResult.Extract()
 	if err != nil {
 		return "", fmt.Errorf("could not find the image %s, that is referenced by the light stemcell, in OpenStack: %w", imageID, err)

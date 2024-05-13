@@ -38,6 +38,13 @@ type FakeLogger struct {
 	targetLoggerReturnsOnCall map[int]struct {
 		result1 logger.Logger
 	}
+	WarnStub        func(string, string, ...interface{})
+	warnMutex       sync.RWMutex
+	warnArgsForCall []struct {
+		arg1 string
+		arg2 string
+		arg3 []interface{}
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -195,6 +202,40 @@ func (fake *FakeLogger) TargetLoggerReturnsOnCall(i int, result1 logger.Logger) 
 	}{result1}
 }
 
+func (fake *FakeLogger) Warn(arg1 string, arg2 string, arg3 ...interface{}) {
+	fake.warnMutex.Lock()
+	fake.warnArgsForCall = append(fake.warnArgsForCall, struct {
+		arg1 string
+		arg2 string
+		arg3 []interface{}
+	}{arg1, arg2, arg3})
+	stub := fake.WarnStub
+	fake.recordInvocation("Warn", []interface{}{arg1, arg2, arg3})
+	fake.warnMutex.Unlock()
+	if stub != nil {
+		fake.WarnStub(arg1, arg2, arg3...)
+	}
+}
+
+func (fake *FakeLogger) WarnCallCount() int {
+	fake.warnMutex.RLock()
+	defer fake.warnMutex.RUnlock()
+	return len(fake.warnArgsForCall)
+}
+
+func (fake *FakeLogger) WarnCalls(stub func(string, string, ...interface{})) {
+	fake.warnMutex.Lock()
+	defer fake.warnMutex.Unlock()
+	fake.WarnStub = stub
+}
+
+func (fake *FakeLogger) WarnArgsForCall(i int) (string, string, []interface{}) {
+	fake.warnMutex.RLock()
+	defer fake.warnMutex.RUnlock()
+	argsForCall := fake.warnArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
 func (fake *FakeLogger) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -206,6 +247,8 @@ func (fake *FakeLogger) Invocations() map[string][][]interface{} {
 	defer fake.infoMutex.RUnlock()
 	fake.targetLoggerMutex.RLock()
 	defer fake.targetLoggerMutex.RUnlock()
+	fake.warnMutex.RLock()
+	defer fake.warnMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

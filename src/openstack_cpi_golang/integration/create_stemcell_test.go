@@ -3,12 +3,16 @@ package integration_test
 import (
 	"fmt"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"net/http"
+	"sync/atomic"
 )
 
 var _ = Describe("OpenStack Integration", func() {
+	var count int64
+
 	BeforeEach(func() {
 		SetupHTTP()
 
@@ -90,6 +94,50 @@ var _ = Describe("OpenStack Integration", func() {
 				"file": "/v2/images/b2173dd3-7ad6-4362-baa6-a68bce3565cb/file",
 				"schema": "/v2/schemas/image"
 			}`)
+		})
+
+		writeJsonParamToStdIn(`{
+			"method":"create_stemcell",
+			"arguments":[
+				"/Users/D044133/sap/cloudfoundry/bosh-openstack-cpi-release/local/image.tgz",
+				{
+					"image_id":"b2173dd3-7ad6-4362-baa6-a68bce3565cb",
+					"disk":5120,"disk_format":
+					"vmdk","container_format":"bare",
+					"architecture":"x86_64",
+					"vmware_ostype":"ubuntu64Guest"
+				}
+			]
+		}`)
+
+		err := cpi.Execute(getDefaultConfig(Endpoint()), logger)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		stdOutWriter.Close()
+		Expect(<-outChannel).To(ContainSubstring(`"result":"b2173dd3-7ad6-4362-baa6-a68bce3565cb"`))
+	})
+
+	It("retries the light stemcell creation", func() {
+		services.DefaultRetrySleepDuration = 0
+		Mux.HandleFunc("/v2/images/b2173dd3-7ad6-4362-baa6-a68bce3565cb", func(w http.ResponseWriter, r *http.Request) {
+
+			if atomic.LoadInt64(&count) == 0 {
+				// fail on first request
+				w.WriteHeader(http.StatusInternalServerError)
+				fmt.Fprintf(w, `{}`)
+
+				atomic.AddInt64(&count, 1)
+			} else {
+				// succeed on second request
+				w.WriteHeader(http.StatusOK)
+				fmt.Fprintf(w, `{
+					"status": "active",
+					"visibility": "private",
+					"id": "b2173dd3-7ad6-4362-baa6-a68bce3565cb",
+					"file": "/v2/images/b2173dd3-7ad6-4362-baa6-a68bce3565cb/file",
+					"schema": "/v2/schemas/image"
+				}`)
+			}
 		})
 
 		writeJsonParamToStdIn(`{
