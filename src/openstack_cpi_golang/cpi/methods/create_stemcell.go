@@ -13,7 +13,7 @@ import (
 )
 
 type CreateStemcellMethod struct {
-	imageServiceBuilder  services.ImageServiceBuilder
+	serviceFactory       services.ServiceFactory
 	heavyStemcellCreator stemcell.HeavyStemcellCreator
 	lightStemcellCreator stemcell.LightStemcellCreator
 	rootImageProvider    root_image.RootImage
@@ -22,7 +22,7 @@ type CreateStemcellMethod struct {
 }
 
 func NewCreateStemcellMethod(
-	imageServiceBuilder services.ImageServiceBuilder,
+	serviceFactory services.ServiceFactory,
 	heavyStemcellCreator stemcell.HeavyStemcellCreator,
 	lightStemcellCreator stemcell.LightStemcellCreator,
 	rootImageProvider root_image.RootImage,
@@ -30,7 +30,7 @@ func NewCreateStemcellMethod(
 	logger utils.Logger,
 ) CreateStemcellMethod {
 	return CreateStemcellMethod{
-		imageServiceBuilder:  imageServiceBuilder,
+		serviceFactory:       serviceFactory,
 		heavyStemcellCreator: heavyStemcellCreator,
 		lightStemcellCreator: lightStemcellCreator,
 		rootImageProvider:    rootImageProvider,
@@ -44,7 +44,7 @@ func (a CreateStemcellMethod) CreateStemcell(
 	props apiv1.StemcellCloudProps,
 ) (apiv1.StemcellCID, error) {
 	a.logger.Info("create_stemcell", "Creating new image...")
-	imageService, err := a.imageServiceBuilder.Build()
+	imageService, err := a.serviceFactory.CreateImageService()
 	if err != nil {
 		return apiv1.StemcellCID{}, fmt.Errorf("failed to create image service: %w", err)
 	}

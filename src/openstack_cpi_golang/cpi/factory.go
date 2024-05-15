@@ -57,7 +57,7 @@ func (cpiFactory Factory) New(ctx apiv1.CallContext) (apiv1.CPI, error) {
 		methods.NewInfoMethod(),
 
 		methods.NewCreateStemcellMethod(
-			services.NewImageServiceBuilder(openstackService, openstackConfig, cpiFactory.logger),
+			services.NewServiceFactory(openstackService, openstackConfig, cpiFactory.logger),
 			stemcell.NewHeavyStemcellCreator(openstackConfig),
 			stemcell.NewLightStemcellCreator(openstackConfig),
 			root_image.NewRootImage(),

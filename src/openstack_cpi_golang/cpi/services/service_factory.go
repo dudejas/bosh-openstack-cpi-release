@@ -8,26 +8,26 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ImageServiceBuilder
-type ImageServiceBuilder interface {
-	Build() (ImageService, error)
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ServiceFactory
+type ServiceFactory interface {
+	CreateImageService() (ImageService, error)
 }
 
-type imageServiceBuilder struct {
+type serviceFactory struct {
 	openstackService OpenstackService
 	openstackConfig  config.OpenstackConfig
 	logger           utils.Logger
 }
 
-func NewImageServiceBuilder(openstackService OpenstackService, openstackConfig config.OpenstackConfig, logger utils.Logger) imageServiceBuilder {
-	return imageServiceBuilder{
+func NewServiceFactory(openstackService OpenstackService, openstackConfig config.OpenstackConfig, logger utils.Logger) serviceFactory {
+	return serviceFactory{
 		openstackService: openstackService,
 		openstackConfig:  openstackConfig,
 		logger:           logger,
 	}
 }
 
-func (b imageServiceBuilder) Build() (ImageService, error) {
+func (b serviceFactory) CreateImageService() (ImageService, error) {
 	serviceClient, err := b.openstackService.ImageServiceV2(b.openstackConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve image service client: %w", err)
