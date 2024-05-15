@@ -42,7 +42,7 @@ func (c openstackService) authenticate(config config.OpenstackConfig) (*gophercl
 		Username:         config.Username,
 		Password:         config.APIKey,
 		DomainName:       config.DomainName,
-		TenantName:       config.Tenant,
+		TenantName:       config.ProjectName,
 	}
 
 	return c.openstackFacade.AuthenticatedClient(opts)
