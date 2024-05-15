@@ -22,6 +22,20 @@ type FakeOpenstackFacade struct {
 		result1 *gophercloud.ProviderClient
 		result2 error
 	}
+	NewComputeV2Stub        func(*gophercloud.ProviderClient, gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error)
+	newComputeV2Mutex       sync.RWMutex
+	newComputeV2ArgsForCall []struct {
+		arg1 *gophercloud.ProviderClient
+		arg2 gophercloud.EndpointOpts
+	}
+	newComputeV2Returns struct {
+		result1 *gophercloud.ServiceClient
+		result2 error
+	}
+	newComputeV2ReturnsOnCall map[int]struct {
+		result1 *gophercloud.ServiceClient
+		result2 error
+	}
 	NewImageServiceV2Stub        func(*gophercloud.ProviderClient, gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error)
 	newImageServiceV2Mutex       sync.RWMutex
 	newImageServiceV2ArgsForCall []struct {
@@ -33,6 +47,20 @@ type FakeOpenstackFacade struct {
 		result2 error
 	}
 	newImageServiceV2ReturnsOnCall map[int]struct {
+		result1 *gophercloud.ServiceClient
+		result2 error
+	}
+	NewNetworkV2Stub        func(*gophercloud.ProviderClient, gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error)
+	newNetworkV2Mutex       sync.RWMutex
+	newNetworkV2ArgsForCall []struct {
+		arg1 *gophercloud.ProviderClient
+		arg2 gophercloud.EndpointOpts
+	}
+	newNetworkV2Returns struct {
+		result1 *gophercloud.ServiceClient
+		result2 error
+	}
+	newNetworkV2ReturnsOnCall map[int]struct {
 		result1 *gophercloud.ServiceClient
 		result2 error
 	}
@@ -104,6 +132,71 @@ func (fake *FakeOpenstackFacade) AuthenticatedClientReturnsOnCall(i int, result1
 	}{result1, result2}
 }
 
+func (fake *FakeOpenstackFacade) NewComputeV2(arg1 *gophercloud.ProviderClient, arg2 gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error) {
+	fake.newComputeV2Mutex.Lock()
+	ret, specificReturn := fake.newComputeV2ReturnsOnCall[len(fake.newComputeV2ArgsForCall)]
+	fake.newComputeV2ArgsForCall = append(fake.newComputeV2ArgsForCall, struct {
+		arg1 *gophercloud.ProviderClient
+		arg2 gophercloud.EndpointOpts
+	}{arg1, arg2})
+	stub := fake.NewComputeV2Stub
+	fakeReturns := fake.newComputeV2Returns
+	fake.recordInvocation("NewComputeV2", []interface{}{arg1, arg2})
+	fake.newComputeV2Mutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeOpenstackFacade) NewComputeV2CallCount() int {
+	fake.newComputeV2Mutex.RLock()
+	defer fake.newComputeV2Mutex.RUnlock()
+	return len(fake.newComputeV2ArgsForCall)
+}
+
+func (fake *FakeOpenstackFacade) NewComputeV2Calls(stub func(*gophercloud.ProviderClient, gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error)) {
+	fake.newComputeV2Mutex.Lock()
+	defer fake.newComputeV2Mutex.Unlock()
+	fake.NewComputeV2Stub = stub
+}
+
+func (fake *FakeOpenstackFacade) NewComputeV2ArgsForCall(i int) (*gophercloud.ProviderClient, gophercloud.EndpointOpts) {
+	fake.newComputeV2Mutex.RLock()
+	defer fake.newComputeV2Mutex.RUnlock()
+	argsForCall := fake.newComputeV2ArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeOpenstackFacade) NewComputeV2Returns(result1 *gophercloud.ServiceClient, result2 error) {
+	fake.newComputeV2Mutex.Lock()
+	defer fake.newComputeV2Mutex.Unlock()
+	fake.NewComputeV2Stub = nil
+	fake.newComputeV2Returns = struct {
+		result1 *gophercloud.ServiceClient
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeOpenstackFacade) NewComputeV2ReturnsOnCall(i int, result1 *gophercloud.ServiceClient, result2 error) {
+	fake.newComputeV2Mutex.Lock()
+	defer fake.newComputeV2Mutex.Unlock()
+	fake.NewComputeV2Stub = nil
+	if fake.newComputeV2ReturnsOnCall == nil {
+		fake.newComputeV2ReturnsOnCall = make(map[int]struct {
+			result1 *gophercloud.ServiceClient
+			result2 error
+		})
+	}
+	fake.newComputeV2ReturnsOnCall[i] = struct {
+		result1 *gophercloud.ServiceClient
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeOpenstackFacade) NewImageServiceV2(arg1 *gophercloud.ProviderClient, arg2 gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error) {
 	fake.newImageServiceV2Mutex.Lock()
 	ret, specificReturn := fake.newImageServiceV2ReturnsOnCall[len(fake.newImageServiceV2ArgsForCall)]
@@ -169,13 +262,82 @@ func (fake *FakeOpenstackFacade) NewImageServiceV2ReturnsOnCall(i int, result1 *
 	}{result1, result2}
 }
 
+func (fake *FakeOpenstackFacade) NewNetworkV2(arg1 *gophercloud.ProviderClient, arg2 gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error) {
+	fake.newNetworkV2Mutex.Lock()
+	ret, specificReturn := fake.newNetworkV2ReturnsOnCall[len(fake.newNetworkV2ArgsForCall)]
+	fake.newNetworkV2ArgsForCall = append(fake.newNetworkV2ArgsForCall, struct {
+		arg1 *gophercloud.ProviderClient
+		arg2 gophercloud.EndpointOpts
+	}{arg1, arg2})
+	stub := fake.NewNetworkV2Stub
+	fakeReturns := fake.newNetworkV2Returns
+	fake.recordInvocation("NewNetworkV2", []interface{}{arg1, arg2})
+	fake.newNetworkV2Mutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeOpenstackFacade) NewNetworkV2CallCount() int {
+	fake.newNetworkV2Mutex.RLock()
+	defer fake.newNetworkV2Mutex.RUnlock()
+	return len(fake.newNetworkV2ArgsForCall)
+}
+
+func (fake *FakeOpenstackFacade) NewNetworkV2Calls(stub func(*gophercloud.ProviderClient, gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error)) {
+	fake.newNetworkV2Mutex.Lock()
+	defer fake.newNetworkV2Mutex.Unlock()
+	fake.NewNetworkV2Stub = stub
+}
+
+func (fake *FakeOpenstackFacade) NewNetworkV2ArgsForCall(i int) (*gophercloud.ProviderClient, gophercloud.EndpointOpts) {
+	fake.newNetworkV2Mutex.RLock()
+	defer fake.newNetworkV2Mutex.RUnlock()
+	argsForCall := fake.newNetworkV2ArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeOpenstackFacade) NewNetworkV2Returns(result1 *gophercloud.ServiceClient, result2 error) {
+	fake.newNetworkV2Mutex.Lock()
+	defer fake.newNetworkV2Mutex.Unlock()
+	fake.NewNetworkV2Stub = nil
+	fake.newNetworkV2Returns = struct {
+		result1 *gophercloud.ServiceClient
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeOpenstackFacade) NewNetworkV2ReturnsOnCall(i int, result1 *gophercloud.ServiceClient, result2 error) {
+	fake.newNetworkV2Mutex.Lock()
+	defer fake.newNetworkV2Mutex.Unlock()
+	fake.NewNetworkV2Stub = nil
+	if fake.newNetworkV2ReturnsOnCall == nil {
+		fake.newNetworkV2ReturnsOnCall = make(map[int]struct {
+			result1 *gophercloud.ServiceClient
+			result2 error
+		})
+	}
+	fake.newNetworkV2ReturnsOnCall[i] = struct {
+		result1 *gophercloud.ServiceClient
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeOpenstackFacade) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.authenticatedClientMutex.RLock()
 	defer fake.authenticatedClientMutex.RUnlock()
+	fake.newComputeV2Mutex.RLock()
+	defer fake.newComputeV2Mutex.RUnlock()
 	fake.newImageServiceV2Mutex.RLock()
 	defer fake.newImageServiceV2Mutex.RUnlock()
+	fake.newNetworkV2Mutex.RLock()
+	defer fake.newNetworkV2Mutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

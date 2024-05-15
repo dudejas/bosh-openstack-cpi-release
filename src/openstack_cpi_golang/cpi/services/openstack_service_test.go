@@ -1,8 +1,9 @@
-package services
+package services_test
 
 import (
 	"errors"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services/facades/facadesfakes"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils/utilsfakes"
 	"github.com/gophercloud/gophercloud"
@@ -15,29 +16,28 @@ var _ = Describe("OpenstackService", func() {
 	var serviceClient gophercloud.ServiceClient
 	var envVar utilsfakes.FakeEnvVar
 
+	BeforeEach(func() {
+		openstackFacade = facadesfakes.FakeOpenstackFacade{}
+		serviceClient = gophercloud.ServiceClient{}
+		envVar = utilsfakes.FakeEnvVar{}
+
+		openstackFacade.AuthenticatedClientReturns(&gophercloud.ProviderClient{}, nil)
+		openstackFacade.NewImageServiceV2Returns(&serviceClient, nil)
+		openstackFacade.NewComputeV2Returns(&serviceClient, nil)
+		openstackFacade.NewNetworkV2Returns(&serviceClient, nil)
+
+		envVar.GetReturns("the_os_region_name")
+	})
+
 	Context("ImageServiceV2", func() {
-		BeforeEach(func() {
-			openstackFacade = facadesfakes.FakeOpenstackFacade{}
-			serviceClient = gophercloud.ServiceClient{}
-			envVar = utilsfakes.FakeEnvVar{}
-		})
-
 		It("returns a ImageServiceV2 instance", func() {
-			openstackFacade.AuthenticatedClientReturns(&gophercloud.ProviderClient{}, nil)
-			openstackFacade.NewImageServiceV2Returns(&serviceClient, nil)
-			envVar.GetReturns("the_os_region_name")
-
-			client, err := NewOpenstackService(&openstackFacade, &envVar).ImageServiceV2(config.OpenstackConfig{})
+			client, err := services.NewOpenstackService(&openstackFacade, &envVar).ImageServiceV2(config.OpenstackConfig{})
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(client).To(Equal(&serviceClient))
 		})
 
 		It("authenticates using the cpi config", func() {
-			openstackFacade.AuthenticatedClientReturns(&gophercloud.ProviderClient{}, nil)
-			openstackFacade.NewImageServiceV2Returns(&serviceClient, nil)
-			envVar.GetReturns("the_os_region_name")
-
 			openstackConfig := config.OpenstackConfig{
 				AuthURL:     "the_auth_url",
 				Username:    "the_username",
@@ -46,7 +46,7 @@ var _ = Describe("OpenstackService", func() {
 				ProjectName: "the_tenant",
 			}
 
-			NewOpenstackService(&openstackFacade, &envVar).ImageServiceV2(openstackConfig)
+			services.NewOpenstackService(&openstackFacade, &envVar).ImageServiceV2(openstackConfig)
 
 			opts := openstackFacade.AuthenticatedClientArgsForCall(0)
 			Expect(opts).To(Equal(gophercloud.AuthOptions{
@@ -59,14 +59,9 @@ var _ = Describe("OpenstackService", func() {
 		})
 
 		It("gets the region of the service from the environment", func() {
-			authenticatedClient := &gophercloud.ProviderClient{}
-			openstackFacade.AuthenticatedClientReturns(authenticatedClient, nil)
-			openstackFacade.NewImageServiceV2Returns(&serviceClient, nil)
-			envVar.GetReturns("the_os_region_name")
+			services.NewOpenstackService(&openstackFacade, &envVar).ImageServiceV2(config.OpenstackConfig{})
 
-			NewOpenstackService(&openstackFacade, &envVar).ImageServiceV2(config.OpenstackConfig{})
-
-			authenticatedClient, endpointOpts := openstackFacade.NewImageServiceV2ArgsForCall(0)
+			_, endpointOpts := openstackFacade.NewImageServiceV2ArgsForCall(0)
 			Expect(endpointOpts).To(Equal(gophercloud.EndpointOpts{
 				Region: "the_os_region_name",
 			}))
@@ -75,9 +70,107 @@ var _ = Describe("OpenstackService", func() {
 		It("returns an error on failing authentication", func() {
 			openstackFacade.AuthenticatedClientReturns(nil, errors.New("boom"))
 
-			client, err := NewOpenstackService(&openstackFacade, &envVar).ImageServiceV2(config.OpenstackConfig{})
+			client, err := services.NewOpenstackService(&openstackFacade, &envVar).ImageServiceV2(config.OpenstackConfig{})
 
-			Expect(err.Error()).To(Equal("failed to create image service, authentication failed: boom"))
+			Expect(err.Error()).To(Equal("failed to authenticate: boom"))
+			Expect(client).To(BeNil())
+		})
+
+	})
+
+	Context("ComputeServiceV2", func() {
+		It("returns a ComputeServiceV2 instance", func() {
+			client, err := services.NewOpenstackService(&openstackFacade, &envVar).ComputeServiceV2(config.OpenstackConfig{})
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(client).To(Equal(&serviceClient))
+		})
+
+		It("authenticates using the cpi config", func() {
+			openstackConfig := config.OpenstackConfig{
+				AuthURL:     "the_auth_url",
+				Username:    "the_username",
+				APIKey:      "the_api_key",
+				DomainName:  "the_domain_name",
+				ProjectName: "the_tenant",
+			}
+
+			services.NewOpenstackService(&openstackFacade, &envVar).ComputeServiceV2(openstackConfig)
+
+			opts := openstackFacade.AuthenticatedClientArgsForCall(0)
+			Expect(opts).To(Equal(gophercloud.AuthOptions{
+				IdentityEndpoint: "the_auth_url",
+				Username:         "the_username",
+				Password:         "the_api_key",
+				DomainName:       "the_domain_name",
+				TenantName:       "the_tenant",
+			}))
+		})
+
+		It("gets the region of the service from the environment", func() {
+			services.NewOpenstackService(&openstackFacade, &envVar).ComputeServiceV2(config.OpenstackConfig{})
+
+			_, endpointOpts := openstackFacade.NewComputeV2ArgsForCall(0)
+			Expect(endpointOpts).To(Equal(gophercloud.EndpointOpts{
+				Region: "the_os_region_name",
+			}))
+		})
+
+		It("returns an error on failing authentication", func() {
+			openstackFacade.AuthenticatedClientReturns(nil, errors.New("boom"))
+
+			client, err := services.NewOpenstackService(&openstackFacade, &envVar).ComputeServiceV2(config.OpenstackConfig{})
+
+			Expect(err.Error()).To(Equal("failed to authenticate: boom"))
+			Expect(client).To(BeNil())
+		})
+
+	})
+
+	Context("NetworkServiceV2", func() {
+		It("returns a NetworkServiceV2 instance", func() {
+			client, err := services.NewOpenstackService(&openstackFacade, &envVar).NetworkServiceV2(config.OpenstackConfig{})
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(client).To(Equal(&serviceClient))
+		})
+
+		It("authenticates using the cpi config", func() {
+			openstackConfig := config.OpenstackConfig{
+				AuthURL:     "the_auth_url",
+				Username:    "the_username",
+				APIKey:      "the_api_key",
+				DomainName:  "the_domain_name",
+				ProjectName: "the_tenant",
+			}
+
+			services.NewOpenstackService(&openstackFacade, &envVar).NetworkServiceV2(openstackConfig)
+
+			opts := openstackFacade.AuthenticatedClientArgsForCall(0)
+			Expect(opts).To(Equal(gophercloud.AuthOptions{
+				IdentityEndpoint: "the_auth_url",
+				Username:         "the_username",
+				Password:         "the_api_key",
+				DomainName:       "the_domain_name",
+				TenantName:       "the_tenant",
+			}))
+		})
+
+		It("gets the region of the service from the environment", func() {
+			services.NewOpenstackService(&openstackFacade, &envVar).NetworkServiceV2(config.OpenstackConfig{})
+
+			_, endpointOpts := openstackFacade.NewNetworkV2ArgsForCall(0)
+			Expect(endpointOpts).To(Equal(gophercloud.EndpointOpts{
+				Region: "the_os_region_name",
+			}))
+		})
+
+		It("returns an error on failing authentication", func() {
+			openstackFacade.AuthenticatedClientReturns(nil, errors.New("boom"))
+
+			client, err := services.NewOpenstackService(&openstackFacade, &envVar).NetworkServiceV2(config.OpenstackConfig{})
+
+			Expect(err.Error()).To(Equal("failed to authenticate: boom"))
 			Expect(client).To(BeNil())
 		})
 

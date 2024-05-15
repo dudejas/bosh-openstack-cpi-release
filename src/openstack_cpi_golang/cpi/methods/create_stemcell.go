@@ -44,13 +44,14 @@ func (a CreateStemcellMethod) CreateStemcell(
 	props apiv1.StemcellCloudProps,
 ) (apiv1.StemcellCID, error) {
 	a.logger.Info("create_stemcell", "Creating new image...")
+
+	var cloudProps = properties.CreateStemcell{}
+	props.As(&cloudProps)
+
 	imageService, err := a.serviceFactory.CreateImageService()
 	if err != nil {
 		return apiv1.StemcellCID{}, fmt.Errorf("failed to create image service: %w", err)
 	}
-
-	var cloudProps = properties.CreateStemcell{}
-	props.As(&cloudProps)
 
 	var imageID string
 	var creationError error

@@ -8,6 +8,18 @@ import (
 )
 
 type FakeServiceFactory struct {
+	CreateComputeServiceStub        func() (services.ComputeService, error)
+	createComputeServiceMutex       sync.RWMutex
+	createComputeServiceArgsForCall []struct {
+	}
+	createComputeServiceReturns struct {
+		result1 services.ComputeService
+		result2 error
+	}
+	createComputeServiceReturnsOnCall map[int]struct {
+		result1 services.ComputeService
+		result2 error
+	}
 	CreateImageServiceStub        func() (services.ImageService, error)
 	createImageServiceMutex       sync.RWMutex
 	createImageServiceArgsForCall []struct {
@@ -20,8 +32,76 @@ type FakeServiceFactory struct {
 		result1 services.ImageService
 		result2 error
 	}
+	CreateNetworkServiceStub        func() (services.NetworkService, error)
+	createNetworkServiceMutex       sync.RWMutex
+	createNetworkServiceArgsForCall []struct {
+	}
+	createNetworkServiceReturns struct {
+		result1 services.NetworkService
+		result2 error
+	}
+	createNetworkServiceReturnsOnCall map[int]struct {
+		result1 services.NetworkService
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeServiceFactory) CreateComputeService() (services.ComputeService, error) {
+	fake.createComputeServiceMutex.Lock()
+	ret, specificReturn := fake.createComputeServiceReturnsOnCall[len(fake.createComputeServiceArgsForCall)]
+	fake.createComputeServiceArgsForCall = append(fake.createComputeServiceArgsForCall, struct {
+	}{})
+	stub := fake.CreateComputeServiceStub
+	fakeReturns := fake.createComputeServiceReturns
+	fake.recordInvocation("CreateComputeService", []interface{}{})
+	fake.createComputeServiceMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeServiceFactory) CreateComputeServiceCallCount() int {
+	fake.createComputeServiceMutex.RLock()
+	defer fake.createComputeServiceMutex.RUnlock()
+	return len(fake.createComputeServiceArgsForCall)
+}
+
+func (fake *FakeServiceFactory) CreateComputeServiceCalls(stub func() (services.ComputeService, error)) {
+	fake.createComputeServiceMutex.Lock()
+	defer fake.createComputeServiceMutex.Unlock()
+	fake.CreateComputeServiceStub = stub
+}
+
+func (fake *FakeServiceFactory) CreateComputeServiceReturns(result1 services.ComputeService, result2 error) {
+	fake.createComputeServiceMutex.Lock()
+	defer fake.createComputeServiceMutex.Unlock()
+	fake.CreateComputeServiceStub = nil
+	fake.createComputeServiceReturns = struct {
+		result1 services.ComputeService
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeServiceFactory) CreateComputeServiceReturnsOnCall(i int, result1 services.ComputeService, result2 error) {
+	fake.createComputeServiceMutex.Lock()
+	defer fake.createComputeServiceMutex.Unlock()
+	fake.CreateComputeServiceStub = nil
+	if fake.createComputeServiceReturnsOnCall == nil {
+		fake.createComputeServiceReturnsOnCall = make(map[int]struct {
+			result1 services.ComputeService
+			result2 error
+		})
+	}
+	fake.createComputeServiceReturnsOnCall[i] = struct {
+		result1 services.ComputeService
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeServiceFactory) CreateImageService() (services.ImageService, error) {
@@ -80,11 +160,71 @@ func (fake *FakeServiceFactory) CreateImageServiceReturnsOnCall(i int, result1 s
 	}{result1, result2}
 }
 
+func (fake *FakeServiceFactory) CreateNetworkService() (services.NetworkService, error) {
+	fake.createNetworkServiceMutex.Lock()
+	ret, specificReturn := fake.createNetworkServiceReturnsOnCall[len(fake.createNetworkServiceArgsForCall)]
+	fake.createNetworkServiceArgsForCall = append(fake.createNetworkServiceArgsForCall, struct {
+	}{})
+	stub := fake.CreateNetworkServiceStub
+	fakeReturns := fake.createNetworkServiceReturns
+	fake.recordInvocation("CreateNetworkService", []interface{}{})
+	fake.createNetworkServiceMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeServiceFactory) CreateNetworkServiceCallCount() int {
+	fake.createNetworkServiceMutex.RLock()
+	defer fake.createNetworkServiceMutex.RUnlock()
+	return len(fake.createNetworkServiceArgsForCall)
+}
+
+func (fake *FakeServiceFactory) CreateNetworkServiceCalls(stub func() (services.NetworkService, error)) {
+	fake.createNetworkServiceMutex.Lock()
+	defer fake.createNetworkServiceMutex.Unlock()
+	fake.CreateNetworkServiceStub = stub
+}
+
+func (fake *FakeServiceFactory) CreateNetworkServiceReturns(result1 services.NetworkService, result2 error) {
+	fake.createNetworkServiceMutex.Lock()
+	defer fake.createNetworkServiceMutex.Unlock()
+	fake.CreateNetworkServiceStub = nil
+	fake.createNetworkServiceReturns = struct {
+		result1 services.NetworkService
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeServiceFactory) CreateNetworkServiceReturnsOnCall(i int, result1 services.NetworkService, result2 error) {
+	fake.createNetworkServiceMutex.Lock()
+	defer fake.createNetworkServiceMutex.Unlock()
+	fake.CreateNetworkServiceStub = nil
+	if fake.createNetworkServiceReturnsOnCall == nil {
+		fake.createNetworkServiceReturnsOnCall = make(map[int]struct {
+			result1 services.NetworkService
+			result2 error
+		})
+	}
+	fake.createNetworkServiceReturnsOnCall[i] = struct {
+		result1 services.NetworkService
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeServiceFactory) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.createComputeServiceMutex.RLock()
+	defer fake.createComputeServiceMutex.RUnlock()
 	fake.createImageServiceMutex.RLock()
 	defer fake.createImageServiceMutex.RUnlock()
+	fake.createNetworkServiceMutex.RLock()
+	defer fake.createNetworkServiceMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

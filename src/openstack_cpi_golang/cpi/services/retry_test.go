@@ -15,7 +15,7 @@ type MockNetError struct {
 	text    string
 }
 
-func (m *MockNetError) Error() string  { return m.text }
+func (m MockNetError) Error() string   { return m.text }
 func (m MockNetError) Timeout() bool   { return m.timeout }
 func (m MockNetError) Temporary() bool { return !m.timeout }
 

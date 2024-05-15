@@ -10,6 +10,8 @@ import (
 
 //counterfeiter:generate . ServiceFactory
 type ServiceFactory interface {
+	CreateComputeService() (ComputeService, error)
+	CreateNetworkService() (NetworkService, error)
 	CreateImageService() (ImageService, error)
 }
 
@@ -25,6 +27,32 @@ func NewServiceFactory(openstackService OpenstackService, openstackConfig config
 		openstackConfig:  openstackConfig,
 		logger:           logger,
 	}
+}
+
+func (b serviceFactory) CreateComputeService() (ComputeService, error) {
+	serviceClient, err := b.openstackService.ComputeServiceV2(b.openstackConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve compute service client: %w", err)
+	}
+
+	return NewComputeService(
+		serviceClient,
+		facades.NewComputeFacade(),
+		b.logger,
+	), nil
+}
+
+func (b serviceFactory) CreateNetworkService() (NetworkService, error) {
+	serviceClient, err := b.openstackService.NetworkServiceV2(b.openstackConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve network service client: %w", err)
+	}
+
+	return NewNetworkService(
+		serviceClient,
+		facades.NewNetworkingFacade(),
+		b.logger,
+	), nil
 }
 
 func (b serviceFactory) CreateImageService() (ImageService, error) {
