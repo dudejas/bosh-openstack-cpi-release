@@ -39,11 +39,11 @@ var _ = Describe("OpenstackService", func() {
 			envVar.GetReturns("the_os_region_name")
 
 			openstackConfig := config.OpenstackConfig{
-				AuthURL:    "the_auth_url",
-				Username:   "the_username",
-				APIKey:     "the_api_key",
-				DomainName: "the_domain_name",
-				Tenant:     "the_tenant",
+				AuthURL:     "the_auth_url",
+				Username:    "the_username",
+				APIKey:      "the_api_key",
+				DomainName:  "the_domain_name",
+				ProjectName: "the_tenant",
 			}
 
 			NewOpenstackService(&openstackFacade, &envVar).ImageServiceV2(openstackConfig)

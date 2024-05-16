@@ -9,9 +9,9 @@ type CreateStemcell struct {
 	OsType            string `json:"os_type"`
 	OsDistro          string `json:"os_distro"`
 	Architecture      string `json:"architecture"`
-	AutoDiskConfig    string `json:"auto_disk_config"`
+	AutoDiskConfig    bool   `json:"auto_disk_config"`
 	HwVifModel        string `json:"hw_vif_model"`
-	HyperVisorType    string `json:"hypervisor_type"`
+	Hypervisor        string `json:"hypervisor"`
 	VmwareAdapterType string `json:"vmware_adaptertype"`
 	VmwareDiskType    string `json:"vmware_disktype"`
 	VmwareLinkedClone string `json:"vmware_linked_clone"`

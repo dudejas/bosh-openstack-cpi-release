@@ -13,6 +13,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ImageService
@@ -135,9 +136,9 @@ func (c imageService) getProperties(cloudProps cloud_properties.CreateStemcell) 
 	properties["os_type"] = cloudProps.OsType
 	properties["os_distro"] = cloudProps.OsDistro
 	properties["architecture"] = cloudProps.Architecture
-	properties["auto_disk_config"] = cloudProps.AutoDiskConfig
+	properties["auto_disk_config"] = strconv.FormatBool(cloudProps.AutoDiskConfig)
 	properties["hw_vif_model"] = cloudProps.HwVifModel
-	properties["hypervisor"] = cloudProps.HyperVisorType
+	properties["hypervisor_type"] = cloudProps.Hypervisor
 	properties["vmware_adaptertype"] = cloudProps.VmwareAdapterType
 	properties["vmware_disktype"] = cloudProps.VmwareDiskType
 	properties["vmware_linked_clone"] = cloudProps.VmwareLinkedClone
