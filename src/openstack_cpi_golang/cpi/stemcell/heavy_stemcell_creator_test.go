@@ -2,8 +2,8 @@ package stemcell
 
 import (
 	"errors"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/cloud_properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services/servicesfakes"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -23,7 +23,7 @@ var _ = Describe("heavyStemcellCreator", func() {
 			imageServiceClient.CreateImageReturns("1234", nil)
 
 			imageID, err := NewHeavyStemcellCreator(config).
-				Create(&imageServiceClient, cloud_properties.CreateStemcell{}, "root/image/path")
+				Create(&imageServiceClient, properties.CreateStemcell{}, "root/image/path")
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(imageID).To(Equal("1234"))
@@ -33,7 +33,7 @@ var _ = Describe("heavyStemcellCreator", func() {
 			imageServiceClient.CreateImageReturns("", errors.New("boom"))
 
 			imageID, err := NewHeavyStemcellCreator(config).
-				Create(&imageServiceClient, cloud_properties.CreateStemcell{}, "root/image/path")
+				Create(&imageServiceClient, properties.CreateStemcell{}, "root/image/path")
 
 			Expect(err.Error()).To(Equal("failed to create image: boom"))
 			Expect(imageID).To(Equal(""))
@@ -44,7 +44,7 @@ var _ = Describe("heavyStemcellCreator", func() {
 			imageServiceClient.UploadImageReturns(errors.New("boom"))
 
 			imageID, err := NewHeavyStemcellCreator(config).
-				Create(&imageServiceClient, cloud_properties.CreateStemcell{}, "root/image/path")
+				Create(&imageServiceClient, properties.CreateStemcell{}, "root/image/path")
 
 			Expect(err.Error()).To(Equal("failed to upload root image: boom"))
 			Expect(imageID).To(Equal(""))
@@ -53,10 +53,10 @@ var _ = Describe("heavyStemcellCreator", func() {
 		It("creates an OpenStack image", func() {
 			imageServiceClient.CreateImageReturns("1234", nil)
 			imageServiceClient.UploadImageReturns(nil)
-			theCloudProps := cloud_properties.CreateStemcell{}
+			theCloudProps := properties.CreateStemcell{}
 
 			NewHeavyStemcellCreator(config).
-				Create(&imageServiceClient, cloud_properties.CreateStemcell{}, "root/image/path")
+				Create(&imageServiceClient, properties.CreateStemcell{}, "root/image/path")
 
 			cloudProps, config := imageServiceClient.CreateImageArgsForCall(0)
 			Expect(cloudProps).To(Equal(theCloudProps))
@@ -68,7 +68,7 @@ var _ = Describe("heavyStemcellCreator", func() {
 			imageServiceClient.UploadImageReturns(nil)
 
 			NewHeavyStemcellCreator(config).
-				Create(&imageServiceClient, cloud_properties.CreateStemcell{}, "root/image/path")
+				Create(&imageServiceClient, properties.CreateStemcell{}, "root/image/path")
 
 			imageID, imageFilePath := imageServiceClient.UploadImageArgsForCall(0)
 			Expect(imageID).To(Equal("1234"))

@@ -3,8 +3,8 @@ package services
 import (
 	"errors"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/clients/clientsfakes"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/cloud_properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services/facades/facadesfakes"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils/utilsfakes"
 	"github.com/gophercloud/gophercloud"
@@ -41,7 +41,7 @@ var _ = Describe("ImageService", func() {
 			imagesFacade.CreateReturns(createResult(body, nil, 201, nil))
 
 			imageID, err := NewImageService(&serviceClient, &imagesFacade, &httpClient, &logger).
-				CreateImage(cloud_properties.CreateStemcell{}, config.OpenstackConfig{})
+				CreateImage(properties.CreateStemcell{}, config.OpenstackConfig{})
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(imageID).To(Equal("123-456"))
@@ -50,7 +50,7 @@ var _ = Describe("ImageService", func() {
 		It("create an image entity in OpenStack", func() {
 			imagesFacade.CreateReturns(createResult(body, nil, 201, nil))
 
-			cloudProps := cloud_properties.CreateStemcell{
+			cloudProps := properties.CreateStemcell{
 				Name:            "the_stemcell_name",
 				Version:         "the_stemcell_version",
 				DiskFormat:      "the_disk_format",
@@ -87,7 +87,7 @@ var _ = Describe("ImageService", func() {
 			imagesFacade.CreateReturns(createResult(body, nil, 0, errors.New("boom")))
 
 			imageID, err := NewImageService(&serviceClient, &imagesFacade, &httpClient, &logger).
-				CreateImage(cloud_properties.CreateStemcell{}, config.OpenstackConfig{})
+				CreateImage(properties.CreateStemcell{}, config.OpenstackConfig{})
 
 			Expect(err.Error()).To(Equal("failed to create image: boom"))
 			Expect(imageID).To(Equal(""))

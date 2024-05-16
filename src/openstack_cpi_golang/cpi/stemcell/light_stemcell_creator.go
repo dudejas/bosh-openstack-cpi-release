@@ -2,8 +2,8 @@ package stemcell
 
 import (
 	"fmt"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/cloud_properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services"
 )
 
@@ -11,7 +11,7 @@ import (
 type LightStemcellCreator interface {
 	Create(
 		imageService services.ImageService,
-		cloudProps cloud_properties.CreateStemcell,
+		cloudProps properties.CreateStemcell,
 	) (string, error)
 }
 
@@ -29,7 +29,7 @@ func NewLightStemcellCreator(
 
 func (h lightStemcellCreator) Create(
 	imageService services.ImageService,
-	cloudProps cloud_properties.CreateStemcell,
+	cloudProps properties.CreateStemcell,
 ) (string, error) {
 	imageID, err := imageService.GetImage(cloudProps.ImageID)
 	if err != nil {

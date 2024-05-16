@@ -3,8 +3,8 @@ package methods
 import (
 	"errors"
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/cloud_properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services/servicesfakes"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/stemcell/root_image/root_imagefakes"
@@ -20,7 +20,7 @@ type MockStemcellCloudProps struct {
 }
 
 func (m *MockStemcellCloudProps) As(v interface{}) error {
-	stemcell := v.(*cloud_properties.CreateStemcell)
+	stemcell := v.(*properties.CreateStemcell)
 	stemcell.Version = "0.1"
 	stemcell.ImageID = m.ImageID
 

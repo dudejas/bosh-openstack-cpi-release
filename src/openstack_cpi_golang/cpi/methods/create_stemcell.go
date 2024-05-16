@@ -3,8 +3,8 @@ package methods
 import (
 	"fmt"
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/cloud_properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/stemcell"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/stemcell/root_image"
@@ -49,7 +49,7 @@ func (a CreateStemcellMethod) CreateStemcell(
 		return apiv1.StemcellCID{}, fmt.Errorf("failed to create image service: %w", err)
 	}
 
-	var cloudProps = cloud_properties.CreateStemcell{}
+	var cloudProps = properties.CreateStemcell{}
 	props.As(&cloudProps)
 
 	var imageID string

@@ -4,17 +4,17 @@ package stemcellfakes
 import (
 	"sync"
 
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/cloud_properties"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/stemcell"
 )
 
 type FakeLightStemcellCreator struct {
-	CreateStub        func(services.ImageService, cloud_properties.CreateStemcell) (string, error)
+	CreateStub        func(services.ImageService, properties.CreateStemcell) (string, error)
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
 		arg1 services.ImageService
-		arg2 cloud_properties.CreateStemcell
+		arg2 properties.CreateStemcell
 	}
 	createReturns struct {
 		result1 string
@@ -28,12 +28,12 @@ type FakeLightStemcellCreator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeLightStemcellCreator) Create(arg1 services.ImageService, arg2 cloud_properties.CreateStemcell) (string, error) {
+func (fake *FakeLightStemcellCreator) Create(arg1 services.ImageService, arg2 properties.CreateStemcell) (string, error) {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
 		arg1 services.ImageService
-		arg2 cloud_properties.CreateStemcell
+		arg2 properties.CreateStemcell
 	}{arg1, arg2})
 	stub := fake.CreateStub
 	fakeReturns := fake.createReturns
@@ -54,13 +54,13 @@ func (fake *FakeLightStemcellCreator) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
-func (fake *FakeLightStemcellCreator) CreateCalls(stub func(services.ImageService, cloud_properties.CreateStemcell) (string, error)) {
+func (fake *FakeLightStemcellCreator) CreateCalls(stub func(services.ImageService, properties.CreateStemcell) (string, error)) {
 	fake.createMutex.Lock()
 	defer fake.createMutex.Unlock()
 	fake.CreateStub = stub
 }
 
-func (fake *FakeLightStemcellCreator) CreateArgsForCall(i int) (services.ImageService, cloud_properties.CreateStemcell) {
+func (fake *FakeLightStemcellCreator) CreateArgsForCall(i int) (services.ImageService, properties.CreateStemcell) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	argsForCall := fake.createArgsForCall[i]

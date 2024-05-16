@@ -2,14 +2,14 @@ package stemcell
 
 import (
 	"fmt"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/cloud_properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services"
 )
 
 //counterfeiter:generate . HeavyStemcellCreator
 type HeavyStemcellCreator interface {
-	Create(imageService services.ImageService, cloudProps cloud_properties.CreateStemcell, imagePath string) (string, error)
+	Create(imageService services.ImageService, cloudProps properties.CreateStemcell, imagePath string) (string, error)
 }
 
 type heavyStemcellCreator struct {
@@ -24,7 +24,7 @@ func NewHeavyStemcellCreator(
 	}
 }
 
-func (h heavyStemcellCreator) Create(imageService services.ImageService, cloudProps cloud_properties.CreateStemcell, rootImagePath string) (string, error) {
+func (h heavyStemcellCreator) Create(imageService services.ImageService, cloudProps properties.CreateStemcell, rootImagePath string) (string, error) {
 	imageID, err := imageService.CreateImage(cloudProps, h.config)
 	if err != nil {
 		return "", fmt.Errorf("failed to create image: %w", err)

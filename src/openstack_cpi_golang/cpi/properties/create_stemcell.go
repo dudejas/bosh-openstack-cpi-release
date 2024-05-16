@@ -1,4 +1,4 @@
-package cloud_properties
+package properties
 
 type CreateStemcell struct {
 	Version           string `json:"version"`

@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/clients"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/cloud_properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services/facades"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/gophercloud/gophercloud"
@@ -19,7 +19,7 @@ import (
 //counterfeiter:generate . ImageService
 type ImageService interface {
 	CreateImage(
-		cloudProps cloud_properties.CreateStemcell,
+		cloudProps properties.CreateStemcell,
 		config config.OpenstackConfig,
 	) (string, error)
 
@@ -49,7 +49,7 @@ func NewImageService(serviceClient *gophercloud.ServiceClient, imagesFacade faca
 	}
 }
 
-func (c imageService) CreateImage(cloudProps cloud_properties.CreateStemcell, config config.OpenstackConfig) (string, error) {
+func (c imageService) CreateImage(cloudProps properties.CreateStemcell, config config.OpenstackConfig) (string, error) {
 	createOpts := images.CreateOpts{
 		Name:            fmt.Sprintf("%s/%s", cloudProps.Name, cloudProps.Version),
 		Visibility:      c.getImageVisibility(config.StemcellPubliclyVisible),
@@ -130,7 +130,7 @@ func (c imageService) getImageVisibility(stemcellPubliclyVisible bool) *images.I
 	return &visibility
 }
 
-func (c imageService) getProperties(cloudProps cloud_properties.CreateStemcell) map[string]string {
+func (c imageService) getProperties(cloudProps properties.CreateStemcell) map[string]string {
 	properties := make(map[string]string)
 	properties["version"] = cloudProps.Version
 	properties["os_type"] = cloudProps.OsType
