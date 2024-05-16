@@ -72,17 +72,9 @@ var _ = Describe("ImageService", func() {
 				DiskFormat:      "the_disk_format",
 				ContainerFormat: "the_container_format",
 				Properties: map[string]string{
-					"version":             "the_stemcell_version",
-					"os_type":             "the_os_type",
-					"os_distro":           "",
-					"architecture":        "",
-					"auto_disk_config":    "false",
-					"hw_vif_model":        "",
-					"hypervisor_type":     "",
-					"vmware_adaptertype":  "",
-					"vmware_disktype":     "",
-					"vmware_linked_clone": "",
-					"vmware_ostype":       "",
+					"version":          "the_stemcell_version",
+					"os_type":          "the_os_type",
+					"auto_disk_config": "false",
 				},
 			}
 

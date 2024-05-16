@@ -143,5 +143,13 @@ func (c imageService) getProperties(cloudProps cloud_properties.CreateStemcell) 
 	properties["vmware_disktype"] = cloudProps.VmwareDiskType
 	properties["vmware_linked_clone"] = cloudProps.VmwareLinkedClone
 	properties["vmware_ostype"] = cloudProps.VmvareOsType
+
+	// Delete the zero-values
+	for key, value := range properties {
+		if value == "" {
+			delete(properties, key)
+		}
+	}
+
 	return properties
 }
