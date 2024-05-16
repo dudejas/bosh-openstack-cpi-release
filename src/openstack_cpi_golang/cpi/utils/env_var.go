@@ -2,7 +2,7 @@ package utils
 
 import "os"
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . EnvVar
+//counterfeiter:generate . EnvVar
 type EnvVar interface {
 	Get(key string) string
 }

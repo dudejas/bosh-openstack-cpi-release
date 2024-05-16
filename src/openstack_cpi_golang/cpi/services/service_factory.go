@@ -8,7 +8,7 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ServiceFactory
+//counterfeiter:generate . ServiceFactory
 type ServiceFactory interface {
 	CreateImageService() (ImageService, error)
 }

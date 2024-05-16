@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . HttpClient
+//counterfeiter:generate . HttpClient
 type HttpClient interface {
 	Do(req *http.Request) (*http.Response, error)
 

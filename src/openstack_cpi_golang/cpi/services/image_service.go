@@ -16,7 +16,7 @@ import (
 	"strconv"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ImageService
+//counterfeiter:generate . ImageService
 type ImageService interface {
 	CreateImage(
 		cloudProps cloud_properties.CreateStemcell,

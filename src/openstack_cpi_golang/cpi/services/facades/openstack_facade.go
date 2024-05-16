@@ -5,7 +5,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . OpenstackFacade
+//counterfeiter:generate . OpenstackFacade
 type OpenstackFacade interface {
 	NewImageServiceV2(client *gophercloud.ProviderClient, eo gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error)
 

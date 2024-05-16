@@ -5,7 +5,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/imageservice/v2/images"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ImagesFacade
+//counterfeiter:generate . ImagesFacade
 type ImagesFacade interface {
 	Create(client *gophercloud.ServiceClient, opts images.CreateOptsBuilder) (r images.CreateResult)
 

@@ -7,7 +7,7 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . HeavyStemcellCreator
+//counterfeiter:generate . HeavyStemcellCreator
 type HeavyStemcellCreator interface {
 	Create(imageService services.ImageService, cloudProps cloud_properties.CreateStemcell, imagePath string) (string, error)
 }

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . RootImage
+//counterfeiter:generate . RootImage
 type RootImage interface {
 	Get(stemcellImagePath string, targetDirPath string) (string, error)
 }

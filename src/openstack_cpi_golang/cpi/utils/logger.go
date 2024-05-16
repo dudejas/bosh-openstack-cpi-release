@@ -2,7 +2,7 @@ package utils
 
 import boshlog "github.com/cloudfoundry/bosh-utils/logger"
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Logger
+//counterfeiter:generate . Logger
 type Logger interface {
 	Info(tag, msg string, args ...interface{})
 
