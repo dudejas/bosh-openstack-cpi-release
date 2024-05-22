@@ -66,7 +66,7 @@ var _ = Describe("OpenStack Integration", func() {
 		writeJsonParamToStdIn(`{
 			"method":"create_stemcell",
 			"arguments":[
-				"/Users/D044133/sap/cloudfoundry/bosh-openstack-cpi-release/local/image.tgz",
+				"./testdata/image",
 				{
 					"disk":5120,"disk_format":
 					"vmdk","container_format":"bare",
@@ -99,7 +99,7 @@ var _ = Describe("OpenStack Integration", func() {
 		writeJsonParamToStdIn(`{
 			"method":"create_stemcell",
 			"arguments":[
-				"/Users/D044133/sap/cloudfoundry/bosh-openstack-cpi-release/local/image.tgz",
+				"./testdata/image",
 				{
 					"image_id":"b2173dd3-7ad6-4362-baa6-a68bce3565cb",
 					"disk":5120,"disk_format":
@@ -143,7 +143,7 @@ var _ = Describe("OpenStack Integration", func() {
 		writeJsonParamToStdIn(`{
 			"method":"create_stemcell",
 			"arguments":[
-				"/Users/D044133/sap/cloudfoundry/bosh-openstack-cpi-release/local/image.tgz",
+				"./testdata/image",
 				{
 					"image_id":"b2173dd3-7ad6-4362-baa6-a68bce3565cb",
 					"disk":5120,"disk_format":
