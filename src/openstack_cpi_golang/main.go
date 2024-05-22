@@ -27,6 +27,11 @@ func main() {
 		cpiLogger.Error("main", "failed loading the configuration: %w", err)
 		os.Exit(1)
 	}
+	err = cpiConfig.Validate()
+	if err != nil {
+		cpiLogger.Error("main", "failed validating the configuration: %w", err)
+		os.Exit(1)
+	}
 
 	err = cpi.Execute(cpiConfig, cpiLogger)
 	if err != nil {

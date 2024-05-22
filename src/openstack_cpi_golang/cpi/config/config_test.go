@@ -32,10 +32,59 @@ var _ = Describe("OpenstackConfig", func() {
 			"some/path/config.txt": &fstest.MapFile{
 				Data: []byte(`not a json file`),
 			},
+			"some/path/invalid_user_config.json": &fstest.MapFile{
+				Data: []byte(`{
+						"cloud": {
+							"properties": {
+								"openstack": {	
+									"username": "the_username",
+									"application_credential_id": "the_application_credential_id"
+								}
+							}
+						}
+					}`),
+			},
+			"some/path/empty_config.json": &fstest.MapFile{
+				Data: []byte(`{
+						"cloud": {
+							"properties": {
+								"openstack": {}
+							}
+						}
+					}`),
+			},
+			"some/path/username_api_key_config.json": &fstest.MapFile{
+				Data: []byte(`{
+						"cloud": {
+							"properties": {
+								"openstack": {
+									"auth_url": "the_auth_url",
+									"username": "the_username",
+									"api_key": "the_api_key",
+									"domain": "the_domain",
+									"project": "the_project"	
+								}
+							}
+						}
+					}`),
+			},
+			"some/path/application_credential_config.json": &fstest.MapFile{
+				Data: []byte(`{
+						"cloud": {
+							"properties": {
+								"openstack": {
+									"auth_url": "the_auth_url",
+									"application_credential_id": "the_application_credential_id",
+									"application_credential_secret": "the_application_credential_secret"
+								}
+							}
+						}
+					}`),
+			},
 		}
 	})
 
-	Context("Validate", func() {
+	Context("NewConfigFromPath", func() {
 		It("gets the cpi configuration from filesystem", func() {
 			cpiConfig, err := NewConfigFromPath(fileSystem, "some/path/config.json")
 
@@ -68,5 +117,57 @@ var _ = Describe("OpenstackConfig", func() {
 			Expect(err.Error()).To(ContainSubstring("failed to unmarshall configuration file: some/path/config.txt, err: invalid character"))
 		})
 
+	})
+
+	Context("Validate", func() {
+		It("returns an error if username and application credential is set", func() {
+			_, err := NewConfigFromPath(fileSystem, "some/path/invalid_user_config.json")
+
+			Expect(err.Error()).To(ContainSubstring("Invalid OpenStack cloud properties: username and api_key or application_credential_id and application_credential_secret is required"))
+		})
+
+		It("returns an error if config is empty", func() {
+			_, err := NewConfigFromPath(fileSystem, "some/path/empty_config.json")
+
+			Expect(err.Error()).To(ContainSubstring("Invalid OpenStack cloud properties: username and api_key or application_credential_id and application_credential_secret is required"))
+		})
+
+		It("succeeds with username and api_key", func() {
+			cpiConfig, err := NewConfigFromPath(fileSystem, "some/path/username_api_key_config.json")
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(cpiConfig.Cloud.Properties.Openstack.Username).To(Equal("the_username"))
+			Expect(cpiConfig.Cloud.Properties.Openstack.APIKey).To(Equal("the_api_key"))
+		})
+
+		It("succeeds with application credential id and secret", func() {
+			cpiConfig, err := NewConfigFromPath(fileSystem, "some/path/application_credential_config.json")
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(cpiConfig.Cloud.Properties.Openstack.ApplicationCredentialID).To(Equal("the_application_credential_id"))
+			Expect(cpiConfig.Cloud.Properties.Openstack.ApplicationCredentialSecret).To(Equal("the_application_credential_secret"))
+		})
+	})
+
+	Context("AuthOptions", func() {
+		It("configures AuthOptions with username and password", func() {
+			cpiConfig, err := NewConfigFromPath(fileSystem, "some/path/username_api_key_config.json")
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(cpiConfig.Cloud.Properties.Openstack.AuthOptions().IdentityEndpoint).To(Equal("the_auth_url"))
+			Expect(cpiConfig.Cloud.Properties.Openstack.AuthOptions().Username).To(Equal("the_username"))
+			Expect(cpiConfig.Cloud.Properties.Openstack.AuthOptions().Password).To(Equal("the_api_key"))
+			Expect(cpiConfig.Cloud.Properties.Openstack.AuthOptions().DomainName).To(Equal("the_domain"))
+			Expect(cpiConfig.Cloud.Properties.Openstack.AuthOptions().TenantName).To(Equal("the_project"))
+		})
+
+		It("configures AuthOptions with application credential id and secret", func() {
+			cpiConfig, err := NewConfigFromPath(fileSystem, "some/path/application_credential_config.json")
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(cpiConfig.Cloud.Properties.Openstack.AuthOptions().IdentityEndpoint).To(Equal("the_auth_url"))
+			Expect(cpiConfig.Cloud.Properties.Openstack.AuthOptions().ApplicationCredentialID).To(Equal("the_application_credential_id"))
+			Expect(cpiConfig.Cloud.Properties.Openstack.AuthOptions().ApplicationCredentialSecret).To(Equal("the_application_credential_secret"))
+		})
 	})
 })

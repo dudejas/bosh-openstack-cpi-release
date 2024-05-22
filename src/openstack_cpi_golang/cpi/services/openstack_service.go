@@ -25,7 +25,7 @@ func NewOpenstackService(openstackFacade facades.OpenstackFacade, envVar utils.E
 }
 
 func (c openstackService) ImageServiceV2(config config.OpenstackConfig) (*gophercloud.ServiceClient, error) {
-	authenticatedClient, err := c.authenticate(config)
+	authenticatedClient, err := c.openstackFacade.AuthenticatedClient(config.AuthOptions())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create image service, authentication failed: %w", err)
 	}
@@ -34,16 +34,4 @@ func (c openstackService) ImageServiceV2(config config.OpenstackConfig) (*gopher
 		Region: c.envVar.Get("OS_REGION_NAME"),
 	}
 	return c.openstackFacade.NewImageServiceV2(authenticatedClient, endpointOpts)
-}
-
-func (c openstackService) authenticate(config config.OpenstackConfig) (*gophercloud.ProviderClient, error) {
-	opts := gophercloud.AuthOptions{
-		IdentityEndpoint: config.AuthURL,
-		Username:         config.Username,
-		Password:         config.APIKey,
-		DomainName:       config.DomainName,
-		TenantName:       config.ProjectName,
-	}
-
-	return c.openstackFacade.AuthenticatedClient(opts)
 }

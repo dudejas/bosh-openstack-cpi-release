@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/gophercloud/gophercloud"
 	"io"
 	"io/fs"
 	"strings"
@@ -20,6 +21,8 @@ type OpenstackConfig struct {
 	AuthURL                      string   `json:"auth_url"`
 	Username                     string   `json:"username"`
 	APIKey                       string   `json:"api_key"`
+	ApplicationCredentialID      string   `json:"application_credential_id"`
+	ApplicationCredentialSecret  string   `json:"application_credential_secret"`
 	Region                       string   `json:"region"`
 	EndpointType                 string   `json:"endpoint_type"`
 	DefaultKeyName               string   `json:"default_key_name"`
@@ -54,10 +57,38 @@ func (cpiConfig CpiConfig) Validate() error {
 	return nil
 }
 
-func (openstackConfig OpenstackConfig) Validate() error {
-	// do validation here
-
+func (o OpenstackConfig) Validate() error {
+	if !((o.usernameIsSet() && !o.applicationCredentialIsSet()) ||
+		(!o.usernameIsSet() && o.applicationCredentialIsSet())) {
+		return fmt.Errorf("'Invalid OpenStack cloud properties: username and api_key or application_credential_id and application_credential_secret is required'")
+	}
 	return nil
+}
+
+func (o OpenstackConfig) AuthOptions() gophercloud.AuthOptions {
+	if o.usernameIsSet() {
+		return gophercloud.AuthOptions{
+			IdentityEndpoint: o.AuthURL,
+			Username:         o.Username,
+			Password:         o.APIKey,
+			DomainName:       o.DomainName,
+			TenantName:       o.ProjectName,
+		}
+	} else {
+		return gophercloud.AuthOptions{
+			IdentityEndpoint:            o.AuthURL,
+			ApplicationCredentialID:     o.ApplicationCredentialID,
+			ApplicationCredentialSecret: o.ApplicationCredentialSecret,
+		}
+	}
+}
+
+func (o OpenstackConfig) usernameIsSet() bool {
+	return o.Username != "" && o.APIKey != ""
+}
+
+func (o OpenstackConfig) applicationCredentialIsSet() bool {
+	return o.ApplicationCredentialID != "" && o.ApplicationCredentialSecret != ""
 }
 
 func NewConfigFromPath(filesystem fs.FS, path string) (CpiConfig, error) {
