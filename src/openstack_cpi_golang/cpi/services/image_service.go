@@ -3,6 +3,11 @@ package services
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"strconv"
+
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/clients"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
@@ -10,10 +15,6 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/imageservice/v2/images"
-	"io"
-	"net/http"
-	"os"
-	"strconv"
 )
 
 //counterfeiter:generate . ImageService
@@ -30,6 +31,10 @@ type ImageService interface {
 	UploadImage(
 		imageID string,
 		imageFilePath string,
+	) error
+
+	DeleteImage(
+		imageID string,
 	) error
 }
 
@@ -58,8 +63,7 @@ func (c imageService) CreateImage(cloudProps properties.CreateStemcell, config c
 		Properties:      c.getProperties(cloudProps),
 	}
 
-	r := c.imagesFacade.Create(c.serviceClient, createOpts)
-	image, err := r.Extract()
+	image, err := c.imagesFacade.Create(c.serviceClient, createOpts)
 	if err != nil {
 		return "", fmt.Errorf("failed to create image: %w", err)
 	}
@@ -71,8 +75,7 @@ func (c imageService) GetImage(imageID string) (string, error) {
 	serviceClient := c.serviceClient
 	serviceClient.RetryFunc = RetryOnError(c.logger)
 
-	getResult := c.imagesFacade.Get(serviceClient, imageID)
-	image, err := getResult.Extract()
+	image, err := c.imagesFacade.Get(serviceClient, imageID)
 	if err != nil {
 		return "", fmt.Errorf("could not find the image %s, that is referenced by the light stemcell, in OpenStack: %w", imageID, err)
 	}
@@ -116,6 +119,17 @@ func (c imageService) UploadImage(imageID string, imageFilePath string) error {
 			errMessage += fmt.Sprintf("response-status: '%s', response-body:'%s'\n", resp.Status, string(bodyBytes))
 		}
 		return fmt.Errorf("failed to upload stemcell image to %s, %s", imageURL, errMessage)
+	}
+	return nil
+}
+
+func (c imageService) DeleteImage(imageID string) error {
+	serviceClient := c.serviceClient
+	serviceClient.RetryFunc = RetryOnError(c.logger)
+
+	err := c.imagesFacade.Delete(serviceClient, imageID)
+	if err != nil {
+		return fmt.Errorf("could not delete the image %s, due to the following: %w", imageID, err)
 	}
 	return nil
 }

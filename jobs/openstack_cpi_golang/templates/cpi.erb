@@ -3,7 +3,7 @@
 set -e
 
 BOSH_JOBS_DIR=${BOSH_JOBS_DIR:-/var/vcap/jobs}
-GOLANG_CPI_CALLS=("info", "create_stemcell")
+GOLANG_CPI_CALLS=("info", "create_stemcell", "delete_stemcell")
 REGEXP="\"method\":\"([^\"]*)\""
 
 STDIN=$(cat /dev/stdin)

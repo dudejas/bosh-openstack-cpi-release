@@ -64,7 +64,10 @@ func (cpiFactory Factory) New(ctx apiv1.CallContext) (apiv1.CPI, error) {
 			cpiFactory.openstackConfig,
 			cpiFactory.logger,
 		),
-		methods.NewDeleteStemcellMethod(),
+		methods.NewDeleteStemcellMethod(
+			services.NewServiceFactory(openstackService, openstackConfig, cpiFactory.logger),
+			cpiFactory.logger,
+		),
 
 		methods.NewCreateVMMethod(
 			services.NewServiceFactory(openstackService, openstackConfig, cpiFactory.logger),

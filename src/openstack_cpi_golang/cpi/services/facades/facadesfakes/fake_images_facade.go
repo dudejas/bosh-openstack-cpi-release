@@ -10,35 +10,51 @@ import (
 )
 
 type FakeImagesFacade struct {
-	CreateStub        func(*gophercloud.ServiceClient, images.CreateOptsBuilder) images.CreateResult
+	CreateStub        func(*gophercloud.ServiceClient, images.CreateOptsBuilder) (*images.Image, error)
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
 		arg1 *gophercloud.ServiceClient
 		arg2 images.CreateOptsBuilder
 	}
 	createReturns struct {
-		result1 images.CreateResult
+		result1 *images.Image
+		result2 error
 	}
 	createReturnsOnCall map[int]struct {
-		result1 images.CreateResult
+		result1 *images.Image
+		result2 error
 	}
-	GetStub        func(*gophercloud.ServiceClient, string) images.GetResult
+	DeleteStub        func(*gophercloud.ServiceClient, string) error
+	deleteMutex       sync.RWMutex
+	deleteArgsForCall []struct {
+		arg1 *gophercloud.ServiceClient
+		arg2 string
+	}
+	deleteReturns struct {
+		result1 error
+	}
+	deleteReturnsOnCall map[int]struct {
+		result1 error
+	}
+	GetStub        func(*gophercloud.ServiceClient, string) (*images.Image, error)
 	getMutex       sync.RWMutex
 	getArgsForCall []struct {
 		arg1 *gophercloud.ServiceClient
 		arg2 string
 	}
 	getReturns struct {
-		result1 images.GetResult
+		result1 *images.Image
+		result2 error
 	}
 	getReturnsOnCall map[int]struct {
-		result1 images.GetResult
+		result1 *images.Image
+		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeImagesFacade) Create(arg1 *gophercloud.ServiceClient, arg2 images.CreateOptsBuilder) images.CreateResult {
+func (fake *FakeImagesFacade) Create(arg1 *gophercloud.ServiceClient, arg2 images.CreateOptsBuilder) (*images.Image, error) {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
@@ -53,9 +69,9 @@ func (fake *FakeImagesFacade) Create(arg1 *gophercloud.ServiceClient, arg2 image
 		return stub(arg1, arg2)
 	}
 	if specificReturn {
-		return ret.result1
+		return ret.result1, ret.result2
 	}
-	return fakeReturns.result1
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeImagesFacade) CreateCallCount() int {
@@ -64,7 +80,7 @@ func (fake *FakeImagesFacade) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
-func (fake *FakeImagesFacade) CreateCalls(stub func(*gophercloud.ServiceClient, images.CreateOptsBuilder) images.CreateResult) {
+func (fake *FakeImagesFacade) CreateCalls(stub func(*gophercloud.ServiceClient, images.CreateOptsBuilder) (*images.Image, error)) {
 	fake.createMutex.Lock()
 	defer fake.createMutex.Unlock()
 	fake.CreateStub = stub
@@ -77,30 +93,95 @@ func (fake *FakeImagesFacade) CreateArgsForCall(i int) (*gophercloud.ServiceClie
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeImagesFacade) CreateReturns(result1 images.CreateResult) {
+func (fake *FakeImagesFacade) CreateReturns(result1 *images.Image, result2 error) {
 	fake.createMutex.Lock()
 	defer fake.createMutex.Unlock()
 	fake.CreateStub = nil
 	fake.createReturns = struct {
-		result1 images.CreateResult
-	}{result1}
+		result1 *images.Image
+		result2 error
+	}{result1, result2}
 }
 
-func (fake *FakeImagesFacade) CreateReturnsOnCall(i int, result1 images.CreateResult) {
+func (fake *FakeImagesFacade) CreateReturnsOnCall(i int, result1 *images.Image, result2 error) {
 	fake.createMutex.Lock()
 	defer fake.createMutex.Unlock()
 	fake.CreateStub = nil
 	if fake.createReturnsOnCall == nil {
 		fake.createReturnsOnCall = make(map[int]struct {
-			result1 images.CreateResult
+			result1 *images.Image
+			result2 error
 		})
 	}
 	fake.createReturnsOnCall[i] = struct {
-		result1 images.CreateResult
+		result1 *images.Image
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeImagesFacade) Delete(arg1 *gophercloud.ServiceClient, arg2 string) error {
+	fake.deleteMutex.Lock()
+	ret, specificReturn := fake.deleteReturnsOnCall[len(fake.deleteArgsForCall)]
+	fake.deleteArgsForCall = append(fake.deleteArgsForCall, struct {
+		arg1 *gophercloud.ServiceClient
+		arg2 string
+	}{arg1, arg2})
+	stub := fake.DeleteStub
+	fakeReturns := fake.deleteReturns
+	fake.recordInvocation("Delete", []interface{}{arg1, arg2})
+	fake.deleteMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeImagesFacade) DeleteCallCount() int {
+	fake.deleteMutex.RLock()
+	defer fake.deleteMutex.RUnlock()
+	return len(fake.deleteArgsForCall)
+}
+
+func (fake *FakeImagesFacade) DeleteCalls(stub func(*gophercloud.ServiceClient, string) error) {
+	fake.deleteMutex.Lock()
+	defer fake.deleteMutex.Unlock()
+	fake.DeleteStub = stub
+}
+
+func (fake *FakeImagesFacade) DeleteArgsForCall(i int) (*gophercloud.ServiceClient, string) {
+	fake.deleteMutex.RLock()
+	defer fake.deleteMutex.RUnlock()
+	argsForCall := fake.deleteArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeImagesFacade) DeleteReturns(result1 error) {
+	fake.deleteMutex.Lock()
+	defer fake.deleteMutex.Unlock()
+	fake.DeleteStub = nil
+	fake.deleteReturns = struct {
+		result1 error
 	}{result1}
 }
 
-func (fake *FakeImagesFacade) Get(arg1 *gophercloud.ServiceClient, arg2 string) images.GetResult {
+func (fake *FakeImagesFacade) DeleteReturnsOnCall(i int, result1 error) {
+	fake.deleteMutex.Lock()
+	defer fake.deleteMutex.Unlock()
+	fake.DeleteStub = nil
+	if fake.deleteReturnsOnCall == nil {
+		fake.deleteReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.deleteReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeImagesFacade) Get(arg1 *gophercloud.ServiceClient, arg2 string) (*images.Image, error) {
 	fake.getMutex.Lock()
 	ret, specificReturn := fake.getReturnsOnCall[len(fake.getArgsForCall)]
 	fake.getArgsForCall = append(fake.getArgsForCall, struct {
@@ -115,9 +196,9 @@ func (fake *FakeImagesFacade) Get(arg1 *gophercloud.ServiceClient, arg2 string) 
 		return stub(arg1, arg2)
 	}
 	if specificReturn {
-		return ret.result1
+		return ret.result1, ret.result2
 	}
-	return fakeReturns.result1
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeImagesFacade) GetCallCount() int {
@@ -126,7 +207,7 @@ func (fake *FakeImagesFacade) GetCallCount() int {
 	return len(fake.getArgsForCall)
 }
 
-func (fake *FakeImagesFacade) GetCalls(stub func(*gophercloud.ServiceClient, string) images.GetResult) {
+func (fake *FakeImagesFacade) GetCalls(stub func(*gophercloud.ServiceClient, string) (*images.Image, error)) {
 	fake.getMutex.Lock()
 	defer fake.getMutex.Unlock()
 	fake.GetStub = stub
@@ -139,27 +220,30 @@ func (fake *FakeImagesFacade) GetArgsForCall(i int) (*gophercloud.ServiceClient,
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeImagesFacade) GetReturns(result1 images.GetResult) {
+func (fake *FakeImagesFacade) GetReturns(result1 *images.Image, result2 error) {
 	fake.getMutex.Lock()
 	defer fake.getMutex.Unlock()
 	fake.GetStub = nil
 	fake.getReturns = struct {
-		result1 images.GetResult
-	}{result1}
+		result1 *images.Image
+		result2 error
+	}{result1, result2}
 }
 
-func (fake *FakeImagesFacade) GetReturnsOnCall(i int, result1 images.GetResult) {
+func (fake *FakeImagesFacade) GetReturnsOnCall(i int, result1 *images.Image, result2 error) {
 	fake.getMutex.Lock()
 	defer fake.getMutex.Unlock()
 	fake.GetStub = nil
 	if fake.getReturnsOnCall == nil {
 		fake.getReturnsOnCall = make(map[int]struct {
-			result1 images.GetResult
+			result1 *images.Image
+			result2 error
 		})
 	}
 	fake.getReturnsOnCall[i] = struct {
-		result1 images.GetResult
-	}{result1}
+		result1 *images.Image
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeImagesFacade) Invocations() map[string][][]interface{} {
@@ -167,6 +251,8 @@ func (fake *FakeImagesFacade) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
+	fake.deleteMutex.RLock()
+	defer fake.deleteMutex.RUnlock()
 	fake.getMutex.RLock()
 	defer fake.getMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

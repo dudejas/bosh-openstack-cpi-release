@@ -7,9 +7,11 @@ import (
 
 //counterfeiter:generate . ImagesFacade
 type ImagesFacade interface {
-	Create(client *gophercloud.ServiceClient, opts images.CreateOptsBuilder) (r images.CreateResult)
+	Create(client *gophercloud.ServiceClient, opts images.CreateOptsBuilder) (*images.Image, error)
 
-	Get(client *gophercloud.ServiceClient, id string) (r images.GetResult)
+	Get(client *gophercloud.ServiceClient, id string) (*images.Image, error)
+
+	Delete(client *gophercloud.ServiceClient, id string) error
 }
 
 type imagesFacade struct{}
@@ -18,10 +20,14 @@ func NewImagesFacade() ImagesFacade {
 	return imagesFacade{}
 }
 
-func (c imagesFacade) Create(serviceClient *gophercloud.ServiceClient, createOpts images.CreateOptsBuilder) (r images.CreateResult) {
-	return images.Create(serviceClient, createOpts)
+func (c imagesFacade) Create(serviceClient *gophercloud.ServiceClient, createOpts images.CreateOptsBuilder) (*images.Image, error) {
+	return images.Create(serviceClient, createOpts).Extract()
 }
 
-func (c imagesFacade) Get(serviceClient *gophercloud.ServiceClient, id string) (r images.GetResult) {
-	return images.Get(serviceClient, id)
+func (c imagesFacade) Get(serviceClient *gophercloud.ServiceClient, id string) (*images.Image, error) {
+	return images.Get(serviceClient, id).Extract()
+}
+
+func (c imagesFacade) Delete(serviceClient *gophercloud.ServiceClient, id string) error {
+	return images.Delete(serviceClient, id).ExtractErr()
 }

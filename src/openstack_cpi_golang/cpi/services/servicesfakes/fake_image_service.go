@@ -24,6 +24,17 @@ type FakeImageService struct {
 		result1 string
 		result2 error
 	}
+	DeleteImageStub        func(string) error
+	deleteImageMutex       sync.RWMutex
+	deleteImageArgsForCall []struct {
+		arg1 string
+	}
+	deleteImageReturns struct {
+		result1 error
+	}
+	deleteImageReturnsOnCall map[int]struct {
+		result1 error
+	}
 	GetImageStub        func(string) (string, error)
 	getImageMutex       sync.RWMutex
 	getImageArgsForCall []struct {
@@ -116,6 +127,67 @@ func (fake *FakeImageService) CreateImageReturnsOnCall(i int, result1 string, re
 		result1 string
 		result2 error
 	}{result1, result2}
+}
+
+func (fake *FakeImageService) DeleteImage(arg1 string) error {
+	fake.deleteImageMutex.Lock()
+	ret, specificReturn := fake.deleteImageReturnsOnCall[len(fake.deleteImageArgsForCall)]
+	fake.deleteImageArgsForCall = append(fake.deleteImageArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.DeleteImageStub
+	fakeReturns := fake.deleteImageReturns
+	fake.recordInvocation("DeleteImage", []interface{}{arg1})
+	fake.deleteImageMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeImageService) DeleteImageCallCount() int {
+	fake.deleteImageMutex.RLock()
+	defer fake.deleteImageMutex.RUnlock()
+	return len(fake.deleteImageArgsForCall)
+}
+
+func (fake *FakeImageService) DeleteImageCalls(stub func(string) error) {
+	fake.deleteImageMutex.Lock()
+	defer fake.deleteImageMutex.Unlock()
+	fake.DeleteImageStub = stub
+}
+
+func (fake *FakeImageService) DeleteImageArgsForCall(i int) string {
+	fake.deleteImageMutex.RLock()
+	defer fake.deleteImageMutex.RUnlock()
+	argsForCall := fake.deleteImageArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeImageService) DeleteImageReturns(result1 error) {
+	fake.deleteImageMutex.Lock()
+	defer fake.deleteImageMutex.Unlock()
+	fake.DeleteImageStub = nil
+	fake.deleteImageReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeImageService) DeleteImageReturnsOnCall(i int, result1 error) {
+	fake.deleteImageMutex.Lock()
+	defer fake.deleteImageMutex.Unlock()
+	fake.DeleteImageStub = nil
+	if fake.deleteImageReturnsOnCall == nil {
+		fake.deleteImageReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.deleteImageReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
 }
 
 func (fake *FakeImageService) GetImage(arg1 string) (string, error) {
@@ -249,6 +321,8 @@ func (fake *FakeImageService) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.createImageMutex.RLock()
 	defer fake.createImageMutex.RUnlock()
+	fake.deleteImageMutex.RLock()
+	defer fake.deleteImageMutex.RUnlock()
 	fake.getImageMutex.RLock()
 	defer fake.getImageMutex.RUnlock()
 	fake.uploadImageMutex.RLock()
