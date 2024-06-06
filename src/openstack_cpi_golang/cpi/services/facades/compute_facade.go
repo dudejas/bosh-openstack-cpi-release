@@ -13,7 +13,9 @@ type ComputeFacade interface {
 
 	GetServer(client *gophercloud.ServiceClient, serverID string) (*servers.Server, error)
 
-	ListFlavors(client *gophercloud.ServiceClient, opts flavors.ListOptsBuilder) pagination.Pager
+	ListFlavors(client *gophercloud.ServiceClient, opts flavors.ListOptsBuilder) (pagination.Page, error)
+
+	ExtractFlavors(page pagination.Page) ([]flavors.Flavor, error)
 }
 
 type computeFacade struct {
@@ -30,6 +32,11 @@ func (c computeFacade) CreateServer(client *gophercloud.ServiceClient, opts serv
 func (c computeFacade) GetServer(client *gophercloud.ServiceClient, serverID string) (*servers.Server, error) {
 	return servers.Get(client, serverID).Extract()
 }
-func (c computeFacade) ListFlavors(client *gophercloud.ServiceClient, opts flavors.ListOptsBuilder) pagination.Pager {
-	return flavors.ListDetail(client, opts)
+
+func (c computeFacade) ListFlavors(client *gophercloud.ServiceClient, opts flavors.ListOptsBuilder) (pagination.Page, error) {
+	return flavors.ListDetail(client, opts).AllPages()
+}
+
+func (c computeFacade) ExtractFlavors(page pagination.Page) ([]flavors.Flavor, error) {
+	return flavors.ExtractFlavors(page)
 }

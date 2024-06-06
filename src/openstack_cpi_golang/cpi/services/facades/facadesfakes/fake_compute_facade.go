@@ -26,6 +26,19 @@ type FakeComputeFacade struct {
 		result1 *servers.Server
 		result2 error
 	}
+	ExtractFlavorsStub        func(pagination.Page) ([]flavors.Flavor, error)
+	extractFlavorsMutex       sync.RWMutex
+	extractFlavorsArgsForCall []struct {
+		arg1 pagination.Page
+	}
+	extractFlavorsReturns struct {
+		result1 []flavors.Flavor
+		result2 error
+	}
+	extractFlavorsReturnsOnCall map[int]struct {
+		result1 []flavors.Flavor
+		result2 error
+	}
 	GetServerStub        func(*gophercloud.ServiceClient, string) (*servers.Server, error)
 	getServerMutex       sync.RWMutex
 	getServerArgsForCall []struct {
@@ -40,17 +53,19 @@ type FakeComputeFacade struct {
 		result1 *servers.Server
 		result2 error
 	}
-	ListFlavorsStub        func(*gophercloud.ServiceClient, flavors.ListOptsBuilder) pagination.Pager
+	ListFlavorsStub        func(*gophercloud.ServiceClient, flavors.ListOptsBuilder) (pagination.Page, error)
 	listFlavorsMutex       sync.RWMutex
 	listFlavorsArgsForCall []struct {
 		arg1 *gophercloud.ServiceClient
 		arg2 flavors.ListOptsBuilder
 	}
 	listFlavorsReturns struct {
-		result1 pagination.Pager
+		result1 pagination.Page
+		result2 error
 	}
 	listFlavorsReturnsOnCall map[int]struct {
-		result1 pagination.Pager
+		result1 pagination.Page
+		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -121,6 +136,70 @@ func (fake *FakeComputeFacade) CreateServerReturnsOnCall(i int, result1 *servers
 	}{result1, result2}
 }
 
+func (fake *FakeComputeFacade) ExtractFlavors(arg1 pagination.Page) ([]flavors.Flavor, error) {
+	fake.extractFlavorsMutex.Lock()
+	ret, specificReturn := fake.extractFlavorsReturnsOnCall[len(fake.extractFlavorsArgsForCall)]
+	fake.extractFlavorsArgsForCall = append(fake.extractFlavorsArgsForCall, struct {
+		arg1 pagination.Page
+	}{arg1})
+	stub := fake.ExtractFlavorsStub
+	fakeReturns := fake.extractFlavorsReturns
+	fake.recordInvocation("ExtractFlavors", []interface{}{arg1})
+	fake.extractFlavorsMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeComputeFacade) ExtractFlavorsCallCount() int {
+	fake.extractFlavorsMutex.RLock()
+	defer fake.extractFlavorsMutex.RUnlock()
+	return len(fake.extractFlavorsArgsForCall)
+}
+
+func (fake *FakeComputeFacade) ExtractFlavorsCalls(stub func(pagination.Page) ([]flavors.Flavor, error)) {
+	fake.extractFlavorsMutex.Lock()
+	defer fake.extractFlavorsMutex.Unlock()
+	fake.ExtractFlavorsStub = stub
+}
+
+func (fake *FakeComputeFacade) ExtractFlavorsArgsForCall(i int) pagination.Page {
+	fake.extractFlavorsMutex.RLock()
+	defer fake.extractFlavorsMutex.RUnlock()
+	argsForCall := fake.extractFlavorsArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeComputeFacade) ExtractFlavorsReturns(result1 []flavors.Flavor, result2 error) {
+	fake.extractFlavorsMutex.Lock()
+	defer fake.extractFlavorsMutex.Unlock()
+	fake.ExtractFlavorsStub = nil
+	fake.extractFlavorsReturns = struct {
+		result1 []flavors.Flavor
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeComputeFacade) ExtractFlavorsReturnsOnCall(i int, result1 []flavors.Flavor, result2 error) {
+	fake.extractFlavorsMutex.Lock()
+	defer fake.extractFlavorsMutex.Unlock()
+	fake.ExtractFlavorsStub = nil
+	if fake.extractFlavorsReturnsOnCall == nil {
+		fake.extractFlavorsReturnsOnCall = make(map[int]struct {
+			result1 []flavors.Flavor
+			result2 error
+		})
+	}
+	fake.extractFlavorsReturnsOnCall[i] = struct {
+		result1 []flavors.Flavor
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeComputeFacade) GetServer(arg1 *gophercloud.ServiceClient, arg2 string) (*servers.Server, error) {
 	fake.getServerMutex.Lock()
 	ret, specificReturn := fake.getServerReturnsOnCall[len(fake.getServerArgsForCall)]
@@ -186,7 +265,7 @@ func (fake *FakeComputeFacade) GetServerReturnsOnCall(i int, result1 *servers.Se
 	}{result1, result2}
 }
 
-func (fake *FakeComputeFacade) ListFlavors(arg1 *gophercloud.ServiceClient, arg2 flavors.ListOptsBuilder) pagination.Pager {
+func (fake *FakeComputeFacade) ListFlavors(arg1 *gophercloud.ServiceClient, arg2 flavors.ListOptsBuilder) (pagination.Page, error) {
 	fake.listFlavorsMutex.Lock()
 	ret, specificReturn := fake.listFlavorsReturnsOnCall[len(fake.listFlavorsArgsForCall)]
 	fake.listFlavorsArgsForCall = append(fake.listFlavorsArgsForCall, struct {
@@ -201,9 +280,9 @@ func (fake *FakeComputeFacade) ListFlavors(arg1 *gophercloud.ServiceClient, arg2
 		return stub(arg1, arg2)
 	}
 	if specificReturn {
-		return ret.result1
+		return ret.result1, ret.result2
 	}
-	return fakeReturns.result1
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeComputeFacade) ListFlavorsCallCount() int {
@@ -212,7 +291,7 @@ func (fake *FakeComputeFacade) ListFlavorsCallCount() int {
 	return len(fake.listFlavorsArgsForCall)
 }
 
-func (fake *FakeComputeFacade) ListFlavorsCalls(stub func(*gophercloud.ServiceClient, flavors.ListOptsBuilder) pagination.Pager) {
+func (fake *FakeComputeFacade) ListFlavorsCalls(stub func(*gophercloud.ServiceClient, flavors.ListOptsBuilder) (pagination.Page, error)) {
 	fake.listFlavorsMutex.Lock()
 	defer fake.listFlavorsMutex.Unlock()
 	fake.ListFlavorsStub = stub
@@ -225,27 +304,30 @@ func (fake *FakeComputeFacade) ListFlavorsArgsForCall(i int) (*gophercloud.Servi
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeComputeFacade) ListFlavorsReturns(result1 pagination.Pager) {
+func (fake *FakeComputeFacade) ListFlavorsReturns(result1 pagination.Page, result2 error) {
 	fake.listFlavorsMutex.Lock()
 	defer fake.listFlavorsMutex.Unlock()
 	fake.ListFlavorsStub = nil
 	fake.listFlavorsReturns = struct {
-		result1 pagination.Pager
-	}{result1}
+		result1 pagination.Page
+		result2 error
+	}{result1, result2}
 }
 
-func (fake *FakeComputeFacade) ListFlavorsReturnsOnCall(i int, result1 pagination.Pager) {
+func (fake *FakeComputeFacade) ListFlavorsReturnsOnCall(i int, result1 pagination.Page, result2 error) {
 	fake.listFlavorsMutex.Lock()
 	defer fake.listFlavorsMutex.Unlock()
 	fake.ListFlavorsStub = nil
 	if fake.listFlavorsReturnsOnCall == nil {
 		fake.listFlavorsReturnsOnCall = make(map[int]struct {
-			result1 pagination.Pager
+			result1 pagination.Page
+			result2 error
 		})
 	}
 	fake.listFlavorsReturnsOnCall[i] = struct {
-		result1 pagination.Pager
-	}{result1}
+		result1 pagination.Page
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeComputeFacade) Invocations() map[string][][]interface{} {
@@ -253,6 +335,8 @@ func (fake *FakeComputeFacade) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.createServerMutex.RLock()
 	defer fake.createServerMutex.RUnlock()
+	fake.extractFlavorsMutex.RLock()
+	defer fake.extractFlavorsMutex.RUnlock()
 	fake.getServerMutex.RLock()
 	defer fake.getServerMutex.RUnlock()
 	fake.listFlavorsMutex.RLock()

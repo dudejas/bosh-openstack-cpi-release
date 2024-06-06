@@ -153,7 +153,7 @@ var _ = Describe("CreateVMMethod", func() {
 				apiv1.VMEnv{},
 			)
 
-			stemcellCID, _, _, _, _ := computeService.CreateServerArgsForCall(0)
+			stemcellCID, _, _, _ := computeService.CreateServerArgsForCall(0)
 			Expect(stemcellCID.AsString()).To(Equal("stemcell-id"))
 		})
 

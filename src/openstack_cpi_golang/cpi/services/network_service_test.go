@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services/facades/facadesfakes"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services/servicesmocks"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils/utilsfakes"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/vm"
 	"github.com/gophercloud/gophercloud"
@@ -13,33 +14,21 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-type MockPage struct{}
-
-func (m MockPage) NextPageURL() (string, error) {
-	return "", nil
-}
-func (m MockPage) IsEmpty() (bool, error) {
-	return false, nil
-}
-func (m MockPage) GetBody() interface{} {
-	return nil
-}
-
 var _ = Describe("NetworkService", func() {
 	var networkConfig vm.NetworkConfig
 	var serviceClient gophercloud.ServiceClient
 	var networkingFacade facadesfakes.FakeNetworkingFacade
 	var logger utilsfakes.FakeLogger
-	var floatingIpPage MockPage
-	var portPage MockPage
+	var floatingIpPage servicesmocks.MockPage
+	var portPage servicesmocks.MockPage
 
 	BeforeEach(func() {
 		providerClient := gophercloud.ProviderClient{TokenID: "the_token"}
 		serviceClient = gophercloud.ServiceClient{ProviderClient: &providerClient}
 		networkingFacade = facadesfakes.FakeNetworkingFacade{}
 		logger = utilsfakes.FakeLogger{}
-		floatingIpPage = MockPage{}
-		portPage = MockPage{}
+		floatingIpPage = servicesmocks.MockPage{}
+		portPage = servicesmocks.MockPage{}
 
 		networkingFacade.ListFloatingIpsReturns(floatingIpPage, nil)
 		networkingFacade.ExtractFloatingIPsReturns([]floatingips.FloatingIP{{ID: "the_floating_ip_id"}}, nil)

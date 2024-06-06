@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 )
 
-var _ = Describe("OpenStack Integration", func() {
+var _ = Describe("Create Stemcell", func() {
 	var count int64
 
 	BeforeEach(func() {
@@ -19,10 +19,10 @@ var _ = Describe("OpenStack Integration", func() {
 		Mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, `{
 				"versions": {"values": [
-					{"status": "stable","id": "v3.0","links": [{ "href": "%s", "rel": "self" }]},
-					{"status": "stable","id": "v2.0","links": [{ "href": "%s", "rel": "self" }]}
+					{"status": "stable","id": "v3.0","links": [{ "href": "%s/v3", "rel": "self" }]},
+					{"status": "stable","id": "v2.0","links": [{ "href": "%s/v2.0", "rel": "self" }]}
 				]}
-			}`, Endpoint()+"v3/", Endpoint()+"v2.0/")
+			}`, Endpoint(), Endpoint())
 		})
 
 		Mux.HandleFunc("/v3/auth/tokens", func(w http.ResponseWriter, r *http.Request) {

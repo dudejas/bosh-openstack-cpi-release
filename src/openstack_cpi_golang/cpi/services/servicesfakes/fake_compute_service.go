@@ -12,14 +12,13 @@ import (
 )
 
 type FakeComputeService struct {
-	CreateServerStub        func(apiv1.StemcellCID, properties.CreateVM, vm.NetworkConfig, config.OpenstackConfig, vm.InstanceTypeResolver) (string, error)
+	CreateServerStub        func(apiv1.StemcellCID, properties.CreateVM, vm.NetworkConfig, config.OpenstackConfig) (string, error)
 	createServerMutex       sync.RWMutex
 	createServerArgsForCall []struct {
 		arg1 apiv1.StemcellCID
 		arg2 properties.CreateVM
 		arg3 vm.NetworkConfig
 		arg4 config.OpenstackConfig
-		arg5 vm.InstanceTypeResolver
 	}
 	createServerReturns struct {
 		result1 string
@@ -33,7 +32,7 @@ type FakeComputeService struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeComputeService) CreateServer(arg1 apiv1.StemcellCID, arg2 properties.CreateVM, arg3 vm.NetworkConfig, arg4 config.OpenstackConfig, arg5 vm.InstanceTypeResolver) (string, error) {
+func (fake *FakeComputeService) CreateServer(arg1 apiv1.StemcellCID, arg2 properties.CreateVM, arg3 vm.NetworkConfig, arg4 config.OpenstackConfig) (string, error) {
 	fake.createServerMutex.Lock()
 	ret, specificReturn := fake.createServerReturnsOnCall[len(fake.createServerArgsForCall)]
 	fake.createServerArgsForCall = append(fake.createServerArgsForCall, struct {
@@ -41,14 +40,13 @@ func (fake *FakeComputeService) CreateServer(arg1 apiv1.StemcellCID, arg2 proper
 		arg2 properties.CreateVM
 		arg3 vm.NetworkConfig
 		arg4 config.OpenstackConfig
-		arg5 vm.InstanceTypeResolver
-	}{arg1, arg2, arg3, arg4, arg5})
+	}{arg1, arg2, arg3, arg4})
 	stub := fake.CreateServerStub
 	fakeReturns := fake.createServerReturns
-	fake.recordInvocation("CreateServer", []interface{}{arg1, arg2, arg3, arg4, arg5})
+	fake.recordInvocation("CreateServer", []interface{}{arg1, arg2, arg3, arg4})
 	fake.createServerMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3, arg4, arg5)
+		return stub(arg1, arg2, arg3, arg4)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -62,17 +60,17 @@ func (fake *FakeComputeService) CreateServerCallCount() int {
 	return len(fake.createServerArgsForCall)
 }
 
-func (fake *FakeComputeService) CreateServerCalls(stub func(apiv1.StemcellCID, properties.CreateVM, vm.NetworkConfig, config.OpenstackConfig, vm.InstanceTypeResolver) (string, error)) {
+func (fake *FakeComputeService) CreateServerCalls(stub func(apiv1.StemcellCID, properties.CreateVM, vm.NetworkConfig, config.OpenstackConfig) (string, error)) {
 	fake.createServerMutex.Lock()
 	defer fake.createServerMutex.Unlock()
 	fake.CreateServerStub = stub
 }
 
-func (fake *FakeComputeService) CreateServerArgsForCall(i int) (apiv1.StemcellCID, properties.CreateVM, vm.NetworkConfig, config.OpenstackConfig, vm.InstanceTypeResolver) {
+func (fake *FakeComputeService) CreateServerArgsForCall(i int) (apiv1.StemcellCID, properties.CreateVM, vm.NetworkConfig, config.OpenstackConfig) {
 	fake.createServerMutex.RLock()
 	defer fake.createServerMutex.RUnlock()
 	argsForCall := fake.createServerArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
 func (fake *FakeComputeService) CreateServerReturns(result1 string, result2 error) {

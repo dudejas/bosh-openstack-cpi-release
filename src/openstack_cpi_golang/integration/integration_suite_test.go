@@ -69,7 +69,7 @@ func SetupHTTP() {
 }
 
 func Endpoint() string {
-	return Server.URL + "/"
+	return Server.URL
 }
 
 func TeardownHTTP() {

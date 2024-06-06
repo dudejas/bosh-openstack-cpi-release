@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"time"
 )
@@ -24,7 +25,6 @@ type ComputeService interface {
 		cloudProps properties.CreateVM,
 		networkConfig vm.NetworkConfig,
 		config config.OpenstackConfig,
-		instanceTypeResolver vm.InstanceTypeResolver,
 	) (string, error)
 }
 
@@ -51,9 +51,11 @@ func (c computeService) CreateServer(
 	cloudProps properties.CreateVM,
 	networkConfig vm.NetworkConfig,
 	config config.OpenstackConfig,
-	instanceTypeResolver vm.InstanceTypeResolver,
 ) (string, error) {
-	flavorRef, err := instanceTypeResolver.GetInstanceTypeFlavorID(cloudProps.InstanceType, c.serviceClient, c.computeFacade)
+	flavorRef, err := c.getInstanceTypeFlavorID(cloudProps.InstanceType, c.serviceClient, c.computeFacade)
+	if err != nil {
+		return "", fmt.Errorf("failed to get flavor of instance type: %w", err)
+	}
 
 	serverCreateOpts := servers.CreateOpts{
 		Name:             "vm-" + uuid.New().String(),
@@ -120,4 +122,44 @@ func (c computeService) waitForServerToBecomeActive(serverID string, timeout tim
 			time.Sleep(ComputeServicePollingInterval)
 		}
 	}
+}
+
+func (c computeService) getInstanceTypeFlavorID(
+	flavorName string,
+	serviceClient *gophercloud.ServiceClient,
+	computeFacade facades.ComputeFacade,
+) (string, error) {
+	flavorPages, err := computeFacade.ListFlavors(serviceClient, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to list flavors: %w", err)
+	}
+
+	allFlavors, err := computeFacade.ExtractFlavors(flavorPages)
+	if err != nil {
+		return "", fmt.Errorf("failed to extract flavors: %w", err)
+	}
+
+	var flavor *flavors.Flavor
+	for _, singleFlavor := range allFlavors {
+		if singleFlavor.Name == flavorName {
+			flavor = &singleFlavor
+			break
+		}
+	}
+
+	if flavor == nil {
+		return "", fmt.Errorf("flavor '%s' not found", flavorName)
+	}
+
+	if flavor.Ephemeral > 0 {
+		// Ephemeral disk size should be at least the double of the vm total memory size, as agent will need:
+		// - vm total memory size for swapon,
+		// - the rest for /var/vcap/data
+		minEphemeralSize := (flavor.RAM / 1024) * 2
+		if flavor.Ephemeral < minEphemeralSize {
+			return "", fmt.Errorf("flavor %s should have at least %dGb of ephemeral disk", flavorName, minEphemeralSize)
+		}
+	}
+
+	return flavor.ID, nil
 }
