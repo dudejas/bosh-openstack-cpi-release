@@ -9,8 +9,6 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services/facades/facadesfakes"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services/servicesmocks"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils/utilsfakes"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/vm"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/vm/vmfakes"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
@@ -24,7 +22,7 @@ var _ = Describe("ComputeService", func() {
 	var computeFacade facadesfakes.FakeComputeFacade
 	var logger utilsfakes.FakeLogger
 	var computeService services.ComputeService
-	var networkConfig vmfakes.FakeNetworkConfig
+	var networkConfig properties.NetworkConfig
 	var flavorsPage servicesmocks.MockPage
 
 	BeforeEach(func() {
@@ -33,7 +31,7 @@ var _ = Describe("ComputeService", func() {
 		computeFacade = facadesfakes.FakeComputeFacade{}
 		logger = utilsfakes.FakeLogger{}
 		computeService = services.NewComputeService(&serviceClient, &computeFacade, &logger)
-		networkConfig = vmfakes.FakeNetworkConfig{}
+		networkConfig = properties.NetworkConfig{}
 		flavorsPage = servicesmocks.MockPage{}
 
 		computeFacade.CreateServerReturns(&servers.Server{ID: "123-456"}, nil)
@@ -48,7 +46,7 @@ var _ = Describe("ComputeService", func() {
 			_, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "the_instance_type"},
-				&networkConfig,
+				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10},
 			)
 			Expect(err).ToNot(HaveOccurred())
@@ -62,7 +60,7 @@ var _ = Describe("ComputeService", func() {
 			_, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "the_instance_type"},
-				&networkConfig,
+				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10},
 			)
 
@@ -73,7 +71,7 @@ var _ = Describe("ComputeService", func() {
 			computeService.CreateServer(
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "the_instance_type"},
-				&networkConfig,
+				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10},
 			)
 
@@ -86,7 +84,7 @@ var _ = Describe("ComputeService", func() {
 			_, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "the_instance_type"},
-				&networkConfig,
+				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10},
 			)
 
@@ -97,7 +95,7 @@ var _ = Describe("ComputeService", func() {
 			_, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "not_existing_flavor"},
-				&networkConfig,
+				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10},
 			)
 
@@ -110,7 +108,7 @@ var _ = Describe("ComputeService", func() {
 			_, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "the_flavor_id"},
-				&networkConfig,
+				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10},
 			)
 
@@ -118,17 +116,17 @@ var _ = Describe("ComputeService", func() {
 		})
 
 		It("creates ops for the server", func() {
-			networkConfig.GetManualNetworksReturns(
-				[]vm.Network{
+			networkConfig = properties.NetworkConfig{
+				ManualNetworks: []properties.Network{
 					{IP: "1.2.3.4", CloudProps: properties.CreateVMNetwork{NetID: "the_net_id"}},
 				},
-			)
-			networkConfig.SecurityGroupsReturns([]string{"group_1", "group_2"})
+				SecurityGroups: []string{"group_1", "group_2"},
+			}
 
 			_, err := computeService.CreateServer(
 				apiv1.NewStemcellCID("the_stemcell_id"),
 				properties.CreateVM{AvailabilityZone: "the_availability_zone"},
-				&networkConfig,
+				networkConfig,
 				config.OpenstackConfig{DefaultKeyName: "the_key_name"},
 			)
 			if err != nil {
@@ -157,7 +155,7 @@ var _ = Describe("ComputeService", func() {
 			computeService.CreateServer(
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "the_instance_type"},
-				&networkConfig,
+				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10},
 			)
 
@@ -170,7 +168,7 @@ var _ = Describe("ComputeService", func() {
 			serverID, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "the_instance_type"},
-				&networkConfig,
+				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10},
 			)
 
@@ -187,7 +185,7 @@ var _ = Describe("ComputeService", func() {
 			serverID, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "the_instance_type"},
-				&networkConfig,
+				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10},
 			)
 
@@ -202,7 +200,7 @@ var _ = Describe("ComputeService", func() {
 			serverID, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "the_instance_type"},
-				&networkConfig,
+				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10},
 			)
 
@@ -216,7 +214,7 @@ var _ = Describe("ComputeService", func() {
 			serverID, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "the_instance_type"},
-				&networkConfig,
+				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10},
 			)
 
@@ -230,7 +228,7 @@ var _ = Describe("ComputeService", func() {
 			serverID, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "the_instance_type"},
-				&networkConfig,
+				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10},
 			)
 
@@ -244,7 +242,7 @@ var _ = Describe("ComputeService", func() {
 			serverID, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "the_instance_type"},
-				&networkConfig,
+				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 0},
 			)
 
@@ -256,7 +254,7 @@ var _ = Describe("ComputeService", func() {
 			serverID, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "the_instance_type"},
-				&networkConfig,
+				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10},
 			)
 

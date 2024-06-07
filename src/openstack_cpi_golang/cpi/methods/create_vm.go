@@ -58,7 +58,7 @@ func (m CreateVMMethod) CreateVMV2(
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to resolve stemcell: %w", err)
 	}
 
-	networkConfig, err := vm.NewNetworkConfig(networks)
+	networkConfig, err := vm.NewNetworkConfigBuilder(networkService, networks, m.config, cloudProps).Build()
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to create network config: %w", err)
 	}

@@ -8,16 +8,15 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/vm"
 )
 
 type FakeComputeService struct {
-	CreateServerStub        func(apiv1.StemcellCID, properties.CreateVM, vm.NetworkConfig, config.OpenstackConfig) (string, error)
+	CreateServerStub        func(apiv1.StemcellCID, properties.CreateVM, properties.NetworkConfig, config.OpenstackConfig) (string, error)
 	createServerMutex       sync.RWMutex
 	createServerArgsForCall []struct {
 		arg1 apiv1.StemcellCID
 		arg2 properties.CreateVM
-		arg3 vm.NetworkConfig
+		arg3 properties.NetworkConfig
 		arg4 config.OpenstackConfig
 	}
 	createServerReturns struct {
@@ -32,13 +31,13 @@ type FakeComputeService struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeComputeService) CreateServer(arg1 apiv1.StemcellCID, arg2 properties.CreateVM, arg3 vm.NetworkConfig, arg4 config.OpenstackConfig) (string, error) {
+func (fake *FakeComputeService) CreateServer(arg1 apiv1.StemcellCID, arg2 properties.CreateVM, arg3 properties.NetworkConfig, arg4 config.OpenstackConfig) (string, error) {
 	fake.createServerMutex.Lock()
 	ret, specificReturn := fake.createServerReturnsOnCall[len(fake.createServerArgsForCall)]
 	fake.createServerArgsForCall = append(fake.createServerArgsForCall, struct {
 		arg1 apiv1.StemcellCID
 		arg2 properties.CreateVM
-		arg3 vm.NetworkConfig
+		arg3 properties.NetworkConfig
 		arg4 config.OpenstackConfig
 	}{arg1, arg2, arg3, arg4})
 	stub := fake.CreateServerStub
@@ -60,13 +59,13 @@ func (fake *FakeComputeService) CreateServerCallCount() int {
 	return len(fake.createServerArgsForCall)
 }
 
-func (fake *FakeComputeService) CreateServerCalls(stub func(apiv1.StemcellCID, properties.CreateVM, vm.NetworkConfig, config.OpenstackConfig) (string, error)) {
+func (fake *FakeComputeService) CreateServerCalls(stub func(apiv1.StemcellCID, properties.CreateVM, properties.NetworkConfig, config.OpenstackConfig) (string, error)) {
 	fake.createServerMutex.Lock()
 	defer fake.createServerMutex.Unlock()
 	fake.CreateServerStub = stub
 }
 
-func (fake *FakeComputeService) CreateServerArgsForCall(i int) (apiv1.StemcellCID, properties.CreateVM, vm.NetworkConfig, config.OpenstackConfig) {
+func (fake *FakeComputeService) CreateServerArgsForCall(i int) (apiv1.StemcellCID, properties.CreateVM, properties.NetworkConfig, config.OpenstackConfig) {
 	fake.createServerMutex.RLock()
 	defer fake.createServerMutex.RUnlock()
 	argsForCall := fake.createServerArgsForCall[i]

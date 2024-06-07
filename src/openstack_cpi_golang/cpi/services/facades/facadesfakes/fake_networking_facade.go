@@ -7,6 +7,7 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services/facades"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 	"github.com/gophercloud/gophercloud/pagination"
 )
@@ -38,6 +39,33 @@ type FakeNetworkingFacade struct {
 		result1 []ports.Port
 		result2 error
 	}
+	ExtractSecurityGroupsStub        func(pagination.Page) ([]groups.SecGroup, error)
+	extractSecurityGroupsMutex       sync.RWMutex
+	extractSecurityGroupsArgsForCall []struct {
+		arg1 pagination.Page
+	}
+	extractSecurityGroupsReturns struct {
+		result1 []groups.SecGroup
+		result2 error
+	}
+	extractSecurityGroupsReturnsOnCall map[int]struct {
+		result1 []groups.SecGroup
+		result2 error
+	}
+	GetSecurityGroupsStub        func(*gophercloud.ServiceClient, string) (*groups.SecGroup, error)
+	getSecurityGroupsMutex       sync.RWMutex
+	getSecurityGroupsArgsForCall []struct {
+		arg1 *gophercloud.ServiceClient
+		arg2 string
+	}
+	getSecurityGroupsReturns struct {
+		result1 *groups.SecGroup
+		result2 error
+	}
+	getSecurityGroupsReturnsOnCall map[int]struct {
+		result1 *groups.SecGroup
+		result2 error
+	}
 	ListFloatingIpsStub        func(*gophercloud.ServiceClient, floatingips.ListOpts) (pagination.Page, error)
 	listFloatingIpsMutex       sync.RWMutex
 	listFloatingIpsArgsForCall []struct {
@@ -63,6 +91,20 @@ type FakeNetworkingFacade struct {
 		result2 error
 	}
 	listPortsReturnsOnCall map[int]struct {
+		result1 pagination.Page
+		result2 error
+	}
+	ListSecurityGroupsStub        func(*gophercloud.ServiceClient, groups.ListOpts) (pagination.Page, error)
+	listSecurityGroupsMutex       sync.RWMutex
+	listSecurityGroupsArgsForCall []struct {
+		arg1 *gophercloud.ServiceClient
+		arg2 groups.ListOpts
+	}
+	listSecurityGroupsReturns struct {
+		result1 pagination.Page
+		result2 error
+	}
+	listSecurityGroupsReturnsOnCall map[int]struct {
 		result1 pagination.Page
 		result2 error
 	}
@@ -213,6 +255,135 @@ func (fake *FakeNetworkingFacade) ExtractPortsReturnsOnCall(i int, result1 []por
 	}{result1, result2}
 }
 
+func (fake *FakeNetworkingFacade) ExtractSecurityGroups(arg1 pagination.Page) ([]groups.SecGroup, error) {
+	fake.extractSecurityGroupsMutex.Lock()
+	ret, specificReturn := fake.extractSecurityGroupsReturnsOnCall[len(fake.extractSecurityGroupsArgsForCall)]
+	fake.extractSecurityGroupsArgsForCall = append(fake.extractSecurityGroupsArgsForCall, struct {
+		arg1 pagination.Page
+	}{arg1})
+	stub := fake.ExtractSecurityGroupsStub
+	fakeReturns := fake.extractSecurityGroupsReturns
+	fake.recordInvocation("ExtractSecurityGroups", []interface{}{arg1})
+	fake.extractSecurityGroupsMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeNetworkingFacade) ExtractSecurityGroupsCallCount() int {
+	fake.extractSecurityGroupsMutex.RLock()
+	defer fake.extractSecurityGroupsMutex.RUnlock()
+	return len(fake.extractSecurityGroupsArgsForCall)
+}
+
+func (fake *FakeNetworkingFacade) ExtractSecurityGroupsCalls(stub func(pagination.Page) ([]groups.SecGroup, error)) {
+	fake.extractSecurityGroupsMutex.Lock()
+	defer fake.extractSecurityGroupsMutex.Unlock()
+	fake.ExtractSecurityGroupsStub = stub
+}
+
+func (fake *FakeNetworkingFacade) ExtractSecurityGroupsArgsForCall(i int) pagination.Page {
+	fake.extractSecurityGroupsMutex.RLock()
+	defer fake.extractSecurityGroupsMutex.RUnlock()
+	argsForCall := fake.extractSecurityGroupsArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeNetworkingFacade) ExtractSecurityGroupsReturns(result1 []groups.SecGroup, result2 error) {
+	fake.extractSecurityGroupsMutex.Lock()
+	defer fake.extractSecurityGroupsMutex.Unlock()
+	fake.ExtractSecurityGroupsStub = nil
+	fake.extractSecurityGroupsReturns = struct {
+		result1 []groups.SecGroup
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeNetworkingFacade) ExtractSecurityGroupsReturnsOnCall(i int, result1 []groups.SecGroup, result2 error) {
+	fake.extractSecurityGroupsMutex.Lock()
+	defer fake.extractSecurityGroupsMutex.Unlock()
+	fake.ExtractSecurityGroupsStub = nil
+	if fake.extractSecurityGroupsReturnsOnCall == nil {
+		fake.extractSecurityGroupsReturnsOnCall = make(map[int]struct {
+			result1 []groups.SecGroup
+			result2 error
+		})
+	}
+	fake.extractSecurityGroupsReturnsOnCall[i] = struct {
+		result1 []groups.SecGroup
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeNetworkingFacade) GetSecurityGroups(arg1 *gophercloud.ServiceClient, arg2 string) (*groups.SecGroup, error) {
+	fake.getSecurityGroupsMutex.Lock()
+	ret, specificReturn := fake.getSecurityGroupsReturnsOnCall[len(fake.getSecurityGroupsArgsForCall)]
+	fake.getSecurityGroupsArgsForCall = append(fake.getSecurityGroupsArgsForCall, struct {
+		arg1 *gophercloud.ServiceClient
+		arg2 string
+	}{arg1, arg2})
+	stub := fake.GetSecurityGroupsStub
+	fakeReturns := fake.getSecurityGroupsReturns
+	fake.recordInvocation("GetSecurityGroups", []interface{}{arg1, arg2})
+	fake.getSecurityGroupsMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeNetworkingFacade) GetSecurityGroupsCallCount() int {
+	fake.getSecurityGroupsMutex.RLock()
+	defer fake.getSecurityGroupsMutex.RUnlock()
+	return len(fake.getSecurityGroupsArgsForCall)
+}
+
+func (fake *FakeNetworkingFacade) GetSecurityGroupsCalls(stub func(*gophercloud.ServiceClient, string) (*groups.SecGroup, error)) {
+	fake.getSecurityGroupsMutex.Lock()
+	defer fake.getSecurityGroupsMutex.Unlock()
+	fake.GetSecurityGroupsStub = stub
+}
+
+func (fake *FakeNetworkingFacade) GetSecurityGroupsArgsForCall(i int) (*gophercloud.ServiceClient, string) {
+	fake.getSecurityGroupsMutex.RLock()
+	defer fake.getSecurityGroupsMutex.RUnlock()
+	argsForCall := fake.getSecurityGroupsArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeNetworkingFacade) GetSecurityGroupsReturns(result1 *groups.SecGroup, result2 error) {
+	fake.getSecurityGroupsMutex.Lock()
+	defer fake.getSecurityGroupsMutex.Unlock()
+	fake.GetSecurityGroupsStub = nil
+	fake.getSecurityGroupsReturns = struct {
+		result1 *groups.SecGroup
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeNetworkingFacade) GetSecurityGroupsReturnsOnCall(i int, result1 *groups.SecGroup, result2 error) {
+	fake.getSecurityGroupsMutex.Lock()
+	defer fake.getSecurityGroupsMutex.Unlock()
+	fake.GetSecurityGroupsStub = nil
+	if fake.getSecurityGroupsReturnsOnCall == nil {
+		fake.getSecurityGroupsReturnsOnCall = make(map[int]struct {
+			result1 *groups.SecGroup
+			result2 error
+		})
+	}
+	fake.getSecurityGroupsReturnsOnCall[i] = struct {
+		result1 *groups.SecGroup
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeNetworkingFacade) ListFloatingIps(arg1 *gophercloud.ServiceClient, arg2 floatingips.ListOpts) (pagination.Page, error) {
 	fake.listFloatingIpsMutex.Lock()
 	ret, specificReturn := fake.listFloatingIpsReturnsOnCall[len(fake.listFloatingIpsArgsForCall)]
@@ -343,6 +514,71 @@ func (fake *FakeNetworkingFacade) ListPortsReturnsOnCall(i int, result1 paginati
 	}{result1, result2}
 }
 
+func (fake *FakeNetworkingFacade) ListSecurityGroups(arg1 *gophercloud.ServiceClient, arg2 groups.ListOpts) (pagination.Page, error) {
+	fake.listSecurityGroupsMutex.Lock()
+	ret, specificReturn := fake.listSecurityGroupsReturnsOnCall[len(fake.listSecurityGroupsArgsForCall)]
+	fake.listSecurityGroupsArgsForCall = append(fake.listSecurityGroupsArgsForCall, struct {
+		arg1 *gophercloud.ServiceClient
+		arg2 groups.ListOpts
+	}{arg1, arg2})
+	stub := fake.ListSecurityGroupsStub
+	fakeReturns := fake.listSecurityGroupsReturns
+	fake.recordInvocation("ListSecurityGroups", []interface{}{arg1, arg2})
+	fake.listSecurityGroupsMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeNetworkingFacade) ListSecurityGroupsCallCount() int {
+	fake.listSecurityGroupsMutex.RLock()
+	defer fake.listSecurityGroupsMutex.RUnlock()
+	return len(fake.listSecurityGroupsArgsForCall)
+}
+
+func (fake *FakeNetworkingFacade) ListSecurityGroupsCalls(stub func(*gophercloud.ServiceClient, groups.ListOpts) (pagination.Page, error)) {
+	fake.listSecurityGroupsMutex.Lock()
+	defer fake.listSecurityGroupsMutex.Unlock()
+	fake.ListSecurityGroupsStub = stub
+}
+
+func (fake *FakeNetworkingFacade) ListSecurityGroupsArgsForCall(i int) (*gophercloud.ServiceClient, groups.ListOpts) {
+	fake.listSecurityGroupsMutex.RLock()
+	defer fake.listSecurityGroupsMutex.RUnlock()
+	argsForCall := fake.listSecurityGroupsArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeNetworkingFacade) ListSecurityGroupsReturns(result1 pagination.Page, result2 error) {
+	fake.listSecurityGroupsMutex.Lock()
+	defer fake.listSecurityGroupsMutex.Unlock()
+	fake.ListSecurityGroupsStub = nil
+	fake.listSecurityGroupsReturns = struct {
+		result1 pagination.Page
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeNetworkingFacade) ListSecurityGroupsReturnsOnCall(i int, result1 pagination.Page, result2 error) {
+	fake.listSecurityGroupsMutex.Lock()
+	defer fake.listSecurityGroupsMutex.Unlock()
+	fake.ListSecurityGroupsStub = nil
+	if fake.listSecurityGroupsReturnsOnCall == nil {
+		fake.listSecurityGroupsReturnsOnCall = make(map[int]struct {
+			result1 pagination.Page
+			result2 error
+		})
+	}
+	fake.listSecurityGroupsReturnsOnCall[i] = struct {
+		result1 pagination.Page
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeNetworkingFacade) UpdateFloatingIP(arg1 *gophercloud.ServiceClient, arg2 string, arg3 floatingips.UpdateOpts) (*floatingips.FloatingIP, error) {
 	fake.updateFloatingIPMutex.Lock()
 	ret, specificReturn := fake.updateFloatingIPReturnsOnCall[len(fake.updateFloatingIPArgsForCall)]
@@ -416,10 +652,16 @@ func (fake *FakeNetworkingFacade) Invocations() map[string][][]interface{} {
 	defer fake.extractFloatingIPsMutex.RUnlock()
 	fake.extractPortsMutex.RLock()
 	defer fake.extractPortsMutex.RUnlock()
+	fake.extractSecurityGroupsMutex.RLock()
+	defer fake.extractSecurityGroupsMutex.RUnlock()
+	fake.getSecurityGroupsMutex.RLock()
+	defer fake.getSecurityGroupsMutex.RUnlock()
 	fake.listFloatingIpsMutex.RLock()
 	defer fake.listFloatingIpsMutex.RUnlock()
 	fake.listPortsMutex.RLock()
 	defer fake.listPortsMutex.RUnlock()
+	fake.listSecurityGroupsMutex.RLock()
+	defer fake.listSecurityGroupsMutex.RUnlock()
 	fake.updateFloatingIPMutex.RLock()
 	defer fake.updateFloatingIPMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

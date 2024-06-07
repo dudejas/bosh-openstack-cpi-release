@@ -45,9 +45,13 @@ var _ = Describe("Create VM", func() {
 						],
 						"type": "network", 
 						"name": "neutron"
+					},{
+						"endpoints": [{"url": "%s/","interface": "public","region": "RegionOne"}],
+						"type": "image",
+						"name": "glance"
 					}]
   				}
-			}`, Endpoint(), Endpoint(), Endpoint(), Endpoint(), Endpoint(), Endpoint())
+			}`, Endpoint(), Endpoint(), Endpoint(), Endpoint(), Endpoint(), Endpoint(), Endpoint())
 		})
 
 		Mux.HandleFunc("/v2.1/servers", func(w http.ResponseWriter, r *http.Request) {
@@ -71,8 +75,30 @@ var _ = Describe("Create VM", func() {
 			}`)
 		})
 
-		Mux.HandleFunc("/v2.1/flavors/detail", func(w http.ResponseWriter, r *http.Request) {
+		Mux.HandleFunc("/v2/images/5bba0da5-dfb3-49d8-a005-d799507518f7", func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
 
+			fmt.Fprintf(w, `{
+				"status": "active",
+				"visibility": "private",
+				"id": "b2173dd3-7ad6-4362-baa6-a68bce3565cb",
+				"file": "/v2/images/b2173dd3-7ad6-4362-baa6-a68bce3565cb/file",
+				"schema": "/v2/schemas/image"
+			}`)
+		})
+
+		Mux.HandleFunc("/v2.0/security-groups/0c8a5d1a-8922-4d65-a0b2-dd78ab869e04", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Add("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+
+			fmt.Fprintf(w, `{
+				"security_group": {
+					"id": "85cc3048-abc3-43cc-89b3-377341426ac5"
+				}
+			}`)
+		})
+
+		Mux.HandleFunc("/v2.1/flavors/detail", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 
@@ -169,5 +195,45 @@ var _ = Describe("Create VM", func() {
 
 		stdOutWriter.Close()
 		Expect(<-outChannel).To(ContainSubstring("failed to get flavor of instance type: flavor 'wrong_flavor' not found"))
+	})
+
+	It("fails if a security rule cannot be resolved", func() {
+		writeJsonParamToStdIn(`{
+			"method": "create_vm",
+			"arguments": [
+				"a694d798-0b41-4255-9c8e-b282cd504a52",
+				"5bba0da5-dfb3-49d8-a005-d799507518f7",
+				{
+					"instance_type": "m1.tiny"
+				},
+				{
+					"bosh": {
+						"type": "manual",
+						"ip": "10.0.11.16",
+						"netmask": "255.255.255.0",
+						"cloud_properties": {
+							"net_id": "fbe64fb7-b47c-4fd1-b158-9411d5c3ebf3",
+							"security_groups": [
+								"not-exiting-group"
+							]
+						},
+						"default": [
+							"dns",
+							"gateway"
+						],
+						"gateway": "10.0.11.1"
+					}
+				},
+				[],
+				{}
+			],
+			"api_version": 2
+		}`)
+
+		err := cpi.Execute(getDefaultConfig(Endpoint()), logger)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		stdOutWriter.Close()
+		Expect(<-outChannel).To(ContainSubstring("ailed to resolve security group: failed to get security group 'not-exiting-group' by name"))
 	})
 })

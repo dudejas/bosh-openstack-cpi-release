@@ -62,6 +62,11 @@ func (o OpenstackConfig) Validate() error {
 		(!o.usernameIsSet() && o.applicationCredentialIsSet())) {
 		return fmt.Errorf("'Invalid OpenStack cloud properties: username and api_key or application_credential_id and application_credential_secret is required'")
 	}
+
+	if o.ConfigDrive != "" && o.ConfigDrive != "cdrom" && o.ConfigDrive != "disk" {
+		return fmt.Errorf("Invalid OpenStack cloud properties: config_drive must be either 'cdrom' or 'disk'")
+	}
+
 	return nil
 }
 

@@ -2,11 +2,12 @@ package services
 
 import (
 	"fmt"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services/facades"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/vm"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 )
 
@@ -14,8 +15,12 @@ import (
 type NetworkService interface {
 	ConfigureNetwork(
 		instanceId string,
-		networkConfig vm.NetworkConfig,
+		networkConfig properties.NetworkConfig,
 	) error
+
+	ResolveSecurityGroups(
+		securityGroupIDsAndNames []string,
+	) ([]string, error)
 }
 
 type networkService struct {
@@ -38,9 +43,9 @@ func NewNetworkService(
 
 func (c networkService) ConfigureNetwork(
 	instanceId string,
-	networkConfig vm.NetworkConfig,
+	networkConfig properties.NetworkConfig,
 ) error {
-	vipNetwork := networkConfig.GetVIPNetwork()
+	vipNetwork := networkConfig.VIPNetwork
 
 	if vipNetwork != nil {
 		floatingIp, err := c.getFloatingIp(vipNetwork)
@@ -48,7 +53,7 @@ func (c networkService) ConfigureNetwork(
 			return fmt.Errorf("failed to get floating IP: %w", err)
 		}
 
-		port, err := c.getPort(instanceId, err, networkConfig.GetDefaultNetwork())
+		port, err := c.getPort(instanceId, err, networkConfig.DefaultNetwork)
 		if err != nil {
 			return fmt.Errorf("failed to get port: %w", err)
 		}
@@ -61,7 +66,35 @@ func (c networkService) ConfigureNetwork(
 	return nil
 }
 
-func (c networkService) getFloatingIp(vipNetwork *vm.Network) (floatingips.FloatingIP, error) {
+func (c networkService) ResolveSecurityGroups(securityGroupIDsAndNames []string) ([]string, error) {
+	var securityGroupIds []string
+	var resolvedSecurityGroup *groups.SecGroup
+	var err error
+
+	for _, securityGroup := range securityGroupIDsAndNames {
+		resolvedSecurityGroup, err = c.resolveSecurityGroupById(securityGroup)
+		if err != nil {
+			return []string{}, fmt.Errorf("failed to get security group '%s' by id: %w", securityGroup, err)
+		}
+
+		if resolvedSecurityGroup != nil {
+			securityGroupIds = append(securityGroupIds, resolvedSecurityGroup.ID)
+			continue
+		} else {
+			resolvedSecurityGroup, err = c.resolveSecurityGroupByName(securityGroup)
+			if err != nil {
+				return []string{}, fmt.Errorf("failed to get security group '%s' by name: %w", securityGroup, err)
+			}
+
+			securityGroupIds = append(securityGroupIds, resolvedSecurityGroup.ID)
+			continue
+		}
+
+	}
+	return securityGroupIds, nil
+}
+
+func (c networkService) getFloatingIp(vipNetwork *properties.Network) (floatingips.FloatingIP, error) {
 	listOpts := floatingips.ListOpts{
 		FloatingIP: vipNetwork.IP,
 	}
@@ -83,7 +116,7 @@ func (c networkService) getFloatingIp(vipNetwork *vm.Network) (floatingips.Float
 	return allFIPs[0], err
 }
 
-func (c networkService) getPort(instanceId string, err error, defaultNetwork vm.Network) (ports.Port, error) {
+func (c networkService) getPort(instanceId string, err error, defaultNetwork properties.Network) (ports.Port, error) {
 	listOpts := ports.ListOpts{
 		DeviceID:  instanceId,
 		NetworkID: defaultNetwork.CloudProps.NetID,
@@ -113,4 +146,30 @@ func (c networkService) associateFloatingIp(serviceClient *gophercloud.ServiceCl
 
 	_, err := c.networkingFacade.UpdateFloatingIP(serviceClient, floatingIpId, updateOpts)
 	return err
+}
+
+func (c networkService) resolveSecurityGroupById(securityGroupID string) (*groups.SecGroup, error) {
+	return c.networkingFacade.GetSecurityGroups(c.serviceClient, securityGroupID)
+}
+
+func (c networkService) resolveSecurityGroupByName(securityGroupName string) (*groups.SecGroup, error) {
+	listOpts := groups.ListOpts{
+		Name: securityGroupName,
+	}
+
+	allPages, err := c.networkingFacade.ListSecurityGroups(c.serviceClient, listOpts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list security groups: %w", err)
+	}
+
+	allSecurityGroups, err := c.networkingFacade.ExtractSecurityGroups(allPages)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract security groups: %w", err)
+	}
+
+	if len(allSecurityGroups) == 0 {
+		return nil, fmt.Errorf("security group '%s' could not be found", securityGroupName)
+	}
+
+	return &allSecurityGroups[0], nil
 }

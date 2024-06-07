@@ -7,7 +7,6 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services/facades"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/vm"
 	"github.com/google/uuid"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
@@ -23,7 +22,7 @@ type ComputeService interface {
 	CreateServer(
 		stemcellCID apiv1.StemcellCID,
 		cloudProps properties.CreateVM,
-		networkConfig vm.NetworkConfig,
+		networkConfig properties.NetworkConfig,
 		config config.OpenstackConfig,
 	) (string, error)
 }
@@ -49,7 +48,7 @@ func NewComputeService(
 func (c computeService) CreateServer(
 	stemcellCID apiv1.StemcellCID,
 	cloudProps properties.CreateVM,
-	networkConfig vm.NetworkConfig,
+	networkConfig properties.NetworkConfig,
 	config config.OpenstackConfig,
 ) (string, error) {
 	flavorRef, err := c.getInstanceTypeFlavorID(cloudProps.InstanceType, c.serviceClient, c.computeFacade)
@@ -61,7 +60,7 @@ func (c computeService) CreateServer(
 		Name:             "vm-" + uuid.New().String(),
 		ImageRef:         stemcellCID.AsString(),
 		Networks:         c.getServerNetworks(networkConfig),
-		SecurityGroups:   networkConfig.SecurityGroups(),
+		SecurityGroups:   networkConfig.SecurityGroups,
 		AvailabilityZone: cloudProps.AvailabilityZone,
 		FlavorRef:        flavorRef,
 	}
@@ -84,13 +83,13 @@ func (c computeService) CreateServer(
 	return server.ID, nil
 }
 
-func (c computeService) getServerNetworks(networkConfig vm.NetworkConfig) []servers.Network {
+func (c computeService) getServerNetworks(networkConfig properties.NetworkConfig) []servers.Network {
 	var serverNetworks []servers.Network
-	for _, network := range networkConfig.GetManualNetworks() {
+	for _, network := range networkConfig.ManualNetworks {
 		serverNetworks = append(serverNetworks, servers.Network{UUID: network.CloudProps.NetID, FixedIP: network.IP})
 	}
 
-	dynamicNetwork := networkConfig.GetDynamicNetwork()
+	dynamicNetwork := networkConfig.DynamicNetwork
 	if dynamicNetwork != nil {
 		serverNetworks = append(serverNetworks, servers.Network{UUID: dynamicNetwork.CloudProps.NetID})
 	}

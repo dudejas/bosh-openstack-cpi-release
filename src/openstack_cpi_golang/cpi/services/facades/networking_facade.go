@@ -3,6 +3,7 @@ package facades
 import (
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 	"github.com/gophercloud/gophercloud/pagination"
 )
@@ -18,6 +19,12 @@ type NetworkingFacade interface {
 	ListPorts(client *gophercloud.ServiceClient, opts ports.ListOpts) (pagination.Page, error)
 
 	ExtractPorts(r pagination.Page) ([]ports.Port, error)
+
+	GetSecurityGroups(serviceClient *gophercloud.ServiceClient, id string) (*groups.SecGroup, error)
+
+	ListSecurityGroups(serviceClient *gophercloud.ServiceClient, opts groups.ListOpts) (pagination.Page, error)
+
+	ExtractSecurityGroups(pages pagination.Page) ([]groups.SecGroup, error)
 }
 
 type networkingFacade struct{}
@@ -44,4 +51,16 @@ func (n networkingFacade) ListPorts(serviceClient *gophercloud.ServiceClient, op
 
 func (n networkingFacade) ExtractPorts(pages pagination.Page) ([]ports.Port, error) {
 	return ports.ExtractPorts(pages)
+}
+
+func (n networkingFacade) GetSecurityGroups(serviceClient *gophercloud.ServiceClient, id string) (*groups.SecGroup, error) {
+	return groups.Get(serviceClient, id).Extract()
+}
+
+func (n networkingFacade) ListSecurityGroups(serviceClient *gophercloud.ServiceClient, opts groups.ListOpts) (pagination.Page, error) {
+	return groups.List(serviceClient, opts).AllPages()
+}
+
+func (n networkingFacade) ExtractSecurityGroups(pages pagination.Page) ([]groups.SecGroup, error) {
+	return groups.ExtractGroups(pages)
 }
