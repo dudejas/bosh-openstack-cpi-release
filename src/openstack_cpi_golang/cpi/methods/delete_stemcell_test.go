@@ -31,7 +31,10 @@ var _ = Describe("DeleteStemcellMethod", func() {
 				&logger,
 			).DeleteStemcell(apiv1.NewStemcellCID("cloudID"))
 
+			cid := imageService.DeleteImageArgsForCall(0)
 			Expect(err).ToNot(HaveOccurred())
+			Expect(imageService.DeleteImageCallCount()).To(Equal(1))
+			Expect(cid).To(Equal("cloudID"))
 		})
 
 		It("returns an error if image cannot be deleted", func() {

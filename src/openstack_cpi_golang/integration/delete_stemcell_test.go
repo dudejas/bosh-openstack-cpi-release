@@ -19,7 +19,7 @@ var _ = Describe("OpenStack Integration", func() {
                     {"status": "stable","id": "v3.0","links": [{ "href": "%s", "rel": "self" }]},
                     {"status": "stable","id": "v2.0","links": [{ "href": "%s", "rel": "self" }]}
                 ]}
-            }`, Endpoint()+"v3/", Endpoint()+"v2.0/")
+            }`, Endpoint()+"/v3", Endpoint()+"/v2.0")
 		})
 
 		Mux.HandleFunc("/v3/auth/tokens", func(w http.ResponseWriter, r *http.Request) {
@@ -45,22 +45,21 @@ var _ = Describe("OpenStack Integration", func() {
 
 	It("delete the stemcell image", func() {
 		Mux.HandleFunc("/v2/images/b2173dd3-7ad6-4362-baa6-a68bce3565cb", func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusOK)
+			w.WriteHeader(http.StatusAccepted)
 			r.Method = "DELETE"
 		})
 
 		writeJsonParamToStdIn(`{
-            "method":"delete_stemcell",
-            "arguments":[
-                {
-                "cloudID":"b2173dd3-7ad6-4362-baa6-a68bce3565cb",
-                }
-            ]
-        }`)
+			"method":"delete_stemcell",
+			"arguments":[
+				 "b2173dd3-7ad6-4362-baa6-a68bce3565cb"
+			]
+		  }`)
 
 		err := cpi.Execute(getDefaultConfig(Endpoint()), logger)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		stdOutWriter.Close()
+		Expect(<-outChannel).To(ContainSubstring(`"error":null`))
 	})
 })

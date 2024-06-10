@@ -208,13 +208,25 @@ var _ = Describe("ImageService", func() {
 
 		})
 
-		It("delete an existing image entity in OpenStack", func() {
+		It("deletes an existing image in OpenStack", func() {
+			imagesFacade.DeleteReturns(nil)
+
+			NewImageService(&serviceClient, &imagesFacade, &httpClient, &logger).
+				DeleteImage("123-456")
+
+			serviceClient, imageID := imagesFacade.DeleteArgsForCall(0)
+			Expect(serviceClient).To(Equal(serviceClient))
+			Expect(imageID).To(Equal("123-456"))
+		})
+
+		It("delete an existing image entity in OpenStack without errors", func() {
 			imagesFacade.DeleteReturns(nil)
 
 			err := NewImageService(&serviceClient, &imagesFacade, &httpClient, &logger).
 				DeleteImage("123-456")
 
 			Expect(err).ToNot(HaveOccurred())
+			Expect(imagesFacade.DeleteCallCount()).To(Equal(1))
 		})
 
 		It("returns an error if the image entity cannot be found in OpenStack", func() {
