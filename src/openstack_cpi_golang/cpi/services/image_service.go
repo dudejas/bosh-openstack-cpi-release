@@ -77,10 +77,10 @@ func (c imageService) GetImage(imageID string) (string, error) {
 
 	image, err := c.imagesFacade.Get(serviceClient, imageID)
 	if err != nil {
-		return "", fmt.Errorf("could not find the image %s, that is referenced by the light stemcell, in OpenStack: %w", imageID, err)
+		return "", fmt.Errorf("could not find the image '%s' in OpenStack: %w", imageID, err)
 	}
 	if image.Status != images.ImageStatusActive {
-		return "", fmt.Errorf("image %s is not in active state, it is in state: %s", imageID, image.Status)
+		return "", fmt.Errorf("image '%s' is not in active state, it is in state: %s", imageID, image.Status)
 	}
 
 	return image.ID, nil

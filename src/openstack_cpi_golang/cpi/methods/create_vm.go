@@ -48,6 +48,16 @@ func (m CreateVMMethod) CreateVMV2(
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to create networking service: %w", err)
 	}
 
+	imageService, err := m.serviceFactory.CreateImageService()
+	if err != nil {
+		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to create image service: %w", err)
+	}
+
+	_, err = imageService.GetImage(stemcellCID.AsString())
+	if err != nil {
+		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to resolve stemcell: %w", err)
+	}
+
 	networkConfig, err := vm.NewNetworkConfig(networks)
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to create network config: %w", err)

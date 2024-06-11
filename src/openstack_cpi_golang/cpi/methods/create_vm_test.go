@@ -16,6 +16,7 @@ var _ = Describe("CreateVMMethod", func() {
 	var serviceFactory servicesfakes.FakeServiceFactory
 	var computeService servicesfakes.FakeComputeService
 	var networkService servicesfakes.FakeNetworkService
+	var imageService servicesfakes.FakeImageService
 	var logger utilsfakes.FakeLogger
 	var props map[string]interface{}
 	var networks apiv1.Networks
@@ -26,10 +27,12 @@ var _ = Describe("CreateVMMethod", func() {
 			serviceFactory = servicesfakes.FakeServiceFactory{}
 			computeService = servicesfakes.FakeComputeService{}
 			networkService = servicesfakes.FakeNetworkService{}
+			imageService = servicesfakes.FakeImageService{}
 			logger = utilsfakes.FakeLogger{}
 
 			serviceFactory.CreateComputeServiceReturns(&computeService, nil)
 			serviceFactory.CreateNetworkServiceReturns(&networkService, nil)
+			serviceFactory.CreateImageServiceReturns(&imageService, nil)
 			computeService.CreateServerReturns("123-456", nil)
 			networkService.ConfigureNetworkReturns(nil)
 
@@ -62,7 +65,7 @@ var _ = Describe("CreateVMMethod", func() {
 		It("returns an error if the compute service cannot be retrieved", func() {
 			serviceFactory.CreateComputeServiceReturns(nil, errors.New("boom"))
 
-			stemcellCID, _, err := methods.NewCreateVMMethod(
+			stemcellCID, networks, err := methods.NewCreateVMMethod(
 				&serviceFactory,
 				config.OpenstackConfig{},
 				&logger,
@@ -77,6 +80,7 @@ var _ = Describe("CreateVMMethod", func() {
 
 			Expect(err.Error()).To(Equal("failed to create compute service: boom"))
 			Expect(stemcellCID).To(Equal(apiv1.VMCID{}))
+			Expect(networks).To(Equal(apiv1.Networks{}))
 		})
 
 		It("creates the network service", func() {
@@ -99,7 +103,7 @@ var _ = Describe("CreateVMMethod", func() {
 		It("returns an error if the network service cannot be retrieved", func() {
 			serviceFactory.CreateNetworkServiceReturns(nil, errors.New("boom"))
 
-			stemcellCID, _, err := methods.NewCreateVMMethod(
+			stemcellCID, networks, err := methods.NewCreateVMMethod(
 				&serviceFactory,
 				config.OpenstackConfig{},
 				&logger,
@@ -114,6 +118,66 @@ var _ = Describe("CreateVMMethod", func() {
 
 			Expect(err.Error()).To(Equal("failed to create networking service: boom"))
 			Expect(stemcellCID).To(Equal(apiv1.VMCID{}))
+			Expect(networks).To(Equal(apiv1.Networks{}))
+		})
+
+		It("creates the image service", func() {
+			methods.NewCreateVMMethod(
+				&serviceFactory,
+				config.OpenstackConfig{},
+				&logger,
+			).CreateVMV2(
+				apiv1.NewAgentID("the_agent-id"),
+				apiv1.NewStemcellCID("stemcell-id"),
+				apiv1.NewVMCloudPropsFromMap(props),
+				networks,
+				[]apiv1.DiskCID{},
+				apiv1.VMEnv{},
+			)
+
+			Expect(serviceFactory.CreateImageServiceCallCount()).To(Equal(1))
+		})
+
+		It("returns an error if the image service cannot be retrieved", func() {
+			serviceFactory.CreateImageServiceReturns(nil, errors.New("boom"))
+
+			stemcellCID, networks, err := methods.NewCreateVMMethod(
+				&serviceFactory,
+				config.OpenstackConfig{},
+				&logger,
+			).CreateVMV2(
+				apiv1.NewAgentID("the_agent-id"),
+				apiv1.NewStemcellCID("stemcell-id"),
+				apiv1.NewVMCloudPropsFromMap(props),
+				networks,
+				[]apiv1.DiskCID{},
+				apiv1.VMEnv{},
+			)
+
+			Expect(err.Error()).To(Equal("failed to create image service: boom"))
+			Expect(stemcellCID).To(Equal(apiv1.VMCID{}))
+			Expect(networks).To(Equal(apiv1.Networks{}))
+		})
+
+		It("returns an error if the stemcell cannot be found", func() {
+			imageService.GetImageReturns("", errors.New("boom"))
+
+			stemcellCID, networks, err := methods.NewCreateVMMethod(
+				&serviceFactory,
+				config.OpenstackConfig{},
+				&logger,
+			).CreateVMV2(
+				apiv1.NewAgentID("the_agent-id"),
+				apiv1.NewStemcellCID("stemcell-id"),
+				apiv1.NewVMCloudPropsFromMap(props),
+				networks,
+				[]apiv1.DiskCID{},
+				apiv1.VMEnv{},
+			)
+
+			Expect(err.Error()).To(ContainSubstring("failed to resolve stemcell: boom"))
+			Expect(stemcellCID).To(Equal(apiv1.VMCID{}))
+			Expect(networks).To(Equal(apiv1.Networks{}))
 		})
 
 		It("returns an error if the network config creation fails", func() {
@@ -122,7 +186,7 @@ var _ = Describe("CreateVMMethod", func() {
 				"forbidden_second_dynamic_network": apiv1.NewNetwork(apiv1.NetworkOpts{Type: "dynamic"}),
 			}
 
-			stemcellCID, _, err := methods.NewCreateVMMethod(
+			stemcellCID, networks, err := methods.NewCreateVMMethod(
 				&serviceFactory,
 				config.OpenstackConfig{},
 				&logger,
@@ -137,6 +201,7 @@ var _ = Describe("CreateVMMethod", func() {
 
 			Expect(err.Error()).To(ContainSubstring("failed to create network config: invalid dynamic network configuration"))
 			Expect(stemcellCID).To(Equal(apiv1.VMCID{}))
+			Expect(networks).To(Equal(apiv1.Networks{}))
 		})
 
 		It("creates a server", func() {
@@ -160,7 +225,7 @@ var _ = Describe("CreateVMMethod", func() {
 		It("returns an error if the server creation fails", func() {
 			computeService.CreateServerReturns("", errors.New("boom"))
 
-			stemcellCID, _, err := methods.NewCreateVMMethod(
+			stemcellCID, networks, err := methods.NewCreateVMMethod(
 				&serviceFactory,
 				config.OpenstackConfig{},
 				&logger,
@@ -175,6 +240,7 @@ var _ = Describe("CreateVMMethod", func() {
 
 			Expect(err.Error()).To(Equal("failed to create server: boom"))
 			Expect(stemcellCID).To(Equal(apiv1.VMCID{}))
+			Expect(networks).To(Equal(apiv1.Networks{}))
 		})
 
 		It("configures the network of the created server", func() {
@@ -198,7 +264,7 @@ var _ = Describe("CreateVMMethod", func() {
 		It("returns an error if the network configuration fails", func() {
 			networkService.ConfigureNetworkReturns(errors.New("boom"))
 
-			stemcellCID, _, err := methods.NewCreateVMMethod(
+			stemcellCID, networks, err := methods.NewCreateVMMethod(
 				&serviceFactory,
 				config.OpenstackConfig{},
 				&logger,
@@ -213,6 +279,7 @@ var _ = Describe("CreateVMMethod", func() {
 
 			Expect(err.Error()).To(Equal("failed to configure network for server 123-456: boom"))
 			Expect(stemcellCID).To(Equal(apiv1.VMCID{}))
+			Expect(networks).To(Equal(apiv1.Networks{}))
 		})
 
 		It("returns a server ID", func() {
@@ -231,6 +298,24 @@ var _ = Describe("CreateVMMethod", func() {
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stemcellCID.AsString()).To(Equal("123-456"))
+		})
+
+		It("returns networks", func() {
+			_, networks, err := methods.NewCreateVMMethod(
+				&serviceFactory,
+				config.OpenstackConfig{},
+				&logger,
+			).CreateVMV2(
+				apiv1.NewAgentID("the_agent-id"),
+				apiv1.NewStemcellCID("stemcell-id"),
+				apiv1.NewVMCloudPropsFromMap(props),
+				networks,
+				[]apiv1.DiskCID{},
+				apiv1.VMEnv{},
+			)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(networks["network1"]).To(Equal(apiv1.NewNetwork(apiv1.NetworkOpts{})))
 		})
 	})
 })

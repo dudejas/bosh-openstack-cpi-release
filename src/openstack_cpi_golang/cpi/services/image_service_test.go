@@ -124,7 +124,7 @@ var _ = Describe("ImageService", func() {
 			imageID, err := NewImageService(&serviceClient, &imagesFacade, &httpClient, &logger).
 				GetImage("123-456")
 
-			Expect(err.Error()).To(Equal("could not find the image 123-456, that is referenced by the light stemcell, in OpenStack: boom"))
+			Expect(err.Error()).To(Equal("could not find the image '123-456' in OpenStack: boom"))
 			Expect(imageID).To(Equal(""))
 		})
 
@@ -134,7 +134,7 @@ var _ = Describe("ImageService", func() {
 			imageID, err := NewImageService(&serviceClient, &imagesFacade, &httpClient, &logger).
 				GetImage("123-456")
 
-			Expect(err.Error()).To(Equal("image 123-456 is not in active state, it is in state: not-active"))
+			Expect(err.Error()).To(Equal("image '123-456' is not in active state, it is in state: not-active"))
 			Expect(imageID).To(Equal(""))
 		})
 
