@@ -6,6 +6,7 @@ import (
 
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services/facades"
 	"github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/pagination"
@@ -39,6 +40,21 @@ type FakeComputeFacade struct {
 		result1 []flavors.Flavor
 		result2 error
 	}
+	GetOSKeyPairStub        func(*gophercloud.ServiceClient, string, keypairs.GetOpts) (*keypairs.KeyPair, error)
+	getOSKeyPairMutex       sync.RWMutex
+	getOSKeyPairArgsForCall []struct {
+		arg1 *gophercloud.ServiceClient
+		arg2 string
+		arg3 keypairs.GetOpts
+	}
+	getOSKeyPairReturns struct {
+		result1 *keypairs.KeyPair
+		result2 error
+	}
+	getOSKeyPairReturnsOnCall map[int]struct {
+		result1 *keypairs.KeyPair
+		result2 error
+	}
 	GetServerStub        func(*gophercloud.ServiceClient, string) (*servers.Server, error)
 	getServerMutex       sync.RWMutex
 	getServerArgsForCall []struct {
@@ -53,11 +69,11 @@ type FakeComputeFacade struct {
 		result1 *servers.Server
 		result2 error
 	}
-	ListFlavorsStub        func(*gophercloud.ServiceClient, flavors.ListOptsBuilder) (pagination.Page, error)
+	ListFlavorsStub        func(*gophercloud.ServiceClient, flavors.ListOpts) (pagination.Page, error)
 	listFlavorsMutex       sync.RWMutex
 	listFlavorsArgsForCall []struct {
 		arg1 *gophercloud.ServiceClient
-		arg2 flavors.ListOptsBuilder
+		arg2 flavors.ListOpts
 	}
 	listFlavorsReturns struct {
 		result1 pagination.Page
@@ -200,6 +216,72 @@ func (fake *FakeComputeFacade) ExtractFlavorsReturnsOnCall(i int, result1 []flav
 	}{result1, result2}
 }
 
+func (fake *FakeComputeFacade) GetOSKeyPair(arg1 *gophercloud.ServiceClient, arg2 string, arg3 keypairs.GetOpts) (*keypairs.KeyPair, error) {
+	fake.getOSKeyPairMutex.Lock()
+	ret, specificReturn := fake.getOSKeyPairReturnsOnCall[len(fake.getOSKeyPairArgsForCall)]
+	fake.getOSKeyPairArgsForCall = append(fake.getOSKeyPairArgsForCall, struct {
+		arg1 *gophercloud.ServiceClient
+		arg2 string
+		arg3 keypairs.GetOpts
+	}{arg1, arg2, arg3})
+	stub := fake.GetOSKeyPairStub
+	fakeReturns := fake.getOSKeyPairReturns
+	fake.recordInvocation("GetOSKeyPair", []interface{}{arg1, arg2, arg3})
+	fake.getOSKeyPairMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeComputeFacade) GetOSKeyPairCallCount() int {
+	fake.getOSKeyPairMutex.RLock()
+	defer fake.getOSKeyPairMutex.RUnlock()
+	return len(fake.getOSKeyPairArgsForCall)
+}
+
+func (fake *FakeComputeFacade) GetOSKeyPairCalls(stub func(*gophercloud.ServiceClient, string, keypairs.GetOpts) (*keypairs.KeyPair, error)) {
+	fake.getOSKeyPairMutex.Lock()
+	defer fake.getOSKeyPairMutex.Unlock()
+	fake.GetOSKeyPairStub = stub
+}
+
+func (fake *FakeComputeFacade) GetOSKeyPairArgsForCall(i int) (*gophercloud.ServiceClient, string, keypairs.GetOpts) {
+	fake.getOSKeyPairMutex.RLock()
+	defer fake.getOSKeyPairMutex.RUnlock()
+	argsForCall := fake.getOSKeyPairArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *FakeComputeFacade) GetOSKeyPairReturns(result1 *keypairs.KeyPair, result2 error) {
+	fake.getOSKeyPairMutex.Lock()
+	defer fake.getOSKeyPairMutex.Unlock()
+	fake.GetOSKeyPairStub = nil
+	fake.getOSKeyPairReturns = struct {
+		result1 *keypairs.KeyPair
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeComputeFacade) GetOSKeyPairReturnsOnCall(i int, result1 *keypairs.KeyPair, result2 error) {
+	fake.getOSKeyPairMutex.Lock()
+	defer fake.getOSKeyPairMutex.Unlock()
+	fake.GetOSKeyPairStub = nil
+	if fake.getOSKeyPairReturnsOnCall == nil {
+		fake.getOSKeyPairReturnsOnCall = make(map[int]struct {
+			result1 *keypairs.KeyPair
+			result2 error
+		})
+	}
+	fake.getOSKeyPairReturnsOnCall[i] = struct {
+		result1 *keypairs.KeyPair
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeComputeFacade) GetServer(arg1 *gophercloud.ServiceClient, arg2 string) (*servers.Server, error) {
 	fake.getServerMutex.Lock()
 	ret, specificReturn := fake.getServerReturnsOnCall[len(fake.getServerArgsForCall)]
@@ -265,12 +347,12 @@ func (fake *FakeComputeFacade) GetServerReturnsOnCall(i int, result1 *servers.Se
 	}{result1, result2}
 }
 
-func (fake *FakeComputeFacade) ListFlavors(arg1 *gophercloud.ServiceClient, arg2 flavors.ListOptsBuilder) (pagination.Page, error) {
+func (fake *FakeComputeFacade) ListFlavors(arg1 *gophercloud.ServiceClient, arg2 flavors.ListOpts) (pagination.Page, error) {
 	fake.listFlavorsMutex.Lock()
 	ret, specificReturn := fake.listFlavorsReturnsOnCall[len(fake.listFlavorsArgsForCall)]
 	fake.listFlavorsArgsForCall = append(fake.listFlavorsArgsForCall, struct {
 		arg1 *gophercloud.ServiceClient
-		arg2 flavors.ListOptsBuilder
+		arg2 flavors.ListOpts
 	}{arg1, arg2})
 	stub := fake.ListFlavorsStub
 	fakeReturns := fake.listFlavorsReturns
@@ -291,13 +373,13 @@ func (fake *FakeComputeFacade) ListFlavorsCallCount() int {
 	return len(fake.listFlavorsArgsForCall)
 }
 
-func (fake *FakeComputeFacade) ListFlavorsCalls(stub func(*gophercloud.ServiceClient, flavors.ListOptsBuilder) (pagination.Page, error)) {
+func (fake *FakeComputeFacade) ListFlavorsCalls(stub func(*gophercloud.ServiceClient, flavors.ListOpts) (pagination.Page, error)) {
 	fake.listFlavorsMutex.Lock()
 	defer fake.listFlavorsMutex.Unlock()
 	fake.ListFlavorsStub = stub
 }
 
-func (fake *FakeComputeFacade) ListFlavorsArgsForCall(i int) (*gophercloud.ServiceClient, flavors.ListOptsBuilder) {
+func (fake *FakeComputeFacade) ListFlavorsArgsForCall(i int) (*gophercloud.ServiceClient, flavors.ListOpts) {
 	fake.listFlavorsMutex.RLock()
 	defer fake.listFlavorsMutex.RUnlock()
 	argsForCall := fake.listFlavorsArgsForCall[i]
@@ -337,6 +419,8 @@ func (fake *FakeComputeFacade) Invocations() map[string][][]interface{} {
 	defer fake.createServerMutex.RUnlock()
 	fake.extractFlavorsMutex.RLock()
 	defer fake.extractFlavorsMutex.RUnlock()
+	fake.getOSKeyPairMutex.RLock()
+	defer fake.getOSKeyPairMutex.RUnlock()
 	fake.getServerMutex.RLock()
 	defer fake.getServerMutex.RUnlock()
 	fake.listFlavorsMutex.RLock()

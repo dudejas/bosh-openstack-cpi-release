@@ -7,6 +7,7 @@ type CreateVM struct {
 	LoadbalancerPools string   `json:"loadbalancer_pools"`
 	SchedulerHints    string   `json:"scheduler_hints"`
 	SecurityGroups    []string `json:"security_groups"`
+	KeyName           string   `json:"key_name"`
 }
 
 type CreateVMNetwork struct {

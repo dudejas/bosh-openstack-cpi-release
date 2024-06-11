@@ -56,6 +56,11 @@ func (c computeService) CreateServer(
 		return "", fmt.Errorf("failed to get flavor of instance type: %w", err)
 	}
 
+	keyname, err := c.getKeyPairName(cloudProps, config)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve keypair: %w", err)
+	}
+
 	serverCreateOpts := servers.CreateOpts{
 		Name:             "vm-" + uuid.New().String(),
 		ImageRef:         stemcellCID.AsString(),
@@ -67,7 +72,7 @@ func (c computeService) CreateServer(
 
 	createOpts := keypairs.CreateOptsExt{
 		CreateOptsBuilder: serverCreateOpts,
-		KeyName:           config.DefaultKeyName,
+		KeyName:           keyname,
 	}
 
 	server, err := c.computeFacade.CreateServer(c.serviceClient, createOpts)
@@ -81,6 +86,27 @@ func (c computeService) CreateServer(
 	}
 
 	return server.ID, nil
+}
+
+func (c computeService) getKeyPairName(cloudProps properties.CreateVM, openstackConfig config.OpenstackConfig) (string, error) {
+	var keyPairName string
+
+	if cloudProps.KeyName != "" {
+		keyPairName = cloudProps.KeyName
+	} else {
+		keyPairName = openstackConfig.DefaultKeyName
+	}
+
+	if keyPairName == "" {
+		return "", fmt.Errorf("key pair name undefined")
+	}
+
+	keypair, err := c.computeFacade.GetOSKeyPair(c.serviceClient, keyPairName, keypairs.GetOpts{})
+	if err != nil {
+		return "", fmt.Errorf("failed to retrieve '%s': %w", keyPairName, err)
+	}
+
+	return keypair.Name, nil
 }
 
 func (c computeService) getServerNetworks(networkConfig properties.NetworkConfig) []servers.Network {
@@ -128,7 +154,7 @@ func (c computeService) getInstanceTypeFlavorID(
 	serviceClient *gophercloud.ServiceClient,
 	computeFacade facades.ComputeFacade,
 ) (string, error) {
-	flavorPages, err := computeFacade.ListFlavors(serviceClient, nil)
+	flavorPages, err := computeFacade.ListFlavors(serviceClient, flavors.ListOpts{})
 	if err != nil {
 		return "", fmt.Errorf("failed to list flavors: %w", err)
 	}

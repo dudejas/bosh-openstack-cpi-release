@@ -2,6 +2,7 @@ package facades
 
 import (
 	"github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/pagination"
@@ -13,9 +14,11 @@ type ComputeFacade interface {
 
 	GetServer(client *gophercloud.ServiceClient, serverID string) (*servers.Server, error)
 
-	ListFlavors(client *gophercloud.ServiceClient, opts flavors.ListOptsBuilder) (pagination.Page, error)
+	ListFlavors(client *gophercloud.ServiceClient, opts flavors.ListOpts) (pagination.Page, error)
 
 	ExtractFlavors(page pagination.Page) ([]flavors.Flavor, error)
+
+	GetOSKeyPair(client *gophercloud.ServiceClient, keyPairName string, ops keypairs.GetOpts) (*keypairs.KeyPair, error)
 }
 
 type computeFacade struct {
@@ -33,10 +36,14 @@ func (c computeFacade) GetServer(client *gophercloud.ServiceClient, serverID str
 	return servers.Get(client, serverID).Extract()
 }
 
-func (c computeFacade) ListFlavors(client *gophercloud.ServiceClient, opts flavors.ListOptsBuilder) (pagination.Page, error) {
+func (c computeFacade) ListFlavors(client *gophercloud.ServiceClient, opts flavors.ListOpts) (pagination.Page, error) {
 	return flavors.ListDetail(client, opts).AllPages()
 }
 
 func (c computeFacade) ExtractFlavors(page pagination.Page) ([]flavors.Flavor, error) {
 	return flavors.ExtractFlavors(page)
+}
+
+func (c computeFacade) GetOSKeyPair(client *gophercloud.ServiceClient, keyPairName string, opts keypairs.GetOpts) (*keypairs.KeyPair, error) {
+	return keypairs.Get(client, keyPairName, opts).Extract()
 }

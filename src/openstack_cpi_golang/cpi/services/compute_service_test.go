@@ -38,6 +38,7 @@ var _ = Describe("ComputeService", func() {
 		computeFacade.GetServerReturns(&servers.Server{ID: "123-456", Status: "ACTIVE"}, nil)
 		computeFacade.ListFlavorsReturns(flavorsPage, nil)
 		computeFacade.ExtractFlavorsReturns([]flavors.Flavor{{ID: "the_flavor_id", Name: "the_instance_type", RAM: 4096, Ephemeral: 10}}, nil)
+		computeFacade.GetOSKeyPairReturns(&keypairs.KeyPair{Name: "the_key_name"}, nil)
 	})
 
 	Context("CreateServer", func() {
@@ -47,7 +48,7 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "the_instance_type"},
 				networkConfig,
-				config.OpenstackConfig{StateTimeOut: 10},
+				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -61,7 +62,7 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "the_instance_type"},
 				networkConfig,
-				config.OpenstackConfig{StateTimeOut: 10},
+				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
 			Expect(err.Error()).To(ContainSubstring("failed to list flavors: boom"))
@@ -72,7 +73,7 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "the_instance_type"},
 				networkConfig,
-				config.OpenstackConfig{StateTimeOut: 10},
+				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
 			Expect(computeFacade.ExtractFlavorsCallCount()).To(Equal(1))
@@ -85,7 +86,7 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "the_instance_type"},
 				networkConfig,
-				config.OpenstackConfig{StateTimeOut: 10},
+				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
 			Expect(err.Error()).To(ContainSubstring("failed to extract flavors: boom"))
@@ -96,7 +97,7 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "not_existing_flavor"},
 				networkConfig,
-				config.OpenstackConfig{StateTimeOut: 10},
+				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
 			Expect(err.Error()).To(ContainSubstring("flavor 'not_existing_flavor' not found"))
@@ -109,10 +110,67 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "the_flavor_id"},
 				networkConfig,
-				config.OpenstackConfig{StateTimeOut: 10},
+				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
 			Expect(err.Error()).To(ContainSubstring("failed to get flavor of instance type: flavor 'the_flavor_id' not found"))
+		})
+
+		It("resolves the key pair via cloud config name", func() {
+			computeFacade.GetOSKeyPairReturns(&keypairs.KeyPair{Name: "the_key_name"}, nil)
+
+			computeService.CreateServer(
+				apiv1.StemcellCID{},
+				properties.CreateVM{
+					InstanceType: "the_instance_type",
+					KeyName:      "key_name_from_properties",
+				},
+				networkConfig,
+				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+			)
+
+			_, keyPairName, _ := computeFacade.GetOSKeyPairArgsForCall(0)
+			Expect(keyPairName).To(Equal("key_name_from_properties"))
+		})
+
+		It("resolves the key pair via openstack config name", func() {
+			computeFacade.GetOSKeyPairReturns(&keypairs.KeyPair{Name: "the_key_name"}, nil)
+
+			computeService.CreateServer(
+				apiv1.StemcellCID{},
+				properties.CreateVM{InstanceType: "the_instance_type"},
+				networkConfig,
+				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "key_name_from_config"},
+			)
+
+			_, keyPairName, _ := computeFacade.GetOSKeyPairArgsForCall(0)
+			Expect(keyPairName).To(Equal("key_name_from_config"))
+		})
+
+		It("returns an error if key pair name IS NOT PROVIDED", func() {
+			computeFacade.GetOSKeyPairReturns(nil, errors.New("boom"))
+
+			_, err := computeService.CreateServer(
+				apiv1.StemcellCID{},
+				properties.CreateVM{InstanceType: "the_instance_type"},
+				networkConfig,
+				config.OpenstackConfig{StateTimeOut: 10},
+			)
+
+			Expect(err.Error()).To(Equal("failed to resolve keypair: key pair name undefined"))
+		})
+
+		It("returns an error id key pair name cannot be resolved", func() {
+			computeFacade.GetOSKeyPairReturns(nil, errors.New("boom"))
+
+			_, err := computeService.CreateServer(
+				apiv1.StemcellCID{},
+				properties.CreateVM{InstanceType: "the_instance_type"},
+				networkConfig,
+				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+			)
+
+			Expect(err.Error()).To(Equal("failed to resolve keypair: failed to retrieve 'the_key_name': boom"))
 		})
 
 		It("creates ops for the server", func() {
@@ -156,7 +214,7 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "the_instance_type"},
 				networkConfig,
-				config.OpenstackConfig{StateTimeOut: 10},
+				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
 			Expect(computeFacade.CreateServerCallCount()).To(Equal(1))
@@ -169,7 +227,7 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "the_instance_type"},
 				networkConfig,
-				config.OpenstackConfig{StateTimeOut: 10},
+				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
 			Expect(err.Error()).To(Equal("failed to create server: boom"))
@@ -186,7 +244,7 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "the_instance_type"},
 				networkConfig,
-				config.OpenstackConfig{StateTimeOut: 10},
+				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
 			Expect(err).ToNot(HaveOccurred())
@@ -201,7 +259,7 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "the_instance_type"},
 				networkConfig,
-				config.OpenstackConfig{StateTimeOut: 10},
+				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
 			Expect(err.Error()).To(Equal("failed while waiting on the server creation: failed to retrieve server information: boom"))
@@ -215,7 +273,7 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "the_instance_type"},
 				networkConfig,
-				config.OpenstackConfig{StateTimeOut: 10},
+				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
 			Expect(err.Error()).To(Equal("failed while waiting on the server creation: server became ERROR state while waiting to become ACTIVE"))
@@ -229,7 +287,7 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "the_instance_type"},
 				networkConfig,
-				config.OpenstackConfig{StateTimeOut: 10},
+				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
 			Expect(err.Error()).To(Equal("failed while waiting on the server creation: server became DELETED state while waiting to become ACTIVE"))
@@ -243,7 +301,7 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "the_instance_type"},
 				networkConfig,
-				config.OpenstackConfig{StateTimeOut: 0},
+				config.OpenstackConfig{StateTimeOut: 0, DefaultKeyName: "the_key_name"},
 			)
 
 			Expect(err.Error()).To(Equal("failed while waiting on the server creation: timeout while waiting for server to become active"))
@@ -255,7 +313,7 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "the_instance_type"},
 				networkConfig,
-				config.OpenstackConfig{StateTimeOut: 10},
+				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
 			Expect(err).ToNot(HaveOccurred())
