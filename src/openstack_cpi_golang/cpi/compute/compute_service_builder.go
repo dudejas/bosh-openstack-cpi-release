@@ -32,9 +32,12 @@ func (b computeServiceBuilder) Build() (ComputeService, error) {
 		return nil, fmt.Errorf("failed to retrieve compute service client: %w", err)
 	}
 
+	computeFacade := NewComputeFacade()
 	return NewComputeService(
 		serviceClient,
-		NewComputeFacade(),
+		computeFacade,
+		NewFlavorResolver(serviceClient, computeFacade),
+		NewVolumeConfigurator(),
 		b.logger,
 	), nil
 }

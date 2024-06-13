@@ -6,10 +6,10 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/compute"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/compute/computefakes"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/mocks"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils/utilsfakes"
 	"github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/bootfromvolume"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
@@ -20,44 +20,44 @@ import (
 var _ = Describe("ComputeService", func() {
 	var serviceClient gophercloud.ServiceClient
 	var computeFacade computefakes.FakeComputeFacade
+	var flavorResolver computefakes.FakeFlavorResolver
+	var volumeConfigurator computefakes.FakeVolumeConfigurator
 	var logger utilsfakes.FakeLogger
 	var computeService compute.ComputeService
 	var networkConfig properties.NetworkConfig
-	var flavorsPage mocks.MockPage
 	var defaultCloudConfig properties.CreateVM
 
 	BeforeEach(func() {
 		providerClient := gophercloud.ProviderClient{TokenID: "the_token"}
 		serviceClient = gophercloud.ServiceClient{ProviderClient: &providerClient}
 		computeFacade = computefakes.FakeComputeFacade{}
+		flavorResolver = computefakes.FakeFlavorResolver{}
+		volumeConfigurator = computefakes.FakeVolumeConfigurator{}
 		logger = utilsfakes.FakeLogger{}
-		computeService = compute.NewComputeService(&serviceClient, &computeFacade, &logger)
+		computeService = compute.NewComputeService(&serviceClient, &computeFacade, &flavorResolver, &volumeConfigurator, &logger)
 		networkConfig = properties.NetworkConfig{}
-		flavorsPage = mocks.MockPage{}
-
 		computeFacade.CreateServerReturns(&servers.Server{ID: "123-456"}, nil)
 		computeFacade.GetServerReturns(&servers.Server{ID: "123-456", Status: "ACTIVE"}, nil)
-		computeFacade.ListFlavorsReturns(flavorsPage, nil)
-		computeFacade.ExtractFlavorsReturns([]flavors.Flavor{{ID: "the_flavor_id", Name: "the_instance_type", RAM: 4096, Ephemeral: 10}}, nil)
+		flavorResolver.ResolveFlavorForInstanceTypeReturns(flavors.Flavor{ID: "the_flavor_id", Name: "the_instance_type", RAM: 4096, Ephemeral: 10}, nil)
 		computeFacade.GetOSKeyPairReturns(&keypairs.KeyPair{Name: "the_os_keypair_name"}, nil)
 		defaultCloudConfig = properties.CreateVM{InstanceType: "the_instance_type", RootDisk: properties.Disk{Size: 1}}
 	})
 
 	Context("CreateServer", func() {
-		It("list flavors", func() {
+		It("resolves flavors by instance type", func() {
 			_, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
+
 			Expect(err).ToNot(HaveOccurred())
-
-			Expect(computeFacade.ListFlavorsCallCount()).To(Equal(1))
+			Expect(flavorResolver.ResolveFlavorForInstanceTypeArgsForCall(0)).To(Equal("the_instance_type"))
 		})
 
-		It("return error if list flavors fails", func() {
-			computeFacade.ListFlavorsReturns(nil, errors.New("boom"))
+		It("return error if flavors resolution fails", func() {
+			flavorResolver.ResolveFlavorForInstanceTypeReturns(flavors.Flavor{}, errors.New("boom"))
 
 			_, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
@@ -66,55 +66,7 @@ var _ = Describe("ComputeService", func() {
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
-			Expect(err.Error()).To(ContainSubstring("failed to list flavors: boom"))
-		})
-
-		It("extract flavors", func() {
-			computeService.CreateServer(
-				apiv1.StemcellCID{},
-				defaultCloudConfig,
-				networkConfig,
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
-			)
-
-			Expect(computeFacade.ExtractFlavorsCallCount()).To(Equal(1))
-		})
-
-		It("return error if extract flavors fails", func() {
-			computeFacade.ExtractFlavorsReturns(nil, errors.New("boom"))
-
-			_, err := computeService.CreateServer(
-				apiv1.StemcellCID{},
-				defaultCloudConfig,
-				networkConfig,
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
-			)
-
-			Expect(err.Error()).To(ContainSubstring("failed to extract flavors: boom"))
-		})
-
-		It("return an error if flavor name is not found", func() {
-			_, err := computeService.CreateServer(
-				apiv1.StemcellCID{},
-				properties.CreateVM{InstanceType: "not_existing_flavor", RootDisk: properties.Disk{Size: 1}},
-				networkConfig,
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
-			)
-
-			Expect(err.Error()).To(ContainSubstring("flavor 'not_existing_flavor' not found"))
-		})
-
-		It("return an error if flavor ephemeral disk is to small", func() {
-			computeFacade.ExtractFlavorsReturns([]flavors.Flavor{{ID: "the_flavor_id", Name: "the_instance_type", RAM: 4096, Ephemeral: 2}}, nil)
-
-			_, err := computeService.CreateServer(
-				apiv1.StemcellCID{},
-				properties.CreateVM{InstanceType: "the_flavor_id", RootDisk: properties.Disk{Size: 1}},
-				networkConfig,
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
-			)
-
-			Expect(err.Error()).To(ContainSubstring("failed to get flavor of instance type: flavor 'the_flavor_id' not found"))
+			Expect(err.Error()).To(ContainSubstring("failed to resolve flavor of instance type 'the_instance_type': boom"))
 		})
 
 		It("resolves the key pair via cloud config name", func() {
@@ -176,6 +128,8 @@ var _ = Describe("ComputeService", func() {
 		})
 
 		It("returns an error if the disksize is 0 in flavor and cloud properties", func() {
+			volumeConfigurator.ConfigureVolumesReturns(nil, errors.New("boom"))
+
 			_, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "the_instance_type", RootDisk: properties.Disk{Size: 0}},
@@ -183,10 +137,19 @@ var _ = Describe("ComputeService", func() {
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "key_name_from_config"},
 			)
 
-			Expect(err.Error()).To(ContainSubstring("failed to configure volumes: failed to get volume size: flavor 'the_flavor_id' has a root disk size of 0."))
+			Expect(err.Error()).To(ContainSubstring("failed to configure volumes: boom"))
 		})
 
 		It("creates ops for the server", func() {
+			volumeConfigurator.ConfigureVolumesReturns([]bootfromvolume.BlockDevice{{
+				UUID:                "the-stemcell-id",
+				SourceType:          bootfromvolume.SourceImage,
+				DestinationType:     bootfromvolume.DestinationVolume,
+				VolumeSize:          999,
+				BootIndex:           0,
+				DeleteOnTermination: true,
+			}}, nil)
+
 			networkConfig = properties.NetworkConfig{
 				ManualNetworks: []properties.Network{
 					{IP: "1.2.3.4", CloudProps: properties.CreateVMNetwork{NetID: "the_net_id"}},
@@ -226,8 +189,8 @@ var _ = Describe("ComputeService", func() {
 			Expect(server["availability_zone"]).To(Equal("the_availability_zone"))
 			Expect(server["flavorRef"]).To(Equal("the_flavor_id"))
 			Expect(server["key_name"]).To(Equal("the_os_keypair_name"))
-			Expect(blockDevice[0]["uuid"]).To(Equal("the_stemcell_id"))
-			Expect(blockDevice[0]["volume_size"]).To(Equal(1.0))
+			Expect(blockDevice[0]["uuid"]).To(Equal("the-stemcell-id"))
+			Expect(blockDevice[0]["volume_size"]).To(Equal(999.0))
 		})
 
 		It("creates a server", func() {

@@ -210,7 +210,7 @@ var _ = Describe("Create VM", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 
 		stdOutWriter.Close()
-		Expect(<-outChannel).To(ContainSubstring("failed to get flavor of instance type: flavor 'wrong_flavor' not found"))
+		Expect(<-outChannel).To(ContainSubstring("failed to resolve flavor of instance type 'wrong_flavor': flavor for instance type 'wrong_flavor' not found"))
 	})
 
 	It("fails if a security rule cannot be resolved", func() {
