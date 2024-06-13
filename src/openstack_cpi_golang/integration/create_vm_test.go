@@ -106,8 +106,10 @@ var _ = Describe("Create VM", func() {
 			fmt.Fprintf(w, `{
 				"flavors": [
 					{
+						"disk": 1,
 						"id": "1",
-						"name": "m1.tiny"
+						"name": "m1.tiny",
+						"ram": 512
 					}
 				]
 			}`)
@@ -137,7 +139,8 @@ var _ = Describe("Create VM", func() {
 				"a694d798-0b41-4255-9c8e-b282cd504a52",
 				"5bba0da5-dfb3-49d8-a005-d799507518f7",
 				{
-					"instance_type": "m1.tiny"
+					"instance_type": "m1.tiny",
+					"key_name": "default_key_name"
 				},
 				{
 					"bosh": {

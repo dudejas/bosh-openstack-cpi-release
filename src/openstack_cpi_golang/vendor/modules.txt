@@ -31,6 +31,7 @@ github.com/google/uuid
 github.com/gophercloud/gophercloud
 github.com/gophercloud/gophercloud/internal/ctxt
 github.com/gophercloud/gophercloud/openstack
+github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/bootfromvolume
 github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs
 github.com/gophercloud/gophercloud/openstack/compute/v2/flavors
 github.com/gophercloud/gophercloud/openstack/compute/v2/servers

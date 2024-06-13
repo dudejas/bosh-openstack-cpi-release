@@ -24,6 +24,7 @@ var _ = Describe("ComputeService", func() {
 	var computeService services.ComputeService
 	var networkConfig properties.NetworkConfig
 	var flavorsPage servicesmocks.MockPage
+	var defaultCloudConfig properties.CreateVM
 
 	BeforeEach(func() {
 		providerClient := gophercloud.ProviderClient{TokenID: "the_token"}
@@ -38,15 +39,15 @@ var _ = Describe("ComputeService", func() {
 		computeFacade.GetServerReturns(&servers.Server{ID: "123-456", Status: "ACTIVE"}, nil)
 		computeFacade.ListFlavorsReturns(flavorsPage, nil)
 		computeFacade.ExtractFlavorsReturns([]flavors.Flavor{{ID: "the_flavor_id", Name: "the_instance_type", RAM: 4096, Ephemeral: 10}}, nil)
-		computeFacade.GetOSKeyPairReturns(&keypairs.KeyPair{Name: "the_key_name"}, nil)
+		computeFacade.GetOSKeyPairReturns(&keypairs.KeyPair{Name: "the_os_keypair_name"}, nil)
+		defaultCloudConfig = properties.CreateVM{InstanceType: "the_instance_type", RootDisk: properties.Disk{Size: 1}}
 	})
 
 	Context("CreateServer", func() {
-
 		It("list flavors", func() {
 			_, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
-				properties.CreateVM{InstanceType: "the_instance_type"},
+				defaultCloudConfig,
 				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
@@ -60,7 +61,7 @@ var _ = Describe("ComputeService", func() {
 
 			_, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
-				properties.CreateVM{InstanceType: "the_instance_type"},
+				defaultCloudConfig,
 				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
@@ -71,7 +72,7 @@ var _ = Describe("ComputeService", func() {
 		It("extract flavors", func() {
 			computeService.CreateServer(
 				apiv1.StemcellCID{},
-				properties.CreateVM{InstanceType: "the_instance_type"},
+				defaultCloudConfig,
 				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
@@ -84,7 +85,7 @@ var _ = Describe("ComputeService", func() {
 
 			_, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
-				properties.CreateVM{InstanceType: "the_instance_type"},
+				defaultCloudConfig,
 				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
@@ -95,7 +96,7 @@ var _ = Describe("ComputeService", func() {
 		It("return an error if flavor name is not found", func() {
 			_, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
-				properties.CreateVM{InstanceType: "not_existing_flavor"},
+				properties.CreateVM{InstanceType: "not_existing_flavor", RootDisk: properties.Disk{Size: 1}},
 				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
@@ -108,7 +109,7 @@ var _ = Describe("ComputeService", func() {
 
 			_, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
-				properties.CreateVM{InstanceType: "the_flavor_id"},
+				properties.CreateVM{InstanceType: "the_flavor_id", RootDisk: properties.Disk{Size: 1}},
 				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
@@ -124,6 +125,7 @@ var _ = Describe("ComputeService", func() {
 				properties.CreateVM{
 					InstanceType: "the_instance_type",
 					KeyName:      "key_name_from_properties",
+					RootDisk:     properties.Disk{Size: 0},
 				},
 				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
@@ -138,7 +140,7 @@ var _ = Describe("ComputeService", func() {
 
 			computeService.CreateServer(
 				apiv1.StemcellCID{},
-				properties.CreateVM{InstanceType: "the_instance_type"},
+				defaultCloudConfig,
 				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "key_name_from_config"},
 			)
@@ -152,7 +154,7 @@ var _ = Describe("ComputeService", func() {
 
 			_, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
-				properties.CreateVM{InstanceType: "the_instance_type"},
+				defaultCloudConfig,
 				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10},
 			)
@@ -165,12 +167,23 @@ var _ = Describe("ComputeService", func() {
 
 			_, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
-				properties.CreateVM{InstanceType: "the_instance_type"},
+				defaultCloudConfig,
 				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
 			Expect(err.Error()).To(Equal("failed to resolve keypair: failed to retrieve 'the_key_name': boom"))
+		})
+
+		It("returns an error if the disksize is 0 in flavor and cloud properties", func() {
+			_, err := computeService.CreateServer(
+				apiv1.StemcellCID{},
+				properties.CreateVM{InstanceType: "the_instance_type", RootDisk: properties.Disk{Size: 0}},
+				networkConfig,
+				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "key_name_from_config"},
+			)
+
+			Expect(err.Error()).To(ContainSubstring("failed to configure volumes: failed to get volume size: flavor 'the_flavor_id' has a root disk size of 0."))
 		})
 
 		It("creates ops for the server", func() {
@@ -181,23 +194,29 @@ var _ = Describe("ComputeService", func() {
 				SecurityGroups: []string{"group_1", "group_2"},
 			}
 
+			bootfromvolume := true
+
 			_, err := computeService.CreateServer(
 				apiv1.NewStemcellCID("the_stemcell_id"),
-				properties.CreateVM{AvailabilityZone: "the_availability_zone"},
+				properties.CreateVM{
+					InstanceType:     "the_instance_type",
+					AvailabilityZone: "the_availability_zone",
+					RootDisk:         properties.Disk{Size: 1},
+					BootFromVolume:   &bootfromvolume,
+				},
 				networkConfig,
 				config.OpenstackConfig{DefaultKeyName: "the_key_name"},
 			)
-			if err != nil {
-				return
-			}
 			Expect(err).ToNot(HaveOccurred())
 
 			sClient, opts := computeFacade.CreateServerArgsForCall(0)
 			Expect(sClient).To(Equal(&serviceClient))
+
 			createMap, err := opts.ToServerCreateMap()
 			server := createMap["server"].(map[string]interface{})
 			serverSecurityGroups := server["security_groups"].([]map[string]interface{})
 			serverNetworks := server["networks"].([]map[string]interface{})
+			blockDevice := server["block_device_mapping_v2"].([]map[string]interface{})
 
 			Expect(server["name"]).To(ContainSubstring("vm-"))
 			Expect(server["imageRef"]).To(Equal("the_stemcell_id"))
@@ -206,13 +225,15 @@ var _ = Describe("ComputeService", func() {
 			Expect(serverSecurityGroups[1]["name"]).To(Equal("group_2"))
 			Expect(server["availability_zone"]).To(Equal("the_availability_zone"))
 			Expect(server["flavorRef"]).To(Equal("the_flavor_id"))
-			Expect(opts.(keypairs.CreateOptsExt).KeyName).To(Equal("the_key_name"))
+			Expect(server["key_name"]).To(Equal("the_os_keypair_name"))
+			Expect(blockDevice[0]["uuid"]).To(Equal("the_stemcell_id"))
+			Expect(blockDevice[0]["volume_size"]).To(Equal(1.0))
 		})
 
 		It("creates a server", func() {
 			computeService.CreateServer(
 				apiv1.StemcellCID{},
-				properties.CreateVM{InstanceType: "the_instance_type"},
+				defaultCloudConfig,
 				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
@@ -225,7 +246,7 @@ var _ = Describe("ComputeService", func() {
 
 			serverID, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
-				properties.CreateVM{InstanceType: "the_instance_type"},
+				defaultCloudConfig,
 				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
@@ -242,7 +263,7 @@ var _ = Describe("ComputeService", func() {
 
 			serverID, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
-				properties.CreateVM{InstanceType: "the_instance_type"},
+				defaultCloudConfig,
 				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
@@ -257,7 +278,7 @@ var _ = Describe("ComputeService", func() {
 
 			serverID, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
-				properties.CreateVM{InstanceType: "the_instance_type"},
+				defaultCloudConfig,
 				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
@@ -271,7 +292,7 @@ var _ = Describe("ComputeService", func() {
 
 			serverID, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
-				properties.CreateVM{InstanceType: "the_instance_type"},
+				defaultCloudConfig,
 				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
@@ -285,7 +306,7 @@ var _ = Describe("ComputeService", func() {
 
 			serverID, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
-				properties.CreateVM{InstanceType: "the_instance_type"},
+				defaultCloudConfig,
 				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
@@ -299,7 +320,7 @@ var _ = Describe("ComputeService", func() {
 
 			serverID, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
-				properties.CreateVM{InstanceType: "the_instance_type"},
+				defaultCloudConfig,
 				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 0, DefaultKeyName: "the_key_name"},
 			)
@@ -311,7 +332,7 @@ var _ = Describe("ComputeService", func() {
 		It("returns the id of the created server", func() {
 			serverID, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
-				properties.CreateVM{InstanceType: "the_instance_type"},
+				defaultCloudConfig,
 				networkConfig,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
