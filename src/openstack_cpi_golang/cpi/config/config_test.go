@@ -1,6 +1,7 @@
-package config
+package config_test
 
 import (
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"testing/fstest"
@@ -125,7 +126,7 @@ var _ = Describe("OpenstackConfig", func() {
 
 	Context("NewConfigFromPath", func() {
 		It("gets the cpi configuration from filesystem", func() {
-			cpiConfig, err := NewConfigFromPath(fileSystem, "some/path/config.json")
+			cpiConfig, err := config.NewConfigFromPath(fileSystem, "some/path/config.json")
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(cpiConfig.Cloud.Properties.Openstack.AuthURL).To(Equal("the_auth_url"))
@@ -139,19 +140,19 @@ var _ = Describe("OpenstackConfig", func() {
 		})
 
 		It("returns an error if config file cannot be found", func() {
-			_, err := NewConfigFromPath(fileSystem, "some/path/not_existing_config.json")
+			_, err := config.NewConfigFromPath(fileSystem, "some/path/not_existing_config.json")
 
 			Expect(err.Error()).To(ContainSubstring("failed to open configuration file: open some/path/not_existing_config.json: file does not exist"))
 		})
 
 		It("returns an error if config file cannot be found", func() {
-			_, err := NewConfigFromPath(fileSystem, "some/path")
+			_, err := config.NewConfigFromPath(fileSystem, "some/path")
 
 			Expect(err.Error()).To(Equal("failed to read configuration file: read some/path: invalid argument"))
 		})
 
 		It("returns an error if config file json cannot be unmarshalled", func() {
-			_, err := NewConfigFromPath(fileSystem, "some/path/config.txt")
+			_, err := config.NewConfigFromPath(fileSystem, "some/path/config.txt")
 
 			Expect(err.Error()).To(ContainSubstring("failed to unmarshall configuration file: some/path/config.txt, err: invalid character"))
 		})
@@ -160,39 +161,39 @@ var _ = Describe("OpenstackConfig", func() {
 
 	Context("Validate", func() {
 		It("returns an error if username and application credential is set", func() {
-			_, err := NewConfigFromPath(fileSystem, "some/path/invalid_user_config.json")
+			_, err := config.NewConfigFromPath(fileSystem, "some/path/invalid_user_config.json")
 
 			Expect(err.Error()).To(ContainSubstring("Invalid OpenStack cloud properties: username and api_key or application_credential_id and application_credential_secret is required"))
 		})
 
 		It("config drive can be set to disk", func() {
-			cpiConfig, err := NewConfigFromPath(fileSystem, "some/path/disk_config_drive.json")
+			cpiConfig, err := config.NewConfigFromPath(fileSystem, "some/path/disk_config_drive.json")
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(cpiConfig.Cloud.Properties.Openstack.ConfigDrive).To(Equal("disk"))
 		})
 
 		It("config drive can be set to cdrom", func() {
-			cpiConfig, err := NewConfigFromPath(fileSystem, "some/path/cdrom_config_drive.json")
+			cpiConfig, err := config.NewConfigFromPath(fileSystem, "some/path/cdrom_config_drive.json")
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(cpiConfig.Cloud.Properties.Openstack.ConfigDrive).To(Equal("cdrom"))
 		})
 
 		It("returns an error if config drive is invalid", func() {
-			_, err := NewConfigFromPath(fileSystem, "some/path/invalid_config_drive.json")
+			_, err := config.NewConfigFromPath(fileSystem, "some/path/invalid_config_drive.json")
 
 			Expect(err.Error()).To(ContainSubstring("Invalid OpenStack cloud properties: config_drive must be either 'cdrom' or 'disk'"))
 		})
 
 		It("returns an error if config is empty", func() {
-			_, err := NewConfigFromPath(fileSystem, "some/path/empty_config.json")
+			_, err := config.NewConfigFromPath(fileSystem, "some/path/empty_config.json")
 
 			Expect(err.Error()).To(ContainSubstring("Invalid OpenStack cloud properties: username and api_key or application_credential_id and application_credential_secret is required"))
 		})
 
 		It("succeeds with username and api_key", func() {
-			cpiConfig, err := NewConfigFromPath(fileSystem, "some/path/username_api_key_config.json")
+			cpiConfig, err := config.NewConfigFromPath(fileSystem, "some/path/username_api_key_config.json")
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(cpiConfig.Cloud.Properties.Openstack.Username).To(Equal("the_username"))
@@ -200,7 +201,7 @@ var _ = Describe("OpenstackConfig", func() {
 		})
 
 		It("succeeds with application credential id and secret", func() {
-			cpiConfig, err := NewConfigFromPath(fileSystem, "some/path/application_credential_config.json")
+			cpiConfig, err := config.NewConfigFromPath(fileSystem, "some/path/application_credential_config.json")
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(cpiConfig.Cloud.Properties.Openstack.ApplicationCredentialID).To(Equal("the_application_credential_id"))
@@ -210,7 +211,7 @@ var _ = Describe("OpenstackConfig", func() {
 
 	Context("AuthOptions", func() {
 		It("configures AuthOptions with username and password", func() {
-			cpiConfig, err := NewConfigFromPath(fileSystem, "some/path/username_api_key_config.json")
+			cpiConfig, err := config.NewConfigFromPath(fileSystem, "some/path/username_api_key_config.json")
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(cpiConfig.Cloud.Properties.Openstack.AuthOptions().IdentityEndpoint).To(Equal("the_auth_url"))
@@ -221,7 +222,7 @@ var _ = Describe("OpenstackConfig", func() {
 		})
 
 		It("configures AuthOptions with application credential id and secret", func() {
-			cpiConfig, err := NewConfigFromPath(fileSystem, "some/path/application_credential_config.json")
+			cpiConfig, err := config.NewConfigFromPath(fileSystem, "some/path/application_credential_config.json")
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(cpiConfig.Cloud.Properties.Openstack.AuthOptions().IdentityEndpoint).To(Equal("the_auth_url"))

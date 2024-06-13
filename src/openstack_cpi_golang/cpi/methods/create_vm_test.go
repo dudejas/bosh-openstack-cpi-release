@@ -3,9 +3,11 @@ package methods_test
 import (
 	"errors"
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/compute/computefakes"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/image/imagefakes"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/methods"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services/servicesfakes"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/network/networkfakes"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils/utilsfakes"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -13,10 +15,12 @@ import (
 
 var _ = Describe("CreateVMMethod", func() {
 
-	var serviceFactory servicesfakes.FakeServiceFactory
-	var computeService servicesfakes.FakeComputeService
-	var networkService servicesfakes.FakeNetworkService
-	var imageService servicesfakes.FakeImageService
+	var computeServiceBuilder computefakes.FakeComputeServiceBuilder
+	var networkServiceBuilder networkfakes.FakeNetworkServiceBuilder
+	var imageServiceBuilder imagefakes.FakeImageServiceBuilder
+	var computeService computefakes.FakeComputeService
+	var networkService networkfakes.FakeNetworkService
+	var imageService imagefakes.FakeImageService
 	var logger utilsfakes.FakeLogger
 	var props map[string]interface{}
 	var networks apiv1.Networks
@@ -24,15 +28,17 @@ var _ = Describe("CreateVMMethod", func() {
 	Context("CreateVMV2", func() {
 
 		BeforeEach(func() {
-			serviceFactory = servicesfakes.FakeServiceFactory{}
-			computeService = servicesfakes.FakeComputeService{}
-			networkService = servicesfakes.FakeNetworkService{}
-			imageService = servicesfakes.FakeImageService{}
+			computeServiceBuilder = computefakes.FakeComputeServiceBuilder{}
+			networkServiceBuilder = networkfakes.FakeNetworkServiceBuilder{}
+			imageServiceBuilder = imagefakes.FakeImageServiceBuilder{}
+			computeService = computefakes.FakeComputeService{}
+			networkService = networkfakes.FakeNetworkService{}
+			imageService = imagefakes.FakeImageService{}
 			logger = utilsfakes.FakeLogger{}
 
-			serviceFactory.CreateComputeServiceReturns(&computeService, nil)
-			serviceFactory.CreateNetworkServiceReturns(&networkService, nil)
-			serviceFactory.CreateImageServiceReturns(&imageService, nil)
+			computeServiceBuilder.BuildReturns(&computeService, nil)
+			networkServiceBuilder.BuildReturns(&networkService, nil)
+			imageServiceBuilder.BuildReturns(&imageService, nil)
 			computeService.CreateServerReturns("123-456", nil)
 			networkService.ConfigureNetworkReturns(nil)
 
@@ -44,10 +50,12 @@ var _ = Describe("CreateVMMethod", func() {
 				"network1": apiv1.NewNetwork(apiv1.NetworkOpts{}),
 			}
 		})
-
+		//
 		It("creates the compute service", func() {
 			methods.NewCreateVMMethod(
-				&serviceFactory,
+				&imageServiceBuilder,
+				&networkServiceBuilder,
+				&computeServiceBuilder,
 				config.OpenstackConfig{},
 				&logger,
 			).CreateVMV2(
@@ -59,14 +67,16 @@ var _ = Describe("CreateVMMethod", func() {
 				apiv1.VMEnv{},
 			)
 
-			Expect(serviceFactory.CreateComputeServiceCallCount()).To(Equal(1))
+			Expect(computeServiceBuilder.BuildCallCount()).To(Equal(1))
 		})
 
 		It("returns an error if the compute service cannot be retrieved", func() {
-			serviceFactory.CreateComputeServiceReturns(nil, errors.New("boom"))
+			computeServiceBuilder.BuildReturns(nil, errors.New("boom"))
 
 			stemcellCID, networks, err := methods.NewCreateVMMethod(
-				&serviceFactory,
+				&imageServiceBuilder,
+				&networkServiceBuilder,
+				&computeServiceBuilder,
 				config.OpenstackConfig{},
 				&logger,
 			).CreateVMV2(
@@ -85,7 +95,9 @@ var _ = Describe("CreateVMMethod", func() {
 
 		It("creates the network service", func() {
 			methods.NewCreateVMMethod(
-				&serviceFactory,
+				&imageServiceBuilder,
+				&networkServiceBuilder,
+				&computeServiceBuilder,
 				config.OpenstackConfig{},
 				&logger,
 			).CreateVMV2(
@@ -97,14 +109,16 @@ var _ = Describe("CreateVMMethod", func() {
 				apiv1.VMEnv{},
 			)
 
-			Expect(serviceFactory.CreateNetworkServiceCallCount()).To(Equal(1))
+			Expect(networkServiceBuilder.BuildCallCount()).To(Equal(1))
 		})
 
 		It("returns an error if the network service cannot be retrieved", func() {
-			serviceFactory.CreateNetworkServiceReturns(nil, errors.New("boom"))
+			networkServiceBuilder.BuildReturns(nil, errors.New("boom"))
 
 			stemcellCID, networks, err := methods.NewCreateVMMethod(
-				&serviceFactory,
+				&imageServiceBuilder,
+				&networkServiceBuilder,
+				&computeServiceBuilder,
 				config.OpenstackConfig{},
 				&logger,
 			).CreateVMV2(
@@ -123,7 +137,9 @@ var _ = Describe("CreateVMMethod", func() {
 
 		It("creates the image service", func() {
 			methods.NewCreateVMMethod(
-				&serviceFactory,
+				&imageServiceBuilder,
+				&networkServiceBuilder,
+				&computeServiceBuilder,
 				config.OpenstackConfig{},
 				&logger,
 			).CreateVMV2(
@@ -135,14 +151,16 @@ var _ = Describe("CreateVMMethod", func() {
 				apiv1.VMEnv{},
 			)
 
-			Expect(serviceFactory.CreateImageServiceCallCount()).To(Equal(1))
+			Expect(imageServiceBuilder.BuildCallCount()).To(Equal(1))
 		})
 
 		It("returns an error if the image service cannot be retrieved", func() {
-			serviceFactory.CreateImageServiceReturns(nil, errors.New("boom"))
+			imageServiceBuilder.BuildReturns(nil, errors.New("boom"))
 
 			stemcellCID, networks, err := methods.NewCreateVMMethod(
-				&serviceFactory,
+				&imageServiceBuilder,
+				&networkServiceBuilder,
+				&computeServiceBuilder,
 				config.OpenstackConfig{},
 				&logger,
 			).CreateVMV2(
@@ -163,7 +181,9 @@ var _ = Describe("CreateVMMethod", func() {
 			imageService.GetImageReturns("", errors.New("boom"))
 
 			stemcellCID, networks, err := methods.NewCreateVMMethod(
-				&serviceFactory,
+				&imageServiceBuilder,
+				&networkServiceBuilder,
+				&computeServiceBuilder,
 				config.OpenstackConfig{},
 				&logger,
 			).CreateVMV2(
@@ -187,7 +207,9 @@ var _ = Describe("CreateVMMethod", func() {
 			}
 
 			stemcellCID, networks, err := methods.NewCreateVMMethod(
-				&serviceFactory,
+				&imageServiceBuilder,
+				&networkServiceBuilder,
+				&computeServiceBuilder,
 				config.OpenstackConfig{},
 				&logger,
 			).CreateVMV2(
@@ -206,7 +228,9 @@ var _ = Describe("CreateVMMethod", func() {
 
 		It("creates a server", func() {
 			methods.NewCreateVMMethod(
-				&serviceFactory,
+				&imageServiceBuilder,
+				&networkServiceBuilder,
+				&computeServiceBuilder,
 				config.OpenstackConfig{},
 				&logger,
 			).CreateVMV2(
@@ -226,7 +250,9 @@ var _ = Describe("CreateVMMethod", func() {
 			computeService.CreateServerReturns("", errors.New("boom"))
 
 			stemcellCID, networks, err := methods.NewCreateVMMethod(
-				&serviceFactory,
+				&imageServiceBuilder,
+				&networkServiceBuilder,
+				&computeServiceBuilder,
 				config.OpenstackConfig{},
 				&logger,
 			).CreateVMV2(
@@ -245,7 +271,9 @@ var _ = Describe("CreateVMMethod", func() {
 
 		It("configures the network of the created server", func() {
 			methods.NewCreateVMMethod(
-				&serviceFactory,
+				&imageServiceBuilder,
+				&networkServiceBuilder,
+				&computeServiceBuilder,
 				config.OpenstackConfig{},
 				&logger,
 			).CreateVMV2(
@@ -265,7 +293,9 @@ var _ = Describe("CreateVMMethod", func() {
 			networkService.ConfigureNetworkReturns(errors.New("boom"))
 
 			stemcellCID, networks, err := methods.NewCreateVMMethod(
-				&serviceFactory,
+				&imageServiceBuilder,
+				&networkServiceBuilder,
+				&computeServiceBuilder,
 				config.OpenstackConfig{},
 				&logger,
 			).CreateVMV2(
@@ -284,7 +314,9 @@ var _ = Describe("CreateVMMethod", func() {
 
 		It("returns a server ID", func() {
 			stemcellCID, _, err := methods.NewCreateVMMethod(
-				&serviceFactory,
+				&imageServiceBuilder,
+				&networkServiceBuilder,
+				&computeServiceBuilder,
 				config.OpenstackConfig{},
 				&logger,
 			).CreateVMV2(
@@ -302,7 +334,9 @@ var _ = Describe("CreateVMMethod", func() {
 
 		It("returns networks", func() {
 			_, networks, err := methods.NewCreateVMMethod(
-				&serviceFactory,
+				&imageServiceBuilder,
+				&networkServiceBuilder,
+				&computeServiceBuilder,
 				config.OpenstackConfig{},
 				&logger,
 			).CreateVMV2(

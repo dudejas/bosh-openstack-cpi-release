@@ -3,24 +3,35 @@ package methods
 import (
 	"fmt"
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/compute"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/image"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/network"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/vm"
 )
 
 type CreateVMMethod struct {
-	serviceFactory services.ServiceFactory
-	config         config.OpenstackConfig
-	logger         utils.Logger
+	imageServiceBuilder   image.ImageServiceBuilder
+	networkServiceBuilder network.NetworkServiceBuilder
+	computeServiceBuilder compute.ComputeServiceBuilder
+	config                config.OpenstackConfig
+	logger                utils.Logger
 }
 
-func NewCreateVMMethod(serviceFactory services.ServiceFactory, config config.OpenstackConfig, logger utils.Logger) CreateVMMethod {
+func NewCreateVMMethod(
+	imageServiceBuilder image.ImageServiceBuilder,
+	networkServiceBuilder network.NetworkServiceBuilder,
+	computeServiceBuilder compute.ComputeServiceBuilder,
+	config config.OpenstackConfig,
+	logger utils.Logger,
+) CreateVMMethod {
 	return CreateVMMethod{
-		serviceFactory: serviceFactory,
-		config:         config,
-		logger:         logger,
+		imageServiceBuilder:   imageServiceBuilder,
+		networkServiceBuilder: networkServiceBuilder,
+		computeServiceBuilder: computeServiceBuilder,
+		config:                config,
+		logger:                logger,
 	}
 }
 
@@ -38,17 +49,17 @@ func (m CreateVMMethod) CreateVMV2(
 	cloudProps := properties.CreateVM{}
 	props.As(&cloudProps)
 
-	computeService, err := m.serviceFactory.CreateComputeService()
+	computeService, err := m.computeServiceBuilder.Build()
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to create compute service: %w", err)
 	}
 
-	networkService, err := m.serviceFactory.CreateNetworkService()
+	networkService, err := m.networkServiceBuilder.Build()
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to create networking service: %w", err)
 	}
 
-	imageService, err := m.serviceFactory.CreateImageService()
+	imageService, err := m.imageServiceBuilder.Build()
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to create image service: %w", err)
 	}
@@ -58,7 +69,7 @@ func (m CreateVMMethod) CreateVMV2(
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to resolve stemcell: %w", err)
 	}
 
-	networkConfig, err := vm.NewNetworkConfigBuilder(networkService, networks, m.config, cloudProps).Build()
+	networkConfig, err := compute.NewNetworkConfigBuilder(networkService, networks, m.config, cloudProps).Build()
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to create network config: %w", err)
 	}

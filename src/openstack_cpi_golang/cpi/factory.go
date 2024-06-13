@@ -2,12 +2,13 @@ package cpi
 
 import (
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/compute"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/image"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/image/root_image"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/methods"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services/facades"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/stemcell"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/stemcell/root_image"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/network"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/openstack"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 )
 
@@ -50,27 +51,29 @@ func NewFactory(
 }
 
 func (cpiFactory Factory) New(ctx apiv1.CallContext) (apiv1.CPI, error) {
-	openstackService := services.NewOpenstackService(facades.NewOpenstackFacade(), utils.NewEnvVar())
+	openstackService := openstack.NewOpenstackService(openstack.NewOpenstackFacade(), utils.NewEnvVar())
 	openstackConfig := cpiFactory.openstackConfig
 
 	return CPI{
 		methods.NewInfoMethod(),
 
 		methods.NewCreateStemcellMethod(
-			services.NewServiceFactory(openstackService, openstackConfig, cpiFactory.logger),
-			stemcell.NewHeavyStemcellCreator(openstackConfig),
-			stemcell.NewLightStemcellCreator(openstackConfig),
+			image.NewImageServiceBuilder(openstackService, openstackConfig, cpiFactory.logger),
+			image.NewHeavyStemcellCreator(openstackConfig),
+			image.NewLightStemcellCreator(openstackConfig),
 			root_image.NewRootImage(),
 			cpiFactory.openstackConfig,
 			cpiFactory.logger,
 		),
 		methods.NewDeleteStemcellMethod(
-			services.NewServiceFactory(openstackService, openstackConfig, cpiFactory.logger),
+			image.NewImageServiceBuilder(openstackService, openstackConfig, cpiFactory.logger),
 			cpiFactory.logger,
 		),
 
 		methods.NewCreateVMMethod(
-			services.NewServiceFactory(openstackService, openstackConfig, cpiFactory.logger),
+			image.NewImageServiceBuilder(openstackService, openstackConfig, cpiFactory.logger),
+			network.NewNetworkServiceBuilder(openstackService, openstackConfig, cpiFactory.logger),
+			compute.NewComputeServiceBuilder(openstackService, openstackConfig, cpiFactory.logger),
 			cpiFactory.openstackConfig,
 			cpiFactory.logger,
 		),

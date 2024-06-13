@@ -3,7 +3,7 @@ package integration_test
 import (
 	"fmt"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/image"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"net/http"
@@ -118,7 +118,7 @@ var _ = Describe("Create Stemcell", func() {
 	})
 
 	It("retries the light stemcell creation", func() {
-		services.DefaultRetrySleepDuration = 0
+		image.DefaultRetrySleepDuration = 0
 		Mux.HandleFunc("/v2/images/b2173dd3-7ad6-4362-baa6-a68bce3565cb", func(w http.ResponseWriter, r *http.Request) {
 
 			if atomic.LoadInt64(&count) == 0 {

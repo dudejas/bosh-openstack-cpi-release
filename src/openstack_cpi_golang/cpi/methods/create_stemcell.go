@@ -4,33 +4,32 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/image"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/image/root_image"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/stemcell"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/stemcell/root_image"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"os"
 )
 
 type CreateStemcellMethod struct {
-	serviceFactory       services.ServiceFactory
-	heavyStemcellCreator stemcell.HeavyStemcellCreator
-	lightStemcellCreator stemcell.LightStemcellCreator
+	imageServiceBuilder  image.ImageServiceBuilder
+	heavyStemcellCreator image.HeavyStemcellCreator
+	lightStemcellCreator image.LightStemcellCreator
 	rootImageProvider    root_image.RootImage
 	config               config.OpenstackConfig
 	logger               utils.Logger
 }
 
 func NewCreateStemcellMethod(
-	serviceFactory services.ServiceFactory,
-	heavyStemcellCreator stemcell.HeavyStemcellCreator,
-	lightStemcellCreator stemcell.LightStemcellCreator,
+	imageServiceBuilder image.ImageServiceBuilder,
+	heavyStemcellCreator image.HeavyStemcellCreator,
+	lightStemcellCreator image.LightStemcellCreator,
 	rootImageProvider root_image.RootImage,
 	config config.OpenstackConfig,
 	logger utils.Logger,
 ) CreateStemcellMethod {
 	return CreateStemcellMethod{
-		serviceFactory:       serviceFactory,
+		imageServiceBuilder:  imageServiceBuilder,
 		heavyStemcellCreator: heavyStemcellCreator,
 		lightStemcellCreator: lightStemcellCreator,
 		rootImageProvider:    rootImageProvider,
@@ -48,7 +47,7 @@ func (a CreateStemcellMethod) CreateStemcell(
 	var cloudProps = properties.CreateStemcell{}
 	props.As(&cloudProps)
 
-	imageService, err := a.serviceFactory.CreateImageService()
+	imageService, err := a.imageServiceBuilder.Build()
 	if err != nil {
 		return apiv1.StemcellCID{}, fmt.Errorf("failed to create image service: %w", err)
 	}

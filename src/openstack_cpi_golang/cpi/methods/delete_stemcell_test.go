@@ -1,10 +1,11 @@
-package methods
+package methods_test
 
 import (
 	"errors"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/image/imagefakes"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/methods"
 
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/services/servicesfakes"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils/utilsfakes"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -12,22 +13,22 @@ import (
 
 var _ = Describe("DeleteStemcellMethod", func() {
 
-	var serviceFactory servicesfakes.FakeServiceFactory
+	var imageServiceBuilder imagefakes.FakeImageServiceBuilder
 	var logger utilsfakes.FakeLogger
-	var imageService servicesfakes.FakeImageService
+	var imageService imagefakes.FakeImageService
 
 	Context("DeleteStemcell", func() {
 
 		BeforeEach(func() {
-			serviceFactory = servicesfakes.FakeServiceFactory{}
+			imageServiceBuilder = imagefakes.FakeImageServiceBuilder{}
 			logger = utilsfakes.FakeLogger{}
 		})
 
 		It("deletes an image ID", func() {
-			serviceFactory.CreateImageServiceReturns(&imageService, nil)
+			imageServiceBuilder.BuildReturns(&imageService, nil)
 			imageService.DeleteImageReturns(nil)
-			err := NewDeleteStemcellMethod(
-				&serviceFactory,
+			err := methods.NewDeleteStemcellMethod(
+				&imageServiceBuilder,
 				&logger,
 			).DeleteStemcell(apiv1.NewStemcellCID("cloudID"))
 
@@ -38,10 +39,10 @@ var _ = Describe("DeleteStemcellMethod", func() {
 		})
 
 		It("returns an error if image cannot be deleted", func() {
-			serviceFactory.CreateImageServiceReturns(&imageService, nil)
+			imageServiceBuilder.BuildReturns(&imageService, nil)
 			imageService.DeleteImageReturns(errors.New("boom"))
-			err := NewDeleteStemcellMethod(
-				&serviceFactory,
+			err := methods.NewDeleteStemcellMethod(
+				&imageServiceBuilder,
 				&logger,
 			).DeleteStemcell(apiv1.NewStemcellCID("cloudID"))
 
@@ -49,9 +50,9 @@ var _ = Describe("DeleteStemcellMethod", func() {
 		})
 
 		It("returns an error if the image service cannot be retrieved", func() {
-			serviceFactory.CreateImageServiceReturns(nil, errors.New("boom"))
-			err := NewDeleteStemcellMethod(
-				&serviceFactory,
+			imageServiceBuilder.BuildReturns(nil, errors.New("boom"))
+			err := methods.NewDeleteStemcellMethod(
+				&imageServiceBuilder,
 				&logger,
 			).DeleteStemcell(apiv1.NewStemcellCID("cloudID"))
 
