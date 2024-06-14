@@ -29,8 +29,8 @@ func (n *NetworkConfig) updateDefaultNetwork(server servers.Server) {
 	for _, addressList := range server.Addresses {
 		if addresses, ok := addressList.([]interface{}); ok {
 			for _, address := range addresses {
-				if ip, ok := address.(string); ok {
-					n.DefaultNetwork.IP = ip
+				if addr, ok := address.(map[string]interface{}); ok {
+					n.DefaultNetwork.IP = addr["addr"].(string)
 					return
 				}
 			}

@@ -38,6 +38,20 @@ type FakeNetworkService struct {
 		result1 properties.NetworkConfig
 		result2 error
 	}
+	GetSubnetIDStub        func(string, string) (string, error)
+	getSubnetIDMutex       sync.RWMutex
+	getSubnetIDArgsForCall []struct {
+		arg1 string
+		arg2 string
+	}
+	getSubnetIDReturns struct {
+		result1 string
+		result2 error
+	}
+	getSubnetIDReturnsOnCall map[int]struct {
+		result1 string
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -170,6 +184,71 @@ func (fake *FakeNetworkService) GetNetworkConfigurationReturnsOnCall(i int, resu
 	}{result1, result2}
 }
 
+func (fake *FakeNetworkService) GetSubnetID(arg1 string, arg2 string) (string, error) {
+	fake.getSubnetIDMutex.Lock()
+	ret, specificReturn := fake.getSubnetIDReturnsOnCall[len(fake.getSubnetIDArgsForCall)]
+	fake.getSubnetIDArgsForCall = append(fake.getSubnetIDArgsForCall, struct {
+		arg1 string
+		arg2 string
+	}{arg1, arg2})
+	stub := fake.GetSubnetIDStub
+	fakeReturns := fake.getSubnetIDReturns
+	fake.recordInvocation("GetSubnetID", []interface{}{arg1, arg2})
+	fake.getSubnetIDMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeNetworkService) GetSubnetIDCallCount() int {
+	fake.getSubnetIDMutex.RLock()
+	defer fake.getSubnetIDMutex.RUnlock()
+	return len(fake.getSubnetIDArgsForCall)
+}
+
+func (fake *FakeNetworkService) GetSubnetIDCalls(stub func(string, string) (string, error)) {
+	fake.getSubnetIDMutex.Lock()
+	defer fake.getSubnetIDMutex.Unlock()
+	fake.GetSubnetIDStub = stub
+}
+
+func (fake *FakeNetworkService) GetSubnetIDArgsForCall(i int) (string, string) {
+	fake.getSubnetIDMutex.RLock()
+	defer fake.getSubnetIDMutex.RUnlock()
+	argsForCall := fake.getSubnetIDArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeNetworkService) GetSubnetIDReturns(result1 string, result2 error) {
+	fake.getSubnetIDMutex.Lock()
+	defer fake.getSubnetIDMutex.Unlock()
+	fake.GetSubnetIDStub = nil
+	fake.getSubnetIDReturns = struct {
+		result1 string
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeNetworkService) GetSubnetIDReturnsOnCall(i int, result1 string, result2 error) {
+	fake.getSubnetIDMutex.Lock()
+	defer fake.getSubnetIDMutex.Unlock()
+	fake.GetSubnetIDStub = nil
+	if fake.getSubnetIDReturnsOnCall == nil {
+		fake.getSubnetIDReturnsOnCall = make(map[int]struct {
+			result1 string
+			result2 error
+		})
+	}
+	fake.getSubnetIDReturnsOnCall[i] = struct {
+		result1 string
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeNetworkService) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -177,6 +256,8 @@ func (fake *FakeNetworkService) Invocations() map[string][][]interface{} {
 	defer fake.configureVIPNetworkMutex.RUnlock()
 	fake.getNetworkConfigurationMutex.RLock()
 	defer fake.getNetworkConfigurationMutex.RUnlock()
+	fake.getSubnetIDMutex.RLock()
+	defer fake.getSubnetIDMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

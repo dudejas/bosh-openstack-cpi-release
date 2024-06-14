@@ -9,6 +9,8 @@ import (
 type OpenstackFacade interface {
 	NewComputeV2(client *gophercloud.ProviderClient, eo gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error)
 
+	NewLoadBalancerV2(client *gophercloud.ProviderClient, endpointOpts gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error)
+
 	NewNetworkV2(client *gophercloud.ProviderClient, eo gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error)
 
 	NewImageServiceV2(client *gophercloud.ProviderClient, eo gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error)
@@ -24,6 +26,10 @@ func NewOpenstackFacade() OpenstackFacade {
 
 func (c openstackFacade) NewComputeV2(client *gophercloud.ProviderClient, endpointOpts gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error) {
 	return openstack.NewComputeV2(client, endpointOpts)
+}
+
+func (c openstackFacade) NewLoadBalancerV2(client *gophercloud.ProviderClient, endpointOpts gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error) {
+	return openstack.NewLoadBalancerV2(client, endpointOpts)
 }
 
 func (c openstackFacade) NewNetworkV2(client *gophercloud.ProviderClient, endpointOpts gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error) {

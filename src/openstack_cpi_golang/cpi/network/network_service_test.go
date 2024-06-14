@@ -10,6 +10,7 @@ import (
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -21,6 +22,7 @@ var _ = Describe("NetworkService", func() {
 	var logger utilsfakes.FakeLogger
 	var floatingIpPage mocks.MockPage
 	var portPage mocks.MockPage
+	var subnetsPage mocks.MockPage
 
 	BeforeEach(func() {
 		providerClient := gophercloud.ProviderClient{TokenID: "the_token"}
@@ -29,6 +31,7 @@ var _ = Describe("NetworkService", func() {
 		logger = utilsfakes.FakeLogger{}
 		floatingIpPage = mocks.MockPage{}
 		portPage = mocks.MockPage{}
+		subnetsPage = mocks.MockPage{}
 
 		networkingFacade.ListFloatingIpsReturns(floatingIpPage, nil)
 		networkingFacade.ExtractFloatingIPsReturns([]floatingips.FloatingIP{{ID: "the_floating_ip_id"}}, nil)
@@ -126,6 +129,79 @@ var _ = Describe("NetworkService", func() {
 
 			err := network.NewNetworkService(&serviceClient, &networkingFacade, &logger).ConfigureVIPNetwork("123-456", networkConfig)
 			Expect(err.Error()).To(Equal("failed to associate floating ip to port: boom"))
+		})
+	})
+
+	Context("GetSubnetID", func() {
+
+		BeforeEach(func() {
+			networkingFacade.ListSubnetsReturns(subnetsPage, nil)
+			networkingFacade.ExtractSubnetsReturns([]subnets.Subnet{
+				{ID: "the-subnet-id-1", CIDR: "1.1.1.0/24"}, {ID: "the-subnet-id-2", CIDR: "1.1.2.0/24"},
+			}, nil)
+		})
+
+		It("lists subnets", func() {
+
+		})
+
+		It("returns an error if listing subnets fails", func() {
+			networkingFacade.ListSubnetsReturns(nil, errors.New("boom"))
+
+			_, err := network.NewNetworkService(&serviceClient, &networkingFacade, &logger).GetSubnetID("the-net-id", "1.1.1.1")
+
+			Expect(err.Error()).To(Equal("failed to list subnets: boom"))
+		})
+
+		It("extracts subnets", func() {
+
+		})
+
+		It("returns an error if extracting subnets fails", func() {
+			network.NewNetworkService(&serviceClient, &networkingFacade, &logger).GetSubnetID("the-net-id", "1.1.1.1")
+
+			page := networkingFacade.ExtractSubnetsArgsForCall(0)
+
+			Expect(page).To(Equal(subnetsPage))
+		})
+
+		It("returns an error if subnets are empty", func() {
+			networkingFacade.ExtractSubnetsReturns([]subnets.Subnet{}, nil)
+
+			_, err := network.NewNetworkService(&serviceClient, &networkingFacade, &logger).GetSubnetID("the-net-id", "1.1.1.1")
+
+			Expect(err.Error()).To(Equal("no subnet found for network 'the-net-id'"))
+		})
+
+		It("calculates the matching subnet of the offered IP", func() {
+
+		})
+
+		It("returns an error if subnet CIDR cannot be parsed", func() {
+			networkingFacade.ExtractSubnetsReturns([]subnets.Subnet{
+				{ID: "the-subnet-id-1", CIDR: "invalid-cidr"},
+			}, nil)
+
+			_, err := network.NewNetworkService(&serviceClient, &networkingFacade, &logger).GetSubnetID("the-net-id", "1.1.1.1")
+
+			Expect(err.Error()).To(Equal("failed to parse subnet cidr 'invalid-cidr': invalid CIDR address: invalid-cidr"))
+		})
+
+		It("returns an error if multiple subnet CIDRs match the offered IP", func() {
+			networkingFacade.ExtractSubnetsReturns([]subnets.Subnet{
+				{ID: "the-subnet-id-1", CIDR: "1.1.1.0/24"}, {ID: "the-subnet-id-2", CIDR: "1.1.1.0/24"},
+			}, nil)
+
+			_, err := network.NewNetworkService(&serviceClient, &networkingFacade, &logger).GetSubnetID("the-net-id", "1.1.1.1")
+
+			Expect(err.Error()).To(ContainSubstring("found more than one matching subnet for the ip"))
+		})
+
+		It("returns the subnet ID of the matching subnet", func() {
+			subnetID, err := network.NewNetworkService(&serviceClient, &networkingFacade, &logger).GetSubnetID("the-net-id", "1.1.1.1")
+
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(subnetID).To(Equal("the-subnet-id-1"))
 		})
 	})
 })

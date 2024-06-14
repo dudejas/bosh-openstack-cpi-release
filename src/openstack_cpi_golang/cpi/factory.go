@@ -6,6 +6,7 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/image"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/image/root_image"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/loadbalancer"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/methods"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/network"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/openstack"
@@ -74,6 +75,7 @@ func (cpiFactory Factory) New(ctx apiv1.CallContext) (apiv1.CPI, error) {
 			image.NewImageServiceBuilder(openstackService, openstackConfig, cpiFactory.logger),
 			network.NewNetworkServiceBuilder(openstackService, openstackConfig, cpiFactory.logger),
 			compute.NewComputeServiceBuilder(openstackService, openstackConfig, cpiFactory.logger),
+			loadbalancer.NewLoadbalancerServiceBuilder(openstackService, openstackConfig, cpiFactory.logger),
 			cpiFactory.openstackConfig,
 			cpiFactory.logger,
 		),

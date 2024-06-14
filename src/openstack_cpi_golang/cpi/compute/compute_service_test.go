@@ -304,4 +304,48 @@ var _ = Describe("ComputeService", func() {
 			Expect(server.ID).To(Equal("123-456"))
 		})
 	})
+
+	Context("SetMetadata", func() {
+		var server servers.Server
+
+		BeforeEach(func() {
+			server = servers.Server{ID: "123-456"}
+		})
+
+		It("does not set tags if none are provided", func() {
+			serverTags := properties.ServerTags{}
+
+			err := computeService.SetMetadata(server, serverTags)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(computeFacade.SetServerMetadataCallCount()).To(Equal(0))
+		})
+
+		It("does set tags", func() {
+			server := servers.Server{ID: "123-456"}
+			serverTags := properties.ServerTags{
+				"tag1": "value1",
+				"tag2": "value2",
+			}
+
+			computeService.SetMetadata(server, serverTags)
+
+			_, serverID, metadata := computeFacade.SetServerMetadataArgsForCall(0)
+
+			Expect(serverID).To(Equal("123-456"))
+			Expect(metadata).To(Equal(servers.MetadatumOpts{"tag1": "value1", "tag2": "value2"}))
+		})
+
+		It("returns an error if setting metadata fails", func() {
+			computeFacade.SetServerMetadataReturns(nil, errors.New("boom"))
+			serverTags := properties.ServerTags{
+				"tag1": "value1",
+				"tag2": "value2",
+			}
+
+			err := computeService.SetMetadata(server, serverTags)
+
+			Expect(err.Error()).To(Equal("failed to set metadata: boom"))
+		})
+	})
 })

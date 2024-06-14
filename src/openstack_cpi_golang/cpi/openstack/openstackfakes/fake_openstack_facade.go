@@ -50,6 +50,20 @@ type FakeOpenstackFacade struct {
 		result1 *gophercloud.ServiceClient
 		result2 error
 	}
+	NewLoadBalancerV2Stub        func(*gophercloud.ProviderClient, gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error)
+	newLoadBalancerV2Mutex       sync.RWMutex
+	newLoadBalancerV2ArgsForCall []struct {
+		arg1 *gophercloud.ProviderClient
+		arg2 gophercloud.EndpointOpts
+	}
+	newLoadBalancerV2Returns struct {
+		result1 *gophercloud.ServiceClient
+		result2 error
+	}
+	newLoadBalancerV2ReturnsOnCall map[int]struct {
+		result1 *gophercloud.ServiceClient
+		result2 error
+	}
 	NewNetworkV2Stub        func(*gophercloud.ProviderClient, gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error)
 	newNetworkV2Mutex       sync.RWMutex
 	newNetworkV2ArgsForCall []struct {
@@ -262,6 +276,71 @@ func (fake *FakeOpenstackFacade) NewImageServiceV2ReturnsOnCall(i int, result1 *
 	}{result1, result2}
 }
 
+func (fake *FakeOpenstackFacade) NewLoadBalancerV2(arg1 *gophercloud.ProviderClient, arg2 gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error) {
+	fake.newLoadBalancerV2Mutex.Lock()
+	ret, specificReturn := fake.newLoadBalancerV2ReturnsOnCall[len(fake.newLoadBalancerV2ArgsForCall)]
+	fake.newLoadBalancerV2ArgsForCall = append(fake.newLoadBalancerV2ArgsForCall, struct {
+		arg1 *gophercloud.ProviderClient
+		arg2 gophercloud.EndpointOpts
+	}{arg1, arg2})
+	stub := fake.NewLoadBalancerV2Stub
+	fakeReturns := fake.newLoadBalancerV2Returns
+	fake.recordInvocation("NewLoadBalancerV2", []interface{}{arg1, arg2})
+	fake.newLoadBalancerV2Mutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeOpenstackFacade) NewLoadBalancerV2CallCount() int {
+	fake.newLoadBalancerV2Mutex.RLock()
+	defer fake.newLoadBalancerV2Mutex.RUnlock()
+	return len(fake.newLoadBalancerV2ArgsForCall)
+}
+
+func (fake *FakeOpenstackFacade) NewLoadBalancerV2Calls(stub func(*gophercloud.ProviderClient, gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error)) {
+	fake.newLoadBalancerV2Mutex.Lock()
+	defer fake.newLoadBalancerV2Mutex.Unlock()
+	fake.NewLoadBalancerV2Stub = stub
+}
+
+func (fake *FakeOpenstackFacade) NewLoadBalancerV2ArgsForCall(i int) (*gophercloud.ProviderClient, gophercloud.EndpointOpts) {
+	fake.newLoadBalancerV2Mutex.RLock()
+	defer fake.newLoadBalancerV2Mutex.RUnlock()
+	argsForCall := fake.newLoadBalancerV2ArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeOpenstackFacade) NewLoadBalancerV2Returns(result1 *gophercloud.ServiceClient, result2 error) {
+	fake.newLoadBalancerV2Mutex.Lock()
+	defer fake.newLoadBalancerV2Mutex.Unlock()
+	fake.NewLoadBalancerV2Stub = nil
+	fake.newLoadBalancerV2Returns = struct {
+		result1 *gophercloud.ServiceClient
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeOpenstackFacade) NewLoadBalancerV2ReturnsOnCall(i int, result1 *gophercloud.ServiceClient, result2 error) {
+	fake.newLoadBalancerV2Mutex.Lock()
+	defer fake.newLoadBalancerV2Mutex.Unlock()
+	fake.NewLoadBalancerV2Stub = nil
+	if fake.newLoadBalancerV2ReturnsOnCall == nil {
+		fake.newLoadBalancerV2ReturnsOnCall = make(map[int]struct {
+			result1 *gophercloud.ServiceClient
+			result2 error
+		})
+	}
+	fake.newLoadBalancerV2ReturnsOnCall[i] = struct {
+		result1 *gophercloud.ServiceClient
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeOpenstackFacade) NewNetworkV2(arg1 *gophercloud.ProviderClient, arg2 gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error) {
 	fake.newNetworkV2Mutex.Lock()
 	ret, specificReturn := fake.newNetworkV2ReturnsOnCall[len(fake.newNetworkV2ArgsForCall)]
@@ -336,6 +415,8 @@ func (fake *FakeOpenstackFacade) Invocations() map[string][][]interface{} {
 	defer fake.newComputeV2Mutex.RUnlock()
 	fake.newImageServiceV2Mutex.RLock()
 	defer fake.newImageServiceV2Mutex.RUnlock()
+	fake.newLoadBalancerV2Mutex.RLock()
+	defer fake.newLoadBalancerV2Mutex.RUnlock()
 	fake.newNetworkV2Mutex.RLock()
 	defer fake.newNetworkV2Mutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

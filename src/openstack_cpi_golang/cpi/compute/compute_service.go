@@ -24,6 +24,11 @@ type ComputeService interface {
 		networkConfig properties.NetworkConfig,
 		config config.OpenstackConfig,
 	) (*servers.Server, error)
+
+	SetMetadata(
+		server servers.Server,
+		tags properties.ServerTags,
+	) error
 }
 
 type computeService struct {
@@ -104,6 +109,23 @@ func (c computeService) CreateServer(
 	}
 
 	return server, nil
+}
+
+func (c computeService) SetMetadata(server servers.Server, tags properties.ServerTags) error {
+
+	if len(tags) > 0 {
+		metadatumOpts := servers.MetadatumOpts{}
+		for k, v := range tags {
+			metadatumOpts[k] = v
+		}
+
+		_, err := c.computeFacade.SetServerMetadata(c.serviceClient, server.ID, metadatumOpts)
+		if err != nil {
+			return fmt.Errorf("failed to set metadata: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (c computeService) getKeyPairName(cloudProps properties.CreateVM, openstackConfig config.OpenstackConfig) (string, error) {

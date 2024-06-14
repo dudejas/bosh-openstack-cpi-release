@@ -19,6 +19,8 @@ type ComputeFacade interface {
 	ExtractFlavors(page pagination.Page) ([]flavors.Flavor, error)
 
 	GetOSKeyPair(client *gophercloud.ServiceClient, keyPairName string, ops keypairs.GetOpts) (*keypairs.KeyPair, error)
+
+	SetServerMetadata(client *gophercloud.ServiceClient, serverID string, opts servers.MetadatumOpts) (map[string]string, error)
 }
 
 type computeFacade struct {
@@ -46,4 +48,8 @@ func (c computeFacade) ExtractFlavors(page pagination.Page) ([]flavors.Flavor, e
 
 func (c computeFacade) GetOSKeyPair(client *gophercloud.ServiceClient, keyPairName string, opts keypairs.GetOpts) (*keypairs.KeyPair, error) {
 	return keypairs.Get(client, keyPairName, opts).Extract()
+}
+
+func (c computeFacade) SetServerMetadata(client *gophercloud.ServiceClient, serverID string, opts servers.MetadatumOpts) (map[string]string, error) {
+	return servers.CreateMetadatum(client, serverID, opts).Extract()
 }

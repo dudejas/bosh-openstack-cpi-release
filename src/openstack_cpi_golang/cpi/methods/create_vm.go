@@ -6,32 +6,38 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/compute"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/image"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/loadbalancer"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/network"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
+	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/pools"
+	"strconv"
 )
 
 type CreateVMMethod struct {
-	imageServiceBuilder   image.ImageServiceBuilder
-	networkServiceBuilder network.NetworkServiceBuilder
-	computeServiceBuilder compute.ComputeServiceBuilder
-	config                config.OpenstackConfig
-	logger                utils.Logger
+	imageServiceBuilder        image.ImageServiceBuilder
+	networkServiceBuilder      network.NetworkServiceBuilder
+	computeServiceBuilder      compute.ComputeServiceBuilder
+	loadbalancerServiceBuilder loadbalancer.LoadbalancerServiceBuilder
+	config                     config.OpenstackConfig
+	logger                     utils.Logger
 }
 
 func NewCreateVMMethod(
 	imageServiceBuilder image.ImageServiceBuilder,
 	networkServiceBuilder network.NetworkServiceBuilder,
 	computeServiceBuilder compute.ComputeServiceBuilder,
+	loadbalancerServiceBuilder loadbalancer.LoadbalancerServiceBuilder,
 	config config.OpenstackConfig,
 	logger utils.Logger,
 ) CreateVMMethod {
 	return CreateVMMethod{
-		imageServiceBuilder:   imageServiceBuilder,
-		networkServiceBuilder: networkServiceBuilder,
-		computeServiceBuilder: computeServiceBuilder,
-		config:                config,
-		logger:                logger,
+		imageServiceBuilder:        imageServiceBuilder,
+		networkServiceBuilder:      networkServiceBuilder,
+		computeServiceBuilder:      computeServiceBuilder,
+		loadbalancerServiceBuilder: loadbalancerServiceBuilder,
+		config:                     config,
+		logger:                     logger,
 	}
 }
 
@@ -49,6 +55,11 @@ func (m CreateVMMethod) CreateVMV2(
 	cloudProps := properties.CreateVM{}
 	props.As(&cloudProps)
 
+	err := cloudProps.Validate()
+	if err != nil {
+		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to validate cloud properties: %w", err)
+	}
+
 	computeService, err := m.computeServiceBuilder.Build()
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to create compute service: %w", err)
@@ -62,6 +73,11 @@ func (m CreateVMMethod) CreateVMV2(
 	imageService, err := m.imageServiceBuilder.Build()
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to create image service: %w", err)
+	}
+
+	loadbalancerService, err := m.loadbalancerServiceBuilder.Build()
+	if err != nil {
+		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to create loadbalancer service: %w", err)
 	}
 
 	_, err = imageService.GetImage(stemcellCID.AsString())
@@ -83,8 +99,61 @@ func (m CreateVMMethod) CreateVMV2(
 
 	err = networkService.ConfigureVIPNetwork(server.ID, networkConfig)
 	if err != nil {
-		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to configure network for server %s: %w", server.ID, err)
+		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to configure network for server '%s': %w", server.ID, err)
 	}
 
+	poolMembers, err := m.configureLoadbalancerPools(loadbalancerService, networkService, cloudProps, networkConfig)
+	if err != nil {
+		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to configure loadbalancer pools: %w", err)
+	}
+
+	computeService.SetMetadata(*server, m.getServerTags(poolMembers))
+
 	return apiv1.NewVMCID(server.ID), networks, nil
+}
+
+func (m CreateVMMethod) configureLoadbalancerPools(
+	loadbalancerService loadbalancer.LoadbalancerService,
+	networkService network.NetworkService,
+	cloudProps properties.CreateVM,
+	networkConfig properties.NetworkConfig,
+) ([]pools.Member, error) {
+	poolMemberships := []pools.Member{}
+	for _, pool := range cloudProps.LoadbalancerPools {
+
+		poolID, err := loadbalancerService.GetPoolID(pool.Name)
+		if err != nil {
+			return []pools.Member{}, fmt.Errorf("failed to get pool ID of pool '%s': %w", pool.Name, err)
+		}
+
+		ip := networkConfig.DefaultNetwork.IP
+
+		defaultNetworkID := networkConfig.DefaultNetwork.CloudProps.NetID
+
+		subnetID, err := networkService.GetSubnetID(defaultNetworkID, ip)
+		if err != nil {
+			return []pools.Member{}, fmt.Errorf("failed to get subnet: %w", err)
+		}
+
+		poolMember, err := loadbalancerService.CreatePoolMember(poolID, ip, pool, subnetID, m.config.StateTimeOut)
+		if err != nil {
+			return []pools.Member{}, fmt.Errorf("failed to create pool membership of IP '%s' in pool '%s': %w", ip, pool.Name, err)
+		}
+
+		poolMemberships = append(poolMemberships, *poolMember)
+	}
+	return poolMemberships, nil
+}
+
+func (m CreateVMMethod) getServerTags(members []pools.Member) properties.ServerTags {
+	tags := properties.ServerTags{}
+
+	var index = 1
+	for _, member := range members {
+		itoa := strconv.Itoa(index)
+		tags["lbaas_pool_"+itoa] = member.PoolID + "/" + member.ID
+		index++
+	}
+
+	return tags
 }

@@ -9,6 +9,8 @@ import (
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
+	"net"
 )
 
 //counterfeiter:generate . NetworkService
@@ -23,6 +25,8 @@ type NetworkService interface {
 		openstackConfig config.OpenstackConfig,
 		cloudProps properties.CreateVM,
 	) (properties.NetworkConfig, error)
+
+	GetSubnetID(networkID string, ip string) (string, error)
 }
 
 type networkService struct {
@@ -68,10 +72,57 @@ func (c networkService) ConfigureVIPNetwork(
 	return nil
 }
 
-func (c networkService) GetNetworkConfiguration(networks apiv1.Networks, openstackConfig config.OpenstackConfig, cloudProps properties.CreateVM) (properties.NetworkConfig, error) {
+func (c networkService) GetNetworkConfiguration(
+	networks apiv1.Networks,
+	openstackConfig config.OpenstackConfig,
+	cloudProps properties.CreateVM,
+) (properties.NetworkConfig, error) {
 	securityGroupsResolver := NewSecurityGroupsResolver(c.serviceClient, c.networkingFacade)
 
 	return NewNetworkConfigBuilder(securityGroupsResolver, networks, openstackConfig, cloudProps).Build()
+}
+
+func (c networkService) GetSubnetID(networkID string, ip string) (string, error) {
+	ipAddress := net.ParseIP(ip)
+	if ipAddress == nil {
+		return "", fmt.Errorf("failed to parse ip address '%s'", ip)
+	}
+
+	listOpts := subnets.ListOpts{
+		NetworkID: networkID,
+	}
+
+	allPages, err := c.networkingFacade.ListSubnets(c.serviceClient, listOpts)
+	if err != nil {
+		return "", fmt.Errorf("failed to list subnets: %w", err)
+	}
+
+	allSubnets, err := c.networkingFacade.ExtractSubnets(allPages)
+	if err != nil {
+		return "", fmt.Errorf("failed to extract subnets: %w", err)
+	}
+
+	if len(allSubnets) == 0 {
+		return "", fmt.Errorf("no subnet found for network '%s'", networkID)
+	}
+
+	var matchingSubnets []string
+	for _, subnet := range allSubnets {
+		_, ipNet, err := net.ParseCIDR(subnet.CIDR)
+		if ipNet == nil {
+			return "", fmt.Errorf("failed to parse subnet cidr '%s': %w", subnet.CIDR, err)
+		}
+
+		if ipNet.Contains(ipAddress) {
+			matchingSubnets = append(matchingSubnets, subnet.ID)
+		}
+	}
+
+	if len(matchingSubnets) > 1 {
+		return "", fmt.Errorf("found more than one matching subnet for the ip '%s' in '%v'", ipAddress, matchingSubnets)
+	}
+
+	return matchingSubnets[0], nil
 }
 
 func (c networkService) getFloatingIp(vipNetwork *properties.Network) (floatingips.FloatingIP, error) {

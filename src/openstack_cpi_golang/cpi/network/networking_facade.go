@@ -5,6 +5,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 	"github.com/gophercloud/gophercloud/pagination"
 )
 
@@ -12,19 +13,23 @@ import (
 type NetworkingFacade interface {
 	ListFloatingIps(serviceClient *gophercloud.ServiceClient, opts floatingips.ListOpts) (pagination.Page, error)
 
-	ExtractFloatingIPs(r pagination.Page) ([]floatingips.FloatingIP, error)
+	ExtractFloatingIPs(page pagination.Page) ([]floatingips.FloatingIP, error)
 
 	UpdateFloatingIP(serviceClient *gophercloud.ServiceClient, floatingIpId string, updateOpts floatingips.UpdateOpts) (*floatingips.FloatingIP, error)
 
 	ListPorts(client *gophercloud.ServiceClient, opts ports.ListOpts) (pagination.Page, error)
 
-	ExtractPorts(r pagination.Page) ([]ports.Port, error)
+	ExtractPorts(page pagination.Page) ([]ports.Port, error)
 
 	GetSecurityGroups(serviceClient *gophercloud.ServiceClient, id string) (*groups.SecGroup, error)
 
 	ListSecurityGroups(serviceClient *gophercloud.ServiceClient, opts groups.ListOpts) (pagination.Page, error)
 
-	ExtractSecurityGroups(pages pagination.Page) ([]groups.SecGroup, error)
+	ExtractSecurityGroups(page pagination.Page) ([]groups.SecGroup, error)
+
+	ListSubnets(serviceClient *gophercloud.ServiceClient, opts subnets.ListOpts) (pagination.Page, error)
+
+	ExtractSubnets(page pagination.Page) ([]subnets.Subnet, error)
 }
 
 type networkingFacade struct{}
@@ -37,8 +42,8 @@ func (n networkingFacade) ListFloatingIps(serviceClient *gophercloud.ServiceClie
 	return floatingips.List(serviceClient, opts).AllPages()
 }
 
-func (n networkingFacade) ExtractFloatingIPs(pages pagination.Page) ([]floatingips.FloatingIP, error) {
-	return floatingips.ExtractFloatingIPs(pages)
+func (n networkingFacade) ExtractFloatingIPs(page pagination.Page) ([]floatingips.FloatingIP, error) {
+	return floatingips.ExtractFloatingIPs(page)
 }
 
 func (n networkingFacade) UpdateFloatingIP(serviceClient *gophercloud.ServiceClient, floatingIpId string, updateOpts floatingips.UpdateOpts) (*floatingips.FloatingIP, error) {
@@ -49,8 +54,8 @@ func (n networkingFacade) ListPorts(serviceClient *gophercloud.ServiceClient, op
 	return ports.List(serviceClient, opts).AllPages()
 }
 
-func (n networkingFacade) ExtractPorts(pages pagination.Page) ([]ports.Port, error) {
-	return ports.ExtractPorts(pages)
+func (n networkingFacade) ExtractPorts(page pagination.Page) ([]ports.Port, error) {
+	return ports.ExtractPorts(page)
 }
 
 func (n networkingFacade) GetSecurityGroups(serviceClient *gophercloud.ServiceClient, id string) (*groups.SecGroup, error) {
@@ -61,6 +66,13 @@ func (n networkingFacade) ListSecurityGroups(serviceClient *gophercloud.ServiceC
 	return groups.List(serviceClient, opts).AllPages()
 }
 
-func (n networkingFacade) ExtractSecurityGroups(pages pagination.Page) ([]groups.SecGroup, error) {
-	return groups.ExtractGroups(pages)
+func (n networkingFacade) ExtractSecurityGroups(page pagination.Page) ([]groups.SecGroup, error) {
+	return groups.ExtractGroups(page)
+}
+func (n networkingFacade) ListSubnets(serviceClient *gophercloud.ServiceClient, opts subnets.ListOpts) (pagination.Page, error) {
+	return subnets.List(serviceClient, opts).AllPages()
+}
+
+func (n networkingFacade) ExtractSubnets(page pagination.Page) ([]subnets.Subnet, error) {
+	return subnets.ExtractSubnets(page)
 }

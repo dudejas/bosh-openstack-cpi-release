@@ -10,6 +10,7 @@ import (
 //counterfeiter:generate . OpenstackService
 type OpenstackService interface {
 	ComputeServiceV2(config config.OpenstackConfig) (*gophercloud.ServiceClient, error)
+	LoadbalancerV2(config config.OpenstackConfig) (*gophercloud.ServiceClient, error)
 	NetworkServiceV2(config config.OpenstackConfig) (*gophercloud.ServiceClient, error)
 	ImageServiceV2(config config.OpenstackConfig) (*gophercloud.ServiceClient, error)
 }
@@ -33,6 +34,15 @@ func (c openstackService) ComputeServiceV2(config config.OpenstackConfig) (*goph
 	}
 
 	return c.openstackFacade.NewComputeV2(authenticatedClient, c.endpointOpts())
+}
+
+func (c openstackService) LoadbalancerV2(config config.OpenstackConfig) (*gophercloud.ServiceClient, error) {
+	authenticatedClient, err := c.openstackFacade.AuthenticatedClient(config.AuthOptions())
+	if err != nil {
+		return nil, fmt.Errorf("failed to authenticate: %w", err)
+	}
+
+	return c.openstackFacade.NewLoadBalancerV2(authenticatedClient, c.endpointOpts())
 }
 
 func (c openstackService) NetworkServiceV2(config config.OpenstackConfig) (*gophercloud.ServiceClient, error) {

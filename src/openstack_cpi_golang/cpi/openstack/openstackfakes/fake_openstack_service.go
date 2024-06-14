@@ -36,6 +36,19 @@ type FakeOpenstackService struct {
 		result1 *gophercloud.ServiceClient
 		result2 error
 	}
+	LoadbalancerV2Stub        func(config.OpenstackConfig) (*gophercloud.ServiceClient, error)
+	loadbalancerV2Mutex       sync.RWMutex
+	loadbalancerV2ArgsForCall []struct {
+		arg1 config.OpenstackConfig
+	}
+	loadbalancerV2Returns struct {
+		result1 *gophercloud.ServiceClient
+		result2 error
+	}
+	loadbalancerV2ReturnsOnCall map[int]struct {
+		result1 *gophercloud.ServiceClient
+		result2 error
+	}
 	NetworkServiceV2Stub        func(config.OpenstackConfig) (*gophercloud.ServiceClient, error)
 	networkServiceV2Mutex       sync.RWMutex
 	networkServiceV2ArgsForCall []struct {
@@ -181,6 +194,70 @@ func (fake *FakeOpenstackService) ImageServiceV2ReturnsOnCall(i int, result1 *go
 	}{result1, result2}
 }
 
+func (fake *FakeOpenstackService) LoadbalancerV2(arg1 config.OpenstackConfig) (*gophercloud.ServiceClient, error) {
+	fake.loadbalancerV2Mutex.Lock()
+	ret, specificReturn := fake.loadbalancerV2ReturnsOnCall[len(fake.loadbalancerV2ArgsForCall)]
+	fake.loadbalancerV2ArgsForCall = append(fake.loadbalancerV2ArgsForCall, struct {
+		arg1 config.OpenstackConfig
+	}{arg1})
+	stub := fake.LoadbalancerV2Stub
+	fakeReturns := fake.loadbalancerV2Returns
+	fake.recordInvocation("LoadbalancerV2", []interface{}{arg1})
+	fake.loadbalancerV2Mutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeOpenstackService) LoadbalancerV2CallCount() int {
+	fake.loadbalancerV2Mutex.RLock()
+	defer fake.loadbalancerV2Mutex.RUnlock()
+	return len(fake.loadbalancerV2ArgsForCall)
+}
+
+func (fake *FakeOpenstackService) LoadbalancerV2Calls(stub func(config.OpenstackConfig) (*gophercloud.ServiceClient, error)) {
+	fake.loadbalancerV2Mutex.Lock()
+	defer fake.loadbalancerV2Mutex.Unlock()
+	fake.LoadbalancerV2Stub = stub
+}
+
+func (fake *FakeOpenstackService) LoadbalancerV2ArgsForCall(i int) config.OpenstackConfig {
+	fake.loadbalancerV2Mutex.RLock()
+	defer fake.loadbalancerV2Mutex.RUnlock()
+	argsForCall := fake.loadbalancerV2ArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeOpenstackService) LoadbalancerV2Returns(result1 *gophercloud.ServiceClient, result2 error) {
+	fake.loadbalancerV2Mutex.Lock()
+	defer fake.loadbalancerV2Mutex.Unlock()
+	fake.LoadbalancerV2Stub = nil
+	fake.loadbalancerV2Returns = struct {
+		result1 *gophercloud.ServiceClient
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeOpenstackService) LoadbalancerV2ReturnsOnCall(i int, result1 *gophercloud.ServiceClient, result2 error) {
+	fake.loadbalancerV2Mutex.Lock()
+	defer fake.loadbalancerV2Mutex.Unlock()
+	fake.LoadbalancerV2Stub = nil
+	if fake.loadbalancerV2ReturnsOnCall == nil {
+		fake.loadbalancerV2ReturnsOnCall = make(map[int]struct {
+			result1 *gophercloud.ServiceClient
+			result2 error
+		})
+	}
+	fake.loadbalancerV2ReturnsOnCall[i] = struct {
+		result1 *gophercloud.ServiceClient
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeOpenstackService) NetworkServiceV2(arg1 config.OpenstackConfig) (*gophercloud.ServiceClient, error) {
 	fake.networkServiceV2Mutex.Lock()
 	ret, specificReturn := fake.networkServiceV2ReturnsOnCall[len(fake.networkServiceV2ArgsForCall)]
@@ -252,6 +329,8 @@ func (fake *FakeOpenstackService) Invocations() map[string][][]interface{} {
 	defer fake.computeServiceV2Mutex.RUnlock()
 	fake.imageServiceV2Mutex.RLock()
 	defer fake.imageServiceV2Mutex.RUnlock()
+	fake.loadbalancerV2Mutex.RLock()
+	defer fake.loadbalancerV2Mutex.RUnlock()
 	fake.networkServiceV2Mutex.RLock()
 	defer fake.networkServiceV2Mutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

@@ -50,9 +50,17 @@ var _ = Describe("Create VM", func() {
 						"endpoints": [{"url": "%s/","interface": "public","region": "RegionOne"}],
 						"type": "image",
 						"name": "glance"
+					},{
+					   "endpoints": [
+						 { "id": "1", "interface": "public",  "region": "RegionOne", "url": "%s/v2.0"},
+						 { "id": "2", "interface": "admin",   "region": "RegionOne", "url": "%s/v2.0"},
+						 { "id": "3", "interface": "internal","region": "RegionOne", "url": "%s/v2.0"}
+					  ],
+					  "type": "load-balancer",
+					  "name": "octavia"
 					}]
   				}
-			}`, Endpoint(), Endpoint(), Endpoint(), Endpoint(), Endpoint(), Endpoint(), Endpoint())
+			}`, Endpoint(), Endpoint(), Endpoint(), Endpoint(), Endpoint(), Endpoint(), Endpoint(), Endpoint(), Endpoint(), Endpoint())
 		})
 
 		Mux.HandleFunc("/v2.1/servers", func(w http.ResponseWriter, r *http.Request) {
