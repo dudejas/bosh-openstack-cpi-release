@@ -23,7 +23,7 @@ type ComputeService interface {
 		cloudProps properties.CreateVM,
 		networkConfig properties.NetworkConfig,
 		config config.OpenstackConfig,
-	) (string, error)
+	) (*servers.Server, error)
 }
 
 type computeService struct {
@@ -55,20 +55,20 @@ func (c computeService) CreateServer(
 	cloudProps properties.CreateVM,
 	networkConfig properties.NetworkConfig,
 	config config.OpenstackConfig,
-) (string, error) {
+) (*servers.Server, error) {
 	flavor, err := c.flavorResolver.ResolveFlavorForInstanceType(cloudProps.InstanceType)
 	if err != nil {
-		return "", fmt.Errorf("failed to resolve flavor of instance type '%s': %w", cloudProps.InstanceType, err)
+		return nil, fmt.Errorf("failed to resolve flavor of instance type '%s': %w", cloudProps.InstanceType, err)
 	}
 
 	keyname, err := c.getKeyPairName(cloudProps, config)
 	if err != nil {
-		return "", fmt.Errorf("failed to resolve keypair: %w", err)
+		return nil, fmt.Errorf("failed to resolve keypair: %w", err)
 	}
 
 	blockDevices, err := c.volumeConfigurator.ConfigureVolumes(stemcellCID.AsString(), config, cloudProps, flavor)
 	if err != nil {
-		return "", fmt.Errorf("failed to configure volumes: %w", err)
+		return nil, fmt.Errorf("failed to configure volumes: %w", err)
 	}
 
 	var createOpts servers.CreateOptsBuilder
@@ -95,15 +95,15 @@ func (c computeService) CreateServer(
 
 	server, err := c.computeFacade.CreateServer(c.serviceClient, createOpts)
 	if err != nil {
-		return "", fmt.Errorf("failed to create server: %w", err)
+		return nil, fmt.Errorf("failed to create server: %w", err)
 	}
 
-	err = c.waitForServerToBecomeActive(server.ID, time.Duration(config.StateTimeOut)*time.Second)
+	server, err = c.waitForServerToBecomeActive(server.ID, time.Duration(config.StateTimeOut)*time.Second)
 	if err != nil {
-		return "", fmt.Errorf("failed while waiting on the server creation: %w", err)
+		return nil, fmt.Errorf("failed while waiting on the server creation: %w", err)
 	}
 
-	return server.ID, nil
+	return server, nil
 }
 
 func (c computeService) getKeyPairName(cloudProps properties.CreateVM, openstackConfig config.OpenstackConfig) (string, error) {
@@ -140,26 +140,26 @@ func (c computeService) getServerNetworks(networkConfig properties.NetworkConfig
 	return serverNetworks
 }
 
-func (c computeService) waitForServerToBecomeActive(serverID string, timeout time.Duration) error {
+func (c computeService) waitForServerToBecomeActive(serverID string, timeout time.Duration) (*servers.Server, error) {
 	timeoutTimer := time.NewTimer(timeout)
 
 	for {
 		select {
 		case <-timeoutTimer.C:
-			return fmt.Errorf("timeout while waiting for server to become active")
+			return nil, fmt.Errorf("timeout while waiting for server to become active")
 		default:
 			server, err := c.computeFacade.GetServer(c.serviceClient, serverID)
 			if err != nil {
-				return fmt.Errorf("failed to retrieve server information: %w", err)
+				return nil, fmt.Errorf("failed to retrieve server information: %w", err)
 			}
 
 			switch server.Status {
 			case "ACTIVE":
-				return nil
+				return server, nil
 			case "ERROR":
-				return fmt.Errorf("server became ERROR state while waiting to become ACTIVE")
+				return nil, fmt.Errorf("server became ERROR state while waiting to become ACTIVE")
 			case "DELETED":
-				return fmt.Errorf("server became DELETED state while waiting to become ACTIVE")
+				return nil, fmt.Errorf("server became DELETED state while waiting to become ACTIVE")
 			}
 
 			time.Sleep(ComputeServicePollingInterval)

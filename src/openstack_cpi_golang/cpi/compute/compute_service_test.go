@@ -207,7 +207,7 @@ var _ = Describe("ComputeService", func() {
 		It("returns an error if the server creation fails", func() {
 			computeFacade.CreateServerReturns(nil, errors.New("boom"))
 
-			serverID, err := computeService.CreateServer(
+			server, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
@@ -215,7 +215,7 @@ var _ = Describe("ComputeService", func() {
 			)
 
 			Expect(err.Error()).To(Equal("failed to create server: boom"))
-			Expect(serverID).To(Equal(""))
+			Expect(server).To(BeNil())
 		})
 
 		It("waits for the server to become ACTIVE", func() {
@@ -224,7 +224,7 @@ var _ = Describe("ComputeService", func() {
 
 			compute.ComputeServicePollingInterval = 0
 
-			serverID, err := computeService.CreateServer(
+			server, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
@@ -232,14 +232,14 @@ var _ = Describe("ComputeService", func() {
 			)
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(serverID).To(Equal("123-456"))
+			Expect(server.ID).To(Equal("123-456"))
 			Expect(computeFacade.GetServerCallCount()).To(Equal(2))
 		})
 
 		It("returns an error while waiting if getting server information fails", func() {
-			computeFacade.GetServerReturns(&servers.Server{}, errors.New("boom"))
+			computeFacade.GetServerReturns(nil, errors.New("boom"))
 
-			serverID, err := computeService.CreateServer(
+			server, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
@@ -247,13 +247,13 @@ var _ = Describe("ComputeService", func() {
 			)
 
 			Expect(err.Error()).To(Equal("failed while waiting on the server creation: failed to retrieve server information: boom"))
-			Expect(serverID).To(Equal(""))
+			Expect(server).To(BeNil())
 		})
 
 		It("returns an error while waiting if the server creation finishes in state ERROR", func() {
 			computeFacade.GetServerReturns(&servers.Server{ID: "123-456", Status: "ERROR"}, nil)
 
-			serverID, err := computeService.CreateServer(
+			server, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
@@ -261,13 +261,13 @@ var _ = Describe("ComputeService", func() {
 			)
 
 			Expect(err.Error()).To(Equal("failed while waiting on the server creation: server became ERROR state while waiting to become ACTIVE"))
-			Expect(serverID).To(Equal(""))
+			Expect(server).To(BeNil())
 		})
 
 		It("returns an error while waiting if the server creation finishes in state DELETED", func() {
 			computeFacade.GetServerReturns(&servers.Server{ID: "123-456", Status: "DELETED"}, nil)
 
-			serverID, err := computeService.CreateServer(
+			server, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
@@ -275,13 +275,13 @@ var _ = Describe("ComputeService", func() {
 			)
 
 			Expect(err.Error()).To(Equal("failed while waiting on the server creation: server became DELETED state while waiting to become ACTIVE"))
-			Expect(serverID).To(Equal(""))
+			Expect(server).To(BeNil())
 		})
 
 		It("returns an error while waiting if the server creation times out", func() {
 			computeFacade.GetServerReturns(&servers.Server{ID: "123-456", Status: "not-active"}, nil)
 
-			serverID, err := computeService.CreateServer(
+			server, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
@@ -289,11 +289,11 @@ var _ = Describe("ComputeService", func() {
 			)
 
 			Expect(err.Error()).To(Equal("failed while waiting on the server creation: timeout while waiting for server to become active"))
-			Expect(serverID).To(Equal(""))
+			Expect(server).To(BeNil())
 		})
 
 		It("returns the id of the created server", func() {
-			serverID, err := computeService.CreateServer(
+			server, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
@@ -301,7 +301,7 @@ var _ = Describe("ComputeService", func() {
 			)
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(serverID).To(Equal("123-456"))
+			Expect(server.ID).To(Equal("123-456"))
 		})
 	})
 })

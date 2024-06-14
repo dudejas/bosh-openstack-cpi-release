@@ -74,15 +74,17 @@ func (m CreateVMMethod) CreateVMV2(
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to create network config: %w", err)
 	}
 
-	serverID, err := computeService.CreateServer(stemcellCID, cloudProps, networkConfig, m.config)
+	server, err := computeService.CreateServer(stemcellCID, cloudProps, networkConfig, m.config)
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to create server: %w", err)
 	}
 
-	err = networkService.ConfigureVIPNetwork(serverID, networkConfig)
+	networkConfig.UpdateWithServerData(*server)
+
+	err = networkService.ConfigureVIPNetwork(server.ID, networkConfig)
 	if err != nil {
-		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to configure network for server %s: %w", serverID, err)
+		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to configure network for server %s: %w", server.ID, err)
 	}
 
-	return apiv1.NewVMCID(serverID), networks, nil
+	return apiv1.NewVMCID(server.ID), networks, nil
 }

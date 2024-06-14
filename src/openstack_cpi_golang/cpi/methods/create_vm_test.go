@@ -10,6 +10,7 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/network/networkfakes"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils/utilsfakes"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -40,7 +41,7 @@ var _ = Describe("CreateVMMethod", func() {
 			computeServiceBuilder.BuildReturns(&computeService, nil)
 			networkServiceBuilder.BuildReturns(&networkService, nil)
 			imageServiceBuilder.BuildReturns(&imageService, nil)
-			computeService.CreateServerReturns("123-456", nil)
+			computeService.CreateServerReturns(&servers.Server{ID: "123-456"}, nil)
 			networkService.ConfigureVIPNetworkReturns(nil)
 
 			props = map[string]interface{}{
@@ -245,7 +246,7 @@ var _ = Describe("CreateVMMethod", func() {
 		})
 
 		It("returns an error if the server creation fails", func() {
-			computeService.CreateServerReturns("", errors.New("boom"))
+			computeService.CreateServerReturns(nil, errors.New("boom"))
 
 			stemcellCID, networks, err := methods.NewCreateVMMethod(
 				&imageServiceBuilder,
