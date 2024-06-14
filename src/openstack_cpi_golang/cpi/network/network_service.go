@@ -2,11 +2,12 @@ package network
 
 import (
 	"fmt"
+	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 )
 
@@ -17,9 +18,11 @@ type NetworkService interface {
 		networkConfig properties.NetworkConfig,
 	) error
 
-	ResolveSecurityGroups(
-		securityGroupIDsAndNames []string,
-	) ([]string, error)
+	GetNetworkConfiguration(
+		networks apiv1.Networks,
+		openstackConfig config.OpenstackConfig,
+		cloudProps properties.CreateVM,
+	) (properties.NetworkConfig, error)
 }
 
 type networkService struct {
@@ -65,32 +68,10 @@ func (c networkService) ConfigureVIPNetwork(
 	return nil
 }
 
-func (c networkService) ResolveSecurityGroups(securityGroupIDsAndNames []string) ([]string, error) {
-	var securityGroupIds []string
-	var resolvedSecurityGroup *groups.SecGroup
-	var err error
+func (c networkService) GetNetworkConfiguration(networks apiv1.Networks, openstackConfig config.OpenstackConfig, cloudProps properties.CreateVM) (properties.NetworkConfig, error) {
+	securityGroupsResolver := NewSecurityGroupsResolver(c.serviceClient, c.networkingFacade)
 
-	for _, securityGroup := range securityGroupIDsAndNames {
-		resolvedSecurityGroup, err = c.resolveSecurityGroupById(securityGroup)
-		if err != nil {
-			return []string{}, fmt.Errorf("failed to get security group '%s' by id: %w", securityGroup, err)
-		}
-
-		if resolvedSecurityGroup != nil {
-			securityGroupIds = append(securityGroupIds, resolvedSecurityGroup.ID)
-			continue
-		} else {
-			resolvedSecurityGroup, err = c.resolveSecurityGroupByName(securityGroup)
-			if err != nil {
-				return []string{}, fmt.Errorf("failed to get security group '%s' by name: %w", securityGroup, err)
-			}
-
-			securityGroupIds = append(securityGroupIds, resolvedSecurityGroup.ID)
-			continue
-		}
-
-	}
-	return securityGroupIds, nil
+	return NewNetworkConfigBuilder(securityGroupsResolver, networks, openstackConfig, cloudProps).Build()
 }
 
 func (c networkService) getFloatingIp(vipNetwork *properties.Network) (floatingips.FloatingIP, error) {
@@ -145,30 +126,4 @@ func (c networkService) associateFloatingIp(serviceClient *gophercloud.ServiceCl
 
 	_, err := c.networkingFacade.UpdateFloatingIP(serviceClient, floatingIpId, updateOpts)
 	return err
-}
-
-func (c networkService) resolveSecurityGroupById(securityGroupID string) (*groups.SecGroup, error) {
-	return c.networkingFacade.GetSecurityGroups(c.serviceClient, securityGroupID)
-}
-
-func (c networkService) resolveSecurityGroupByName(securityGroupName string) (*groups.SecGroup, error) {
-	listOpts := groups.ListOpts{
-		Name: securityGroupName,
-	}
-
-	allPages, err := c.networkingFacade.ListSecurityGroups(c.serviceClient, listOpts)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list security groups: %w", err)
-	}
-
-	allSecurityGroups, err := c.networkingFacade.ExtractSecurityGroups(allPages)
-	if err != nil {
-		return nil, fmt.Errorf("failed to extract security groups: %w", err)
-	}
-
-	if len(allSecurityGroups) == 0 {
-		return nil, fmt.Errorf("security group '%s' could not be found", securityGroupName)
-	}
-
-	return &allSecurityGroups[0], nil
 }

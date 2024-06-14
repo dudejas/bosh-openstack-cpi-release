@@ -1,27 +1,31 @@
-package compute
+package network
 
 import (
 	"fmt"
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/network"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"slices"
 )
 
 type networkConfigBuilder struct {
-	networkService  network.NetworkService
-	networks        apiv1.Networks
-	openstackConfig config.OpenstackConfig
-	cloudProps      properties.CreateVM
+	securityGroupsResolver SecurityGroupsResolver
+	networks               apiv1.Networks
+	openstackConfig        config.OpenstackConfig
+	cloudProps             properties.CreateVM
 }
 
-func NewNetworkConfigBuilder(networkService network.NetworkService, networks apiv1.Networks, openstackConfig config.OpenstackConfig, cloudProps properties.CreateVM) networkConfigBuilder {
+func NewNetworkConfigBuilder(
+	securityGroupsResolver SecurityGroupsResolver,
+	networks apiv1.Networks,
+	openstackConfig config.OpenstackConfig,
+	cloudProps properties.CreateVM,
+) networkConfigBuilder {
 	return networkConfigBuilder{
-		networkService:  networkService,
-		networks:        networks,
-		openstackConfig: openstackConfig,
-		cloudProps:      cloudProps,
+		securityGroupsResolver: securityGroupsResolver,
+		networks:               networks,
+		openstackConfig:        openstackConfig,
+		cloudProps:             cloudProps,
 	}
 }
 
@@ -78,7 +82,7 @@ func (b networkConfigBuilder) securityGroups(networks []properties.Network) ([]s
 
 	}
 
-	securityGroupIDs, err := b.networkService.ResolveSecurityGroups(securityGroups)
+	securityGroupIDs, err := b.securityGroupsResolver.Resolve(securityGroups)
 	if err != nil {
 		return []string{}, fmt.Errorf("failed to resolve security group: %w", err)
 	}

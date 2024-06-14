@@ -4,6 +4,8 @@ package networkfakes
 import (
 	"sync"
 
+	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/network"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 )
@@ -21,17 +23,19 @@ type FakeNetworkService struct {
 	configureVIPNetworkReturnsOnCall map[int]struct {
 		result1 error
 	}
-	ResolveSecurityGroupsStub        func([]string) ([]string, error)
-	resolveSecurityGroupsMutex       sync.RWMutex
-	resolveSecurityGroupsArgsForCall []struct {
-		arg1 []string
+	GetNetworkConfigurationStub        func(apiv1.Networks, config.OpenstackConfig, properties.CreateVM) (properties.NetworkConfig, error)
+	getNetworkConfigurationMutex       sync.RWMutex
+	getNetworkConfigurationArgsForCall []struct {
+		arg1 apiv1.Networks
+		arg2 config.OpenstackConfig
+		arg3 properties.CreateVM
 	}
-	resolveSecurityGroupsReturns struct {
-		result1 []string
+	getNetworkConfigurationReturns struct {
+		result1 properties.NetworkConfig
 		result2 error
 	}
-	resolveSecurityGroupsReturnsOnCall map[int]struct {
-		result1 []string
+	getNetworkConfigurationReturnsOnCall map[int]struct {
+		result1 properties.NetworkConfig
 		result2 error
 	}
 	invocations      map[string][][]interface{}
@@ -100,23 +104,20 @@ func (fake *FakeNetworkService) ConfigureVIPNetworkReturnsOnCall(i int, result1 
 	}{result1}
 }
 
-func (fake *FakeNetworkService) ResolveSecurityGroups(arg1 []string) ([]string, error) {
-	var arg1Copy []string
-	if arg1 != nil {
-		arg1Copy = make([]string, len(arg1))
-		copy(arg1Copy, arg1)
-	}
-	fake.resolveSecurityGroupsMutex.Lock()
-	ret, specificReturn := fake.resolveSecurityGroupsReturnsOnCall[len(fake.resolveSecurityGroupsArgsForCall)]
-	fake.resolveSecurityGroupsArgsForCall = append(fake.resolveSecurityGroupsArgsForCall, struct {
-		arg1 []string
-	}{arg1Copy})
-	stub := fake.ResolveSecurityGroupsStub
-	fakeReturns := fake.resolveSecurityGroupsReturns
-	fake.recordInvocation("ResolveSecurityGroups", []interface{}{arg1Copy})
-	fake.resolveSecurityGroupsMutex.Unlock()
+func (fake *FakeNetworkService) GetNetworkConfiguration(arg1 apiv1.Networks, arg2 config.OpenstackConfig, arg3 properties.CreateVM) (properties.NetworkConfig, error) {
+	fake.getNetworkConfigurationMutex.Lock()
+	ret, specificReturn := fake.getNetworkConfigurationReturnsOnCall[len(fake.getNetworkConfigurationArgsForCall)]
+	fake.getNetworkConfigurationArgsForCall = append(fake.getNetworkConfigurationArgsForCall, struct {
+		arg1 apiv1.Networks
+		arg2 config.OpenstackConfig
+		arg3 properties.CreateVM
+	}{arg1, arg2, arg3})
+	stub := fake.GetNetworkConfigurationStub
+	fakeReturns := fake.getNetworkConfigurationReturns
+	fake.recordInvocation("GetNetworkConfiguration", []interface{}{arg1, arg2, arg3})
+	fake.getNetworkConfigurationMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -124,47 +125,47 @@ func (fake *FakeNetworkService) ResolveSecurityGroups(arg1 []string) ([]string, 
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *FakeNetworkService) ResolveSecurityGroupsCallCount() int {
-	fake.resolveSecurityGroupsMutex.RLock()
-	defer fake.resolveSecurityGroupsMutex.RUnlock()
-	return len(fake.resolveSecurityGroupsArgsForCall)
+func (fake *FakeNetworkService) GetNetworkConfigurationCallCount() int {
+	fake.getNetworkConfigurationMutex.RLock()
+	defer fake.getNetworkConfigurationMutex.RUnlock()
+	return len(fake.getNetworkConfigurationArgsForCall)
 }
 
-func (fake *FakeNetworkService) ResolveSecurityGroupsCalls(stub func([]string) ([]string, error)) {
-	fake.resolveSecurityGroupsMutex.Lock()
-	defer fake.resolveSecurityGroupsMutex.Unlock()
-	fake.ResolveSecurityGroupsStub = stub
+func (fake *FakeNetworkService) GetNetworkConfigurationCalls(stub func(apiv1.Networks, config.OpenstackConfig, properties.CreateVM) (properties.NetworkConfig, error)) {
+	fake.getNetworkConfigurationMutex.Lock()
+	defer fake.getNetworkConfigurationMutex.Unlock()
+	fake.GetNetworkConfigurationStub = stub
 }
 
-func (fake *FakeNetworkService) ResolveSecurityGroupsArgsForCall(i int) []string {
-	fake.resolveSecurityGroupsMutex.RLock()
-	defer fake.resolveSecurityGroupsMutex.RUnlock()
-	argsForCall := fake.resolveSecurityGroupsArgsForCall[i]
-	return argsForCall.arg1
+func (fake *FakeNetworkService) GetNetworkConfigurationArgsForCall(i int) (apiv1.Networks, config.OpenstackConfig, properties.CreateVM) {
+	fake.getNetworkConfigurationMutex.RLock()
+	defer fake.getNetworkConfigurationMutex.RUnlock()
+	argsForCall := fake.getNetworkConfigurationArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
-func (fake *FakeNetworkService) ResolveSecurityGroupsReturns(result1 []string, result2 error) {
-	fake.resolveSecurityGroupsMutex.Lock()
-	defer fake.resolveSecurityGroupsMutex.Unlock()
-	fake.ResolveSecurityGroupsStub = nil
-	fake.resolveSecurityGroupsReturns = struct {
-		result1 []string
+func (fake *FakeNetworkService) GetNetworkConfigurationReturns(result1 properties.NetworkConfig, result2 error) {
+	fake.getNetworkConfigurationMutex.Lock()
+	defer fake.getNetworkConfigurationMutex.Unlock()
+	fake.GetNetworkConfigurationStub = nil
+	fake.getNetworkConfigurationReturns = struct {
+		result1 properties.NetworkConfig
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeNetworkService) ResolveSecurityGroupsReturnsOnCall(i int, result1 []string, result2 error) {
-	fake.resolveSecurityGroupsMutex.Lock()
-	defer fake.resolveSecurityGroupsMutex.Unlock()
-	fake.ResolveSecurityGroupsStub = nil
-	if fake.resolveSecurityGroupsReturnsOnCall == nil {
-		fake.resolveSecurityGroupsReturnsOnCall = make(map[int]struct {
-			result1 []string
+func (fake *FakeNetworkService) GetNetworkConfigurationReturnsOnCall(i int, result1 properties.NetworkConfig, result2 error) {
+	fake.getNetworkConfigurationMutex.Lock()
+	defer fake.getNetworkConfigurationMutex.Unlock()
+	fake.GetNetworkConfigurationStub = nil
+	if fake.getNetworkConfigurationReturnsOnCall == nil {
+		fake.getNetworkConfigurationReturnsOnCall = make(map[int]struct {
+			result1 properties.NetworkConfig
 			result2 error
 		})
 	}
-	fake.resolveSecurityGroupsReturnsOnCall[i] = struct {
-		result1 []string
+	fake.getNetworkConfigurationReturnsOnCall[i] = struct {
+		result1 properties.NetworkConfig
 		result2 error
 	}{result1, result2}
 }
@@ -174,8 +175,8 @@ func (fake *FakeNetworkService) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.configureVIPNetworkMutex.RLock()
 	defer fake.configureVIPNetworkMutex.RUnlock()
-	fake.resolveSecurityGroupsMutex.RLock()
-	defer fake.resolveSecurityGroupsMutex.RUnlock()
+	fake.getNetworkConfigurationMutex.RLock()
+	defer fake.getNetworkConfigurationMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

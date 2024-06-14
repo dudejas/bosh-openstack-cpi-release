@@ -8,6 +8,7 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/image/imagefakes"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/methods"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/network/networkfakes"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils/utilsfakes"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -201,10 +202,7 @@ var _ = Describe("CreateVMMethod", func() {
 		})
 
 		It("returns an error if the network config creation fails", func() {
-			networks = apiv1.Networks{
-				"network":                          apiv1.NewNetwork(apiv1.NetworkOpts{Type: "dynamic"}),
-				"forbidden_second_dynamic_network": apiv1.NewNetwork(apiv1.NetworkOpts{Type: "dynamic"}),
-			}
+			networkService.GetNetworkConfigurationReturns(properties.NetworkConfig{}, errors.New("boom"))
 
 			stemcellCID, networks, err := methods.NewCreateVMMethod(
 				&imageServiceBuilder,
@@ -221,7 +219,7 @@ var _ = Describe("CreateVMMethod", func() {
 				apiv1.VMEnv{},
 			)
 
-			Expect(err.Error()).To(ContainSubstring("failed to create network config: invalid dynamic network configuration"))
+			Expect(err.Error()).To(ContainSubstring("failed to create network config: boom"))
 			Expect(stemcellCID).To(Equal(apiv1.VMCID{}))
 			Expect(networks).To(Equal(apiv1.Networks{}))
 		})

@@ -1,10 +1,9 @@
-package compute_test
+package network_test
 
 import (
 	"encoding/binary"
 	"encoding/json"
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/compute"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/network"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/network/networkfakes"
@@ -16,20 +15,20 @@ import (
 )
 
 var _ = Describe("NetworkConfigBuilder", func() {
-	var networkService networkfakes.FakeNetworkService
 	var networkingConfig properties.NetworkConfig
+	var securityGroupsResolver networkfakes.FakeSecurityGroupsResolver
 	var openstackConfig config.OpenstackConfig
 	var cloudProperties properties.CreateVM
 
 	BeforeEach(func() {
 		openstackConfig = config.OpenstackConfig{}
 		cloudProperties = properties.CreateVM{}
-		networkService = networkfakes.FakeNetworkService{}
+		securityGroupsResolver = networkfakes.FakeSecurityGroupsResolver{}
 	})
 
 	Context("NewNetworkConfig", func() {
 		BeforeEach(func() {
-			networkingConfig, _ = createNetworkConfig(&networkService, []byte(`{
+			networkingConfig, _ = createNetworkConfig(&securityGroupsResolver, []byte(`{
 				"name1": {
 					"type":    "manual",
 					"ip":      "1.1.1.1",
@@ -55,7 +54,7 @@ var _ = Describe("NetworkConfigBuilder", func() {
 		})
 
 		It("returns an error if a manual network is missing a netid", func() {
-			_, err := createNetworkConfig(&networkService, []byte(`{
+			_, err := createNetworkConfig(&securityGroupsResolver, []byte(`{
 				"name1": {
 					"type":    "manual",
 					"ip":      "",
@@ -72,7 +71,7 @@ var _ = Describe("NetworkConfigBuilder", func() {
 		})
 
 		It("returns an error if multiple manual network exists while dhcp should be used and config drive is not defined", func() {
-			_, err := createNetworkConfig(&networkService, []byte(`{
+			_, err := createNetworkConfig(&securityGroupsResolver, []byte(`{
 				"name1": {
 					"type":    "manual",
 					"ip":      "",
@@ -89,7 +88,7 @@ var _ = Describe("NetworkConfigBuilder", func() {
 		})
 
 		It("returns an error if multiple vip networks exists", func() {
-			_, err := createNetworkConfig(&networkService, []byte(`{
+			_, err := createNetworkConfig(&securityGroupsResolver, []byte(`{
 				"name1": {
 					"type":    "vip",
 					"ip":      "",
@@ -106,7 +105,7 @@ var _ = Describe("NetworkConfigBuilder", func() {
 		})
 
 		It("returns an error if multiple dynamic networks exists", func() {
-			_, err := createNetworkConfig(&networkService, []byte(`{
+			_, err := createNetworkConfig(&securityGroupsResolver, []byte(`{
 				"name1": {
 					"type":    "dynamic",
 					"ip":      "",
@@ -123,7 +122,7 @@ var _ = Describe("NetworkConfigBuilder", func() {
 		})
 
 		It("returns an error if same net_id is used by multiple networks", func() {
-			_, err := createNetworkConfig(&networkService, []byte(`{
+			_, err := createNetworkConfig(&securityGroupsResolver, []byte(`{
 				"name1": {
 					"type":    "manual",
 					"ip":      "",
@@ -150,7 +149,7 @@ var _ = Describe("NetworkConfigBuilder", func() {
 		})
 
 		It("returns an empty network if no network is provided", func() {
-			networkingConfig, err := createNetworkConfig(&networkService, []byte(`{}`), openstackConfig, cloudProperties)
+			networkingConfig, err := createNetworkConfig(&securityGroupsResolver, []byte(`{}`), openstackConfig, cloudProperties)
 			Expect(err).ToNot(HaveOccurred())
 			defaultNetwork := networkingConfig.DefaultNetwork
 
@@ -196,9 +195,9 @@ var _ = Describe("NetworkConfigBuilder", func() {
 
 	Context("SecurityGroups", func() {
 		It("returns cloud properties security groups", func() {
-			networkService.ResolveSecurityGroupsReturns([]string{"resolved_security_group_1", "resolved_security_group_2"}, nil)
+			securityGroupsResolver.ResolveReturns([]string{"resolved_security_group_1", "resolved_security_group_2"}, nil)
 
-			networkingConfig, _ = createNetworkConfig(&networkService, []byte(`{
+			networkingConfig, _ = createNetworkConfig(&securityGroupsResolver, []byte(`{
 					"name1": {
 						"type":    "manual",
 						"ip":      "1.1.1.1",
@@ -214,15 +213,15 @@ var _ = Describe("NetworkConfigBuilder", func() {
 				})
 			securityGroups := networkingConfig.SecurityGroups
 
-			securityGroupsParam := networkService.ResolveSecurityGroupsArgsForCall(0)
+			securityGroupsParam := securityGroupsResolver.ResolveArgsForCall(0)
 			Expect(securityGroupsParam).To(ContainElements("cloud_config_security_group_1", "cloud_config_security_group_2"))
 			Expect(securityGroups).To(ContainElements("resolved_security_group_1", "resolved_security_group_2"))
 		})
 
 		It("returns network security groups if cloud properties do not define security groups", func() {
-			networkService.ResolveSecurityGroupsReturns([]string{"resolved_network_security_group_1", "resolved_network_security_group_2"}, nil)
+			securityGroupsResolver.ResolveReturns([]string{"resolved_network_security_group_1", "resolved_network_security_group_2"}, nil)
 
-			networkingConfig, _ = createNetworkConfig(&networkService, []byte(`{
+			networkingConfig, _ = createNetworkConfig(&securityGroupsResolver, []byte(`{
 					"name1": {
 						"type":    "manual",
 						"ip":      "1.1.1.1",
@@ -237,15 +236,15 @@ var _ = Describe("NetworkConfigBuilder", func() {
 			)
 			securityGroups := networkingConfig.SecurityGroups
 
-			securityGroupsParam := networkService.ResolveSecurityGroupsArgsForCall(0)
+			securityGroupsParam := securityGroupsResolver.ResolveArgsForCall(0)
 			Expect(securityGroupsParam).To(ContainElements("security_group_1", "security_group_2"))
 			Expect(securityGroups).To(ContainElements("resolved_network_security_group_1", "resolved_network_security_group_2"))
 		})
 
 		It("returns default security groups if network security groups are not defined", func() {
-			networkService.ResolveSecurityGroupsReturns([]string{"resolved_default_group_1", "resolved_default_group_2"}, nil)
+			securityGroupsResolver.ResolveReturns([]string{"resolved_default_group_1", "resolved_default_group_2"}, nil)
 
-			networkingConfig, _ = createNetworkConfig(&networkService, []byte(`{
+			networkingConfig, _ = createNetworkConfig(&securityGroupsResolver, []byte(`{
 					"name1": {
 						"type":    "manual",
 						"ip":      "1.1.1.1",
@@ -260,17 +259,17 @@ var _ = Describe("NetworkConfigBuilder", func() {
 			)
 			securityGroups := networkingConfig.SecurityGroups
 
-			securityGroupsParam := networkService.ResolveSecurityGroupsArgsForCall(0)
+			securityGroupsParam := securityGroupsResolver.ResolveArgsForCall(0)
 			Expect(securityGroupsParam).To(ContainElements("security_group_1", "security_group_2"))
 			Expect(securityGroups).To(ContainElements("resolved_default_group_1", "resolved_default_group_2"))
 		})
 
 		It("network security groups merge all networks", func() {
-			networkService.ResolveSecurityGroupsReturns([]string{
+			securityGroupsResolver.ResolveReturns([]string{
 				"resolved_security_group_1", "resolved_security_group_2", "resolved_security_group_3", "resolved_security_group_4",
 			}, nil)
 
-			networkingConfig, _ = createNetworkConfig(&networkService, []byte(`{
+			networkingConfig, _ = createNetworkConfig(&securityGroupsResolver, []byte(`{
 				"name1": {
 					"type":    "manual",
 					"ip":      "1.1.1.1",
@@ -295,19 +294,19 @@ var _ = Describe("NetworkConfigBuilder", func() {
 			}`), openstackConfig, cloudProperties)
 			securityGroups := sortSecurityGroups(networkingConfig.SecurityGroups)
 
-			securityGroupsParam := networkService.ResolveSecurityGroupsArgsForCall(0)
+			securityGroupsParam := securityGroupsResolver.ResolveArgsForCall(0)
 			Expect(securityGroupsParam).To(ContainElements("security_group_1", "security_group_2", "security_group_4", "security_group_3"))
 			Expect(securityGroups).To(ContainElements("resolved_security_group_1", "resolved_security_group_2", "resolved_security_group_3", "resolved_security_group_4"))
 		})
 	})
 })
 
-func createNetworkConfig(networkService network.NetworkService, bytes []byte, openstackConfig config.OpenstackConfig, cloudProperties properties.CreateVM) (properties.NetworkConfig, error) {
+func createNetworkConfig(securityGroupsResolver network.SecurityGroupsResolver, bytes []byte, openstackConfig config.OpenstackConfig, cloudProperties properties.CreateVM) (properties.NetworkConfig, error) {
 	var networks apiv1.Networks
 	err := json.Unmarshal(bytes, &networks)
 	Expect(err).ToNot(HaveOccurred())
 
-	networkConfig, err := compute.NewNetworkConfigBuilder(networkService, networks, openstackConfig, cloudProperties).Build()
+	networkConfig, err := network.NewNetworkConfigBuilder(securityGroupsResolver, networks, openstackConfig, cloudProperties).Build()
 
 	return networkConfig, err
 }
