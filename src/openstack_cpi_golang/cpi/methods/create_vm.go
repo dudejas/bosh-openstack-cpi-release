@@ -79,7 +79,7 @@ func (m CreateVMMethod) CreateVMV2(
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to create server: %w", err)
 	}
 
-	err = networkService.ConfigureNetwork(serverID, networkConfig)
+	err = networkService.ConfigureVIPNetwork(serverID, networkConfig)
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to configure network for server %s: %w", serverID, err)
 	}

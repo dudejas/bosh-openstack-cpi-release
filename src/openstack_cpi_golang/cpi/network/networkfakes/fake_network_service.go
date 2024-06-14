@@ -9,16 +9,16 @@ import (
 )
 
 type FakeNetworkService struct {
-	ConfigureNetworkStub        func(string, properties.NetworkConfig) error
-	configureNetworkMutex       sync.RWMutex
-	configureNetworkArgsForCall []struct {
+	ConfigureVIPNetworkStub        func(string, properties.NetworkConfig) error
+	configureVIPNetworkMutex       sync.RWMutex
+	configureVIPNetworkArgsForCall []struct {
 		arg1 string
 		arg2 properties.NetworkConfig
 	}
-	configureNetworkReturns struct {
+	configureVIPNetworkReturns struct {
 		result1 error
 	}
-	configureNetworkReturnsOnCall map[int]struct {
+	configureVIPNetworkReturnsOnCall map[int]struct {
 		result1 error
 	}
 	ResolveSecurityGroupsStub        func([]string) ([]string, error)
@@ -38,17 +38,17 @@ type FakeNetworkService struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeNetworkService) ConfigureNetwork(arg1 string, arg2 properties.NetworkConfig) error {
-	fake.configureNetworkMutex.Lock()
-	ret, specificReturn := fake.configureNetworkReturnsOnCall[len(fake.configureNetworkArgsForCall)]
-	fake.configureNetworkArgsForCall = append(fake.configureNetworkArgsForCall, struct {
+func (fake *FakeNetworkService) ConfigureVIPNetwork(arg1 string, arg2 properties.NetworkConfig) error {
+	fake.configureVIPNetworkMutex.Lock()
+	ret, specificReturn := fake.configureVIPNetworkReturnsOnCall[len(fake.configureVIPNetworkArgsForCall)]
+	fake.configureVIPNetworkArgsForCall = append(fake.configureVIPNetworkArgsForCall, struct {
 		arg1 string
 		arg2 properties.NetworkConfig
 	}{arg1, arg2})
-	stub := fake.ConfigureNetworkStub
-	fakeReturns := fake.configureNetworkReturns
-	fake.recordInvocation("ConfigureNetwork", []interface{}{arg1, arg2})
-	fake.configureNetworkMutex.Unlock()
+	stub := fake.ConfigureVIPNetworkStub
+	fakeReturns := fake.configureVIPNetworkReturns
+	fake.recordInvocation("ConfigureVIPNetwork", []interface{}{arg1, arg2})
+	fake.configureVIPNetworkMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2)
 	}
@@ -58,44 +58,44 @@ func (fake *FakeNetworkService) ConfigureNetwork(arg1 string, arg2 properties.Ne
 	return fakeReturns.result1
 }
 
-func (fake *FakeNetworkService) ConfigureNetworkCallCount() int {
-	fake.configureNetworkMutex.RLock()
-	defer fake.configureNetworkMutex.RUnlock()
-	return len(fake.configureNetworkArgsForCall)
+func (fake *FakeNetworkService) ConfigureVIPNetworkCallCount() int {
+	fake.configureVIPNetworkMutex.RLock()
+	defer fake.configureVIPNetworkMutex.RUnlock()
+	return len(fake.configureVIPNetworkArgsForCall)
 }
 
-func (fake *FakeNetworkService) ConfigureNetworkCalls(stub func(string, properties.NetworkConfig) error) {
-	fake.configureNetworkMutex.Lock()
-	defer fake.configureNetworkMutex.Unlock()
-	fake.ConfigureNetworkStub = stub
+func (fake *FakeNetworkService) ConfigureVIPNetworkCalls(stub func(string, properties.NetworkConfig) error) {
+	fake.configureVIPNetworkMutex.Lock()
+	defer fake.configureVIPNetworkMutex.Unlock()
+	fake.ConfigureVIPNetworkStub = stub
 }
 
-func (fake *FakeNetworkService) ConfigureNetworkArgsForCall(i int) (string, properties.NetworkConfig) {
-	fake.configureNetworkMutex.RLock()
-	defer fake.configureNetworkMutex.RUnlock()
-	argsForCall := fake.configureNetworkArgsForCall[i]
+func (fake *FakeNetworkService) ConfigureVIPNetworkArgsForCall(i int) (string, properties.NetworkConfig) {
+	fake.configureVIPNetworkMutex.RLock()
+	defer fake.configureVIPNetworkMutex.RUnlock()
+	argsForCall := fake.configureVIPNetworkArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeNetworkService) ConfigureNetworkReturns(result1 error) {
-	fake.configureNetworkMutex.Lock()
-	defer fake.configureNetworkMutex.Unlock()
-	fake.ConfigureNetworkStub = nil
-	fake.configureNetworkReturns = struct {
+func (fake *FakeNetworkService) ConfigureVIPNetworkReturns(result1 error) {
+	fake.configureVIPNetworkMutex.Lock()
+	defer fake.configureVIPNetworkMutex.Unlock()
+	fake.ConfigureVIPNetworkStub = nil
+	fake.configureVIPNetworkReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeNetworkService) ConfigureNetworkReturnsOnCall(i int, result1 error) {
-	fake.configureNetworkMutex.Lock()
-	defer fake.configureNetworkMutex.Unlock()
-	fake.ConfigureNetworkStub = nil
-	if fake.configureNetworkReturnsOnCall == nil {
-		fake.configureNetworkReturnsOnCall = make(map[int]struct {
+func (fake *FakeNetworkService) ConfigureVIPNetworkReturnsOnCall(i int, result1 error) {
+	fake.configureVIPNetworkMutex.Lock()
+	defer fake.configureVIPNetworkMutex.Unlock()
+	fake.ConfigureVIPNetworkStub = nil
+	if fake.configureVIPNetworkReturnsOnCall == nil {
+		fake.configureVIPNetworkReturnsOnCall = make(map[int]struct {
 			result1 error
 		})
 	}
-	fake.configureNetworkReturnsOnCall[i] = struct {
+	fake.configureVIPNetworkReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }
@@ -172,8 +172,8 @@ func (fake *FakeNetworkService) ResolveSecurityGroupsReturnsOnCall(i int, result
 func (fake *FakeNetworkService) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.configureNetworkMutex.RLock()
-	defer fake.configureNetworkMutex.RUnlock()
+	fake.configureVIPNetworkMutex.RLock()
+	defer fake.configureVIPNetworkMutex.RUnlock()
 	fake.resolveSecurityGroupsMutex.RLock()
 	defer fake.resolveSecurityGroupsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

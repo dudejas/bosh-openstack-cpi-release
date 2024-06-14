@@ -40,7 +40,7 @@ var _ = Describe("CreateVMMethod", func() {
 			networkServiceBuilder.BuildReturns(&networkService, nil)
 			imageServiceBuilder.BuildReturns(&imageService, nil)
 			computeService.CreateServerReturns("123-456", nil)
-			networkService.ConfigureNetworkReturns(nil)
+			networkService.ConfigureVIPNetworkReturns(nil)
 
 			props = map[string]interface{}{
 				"instance_type": "the_instance_type",
@@ -285,12 +285,12 @@ var _ = Describe("CreateVMMethod", func() {
 				apiv1.VMEnv{},
 			)
 
-			serverID, _ := networkService.ConfigureNetworkArgsForCall(0)
+			serverID, _ := networkService.ConfigureVIPNetworkArgsForCall(0)
 			Expect(serverID).To(Equal("123-456"))
 		})
 
 		It("returns an error if the network configuration fails", func() {
-			networkService.ConfigureNetworkReturns(errors.New("boom"))
+			networkService.ConfigureVIPNetworkReturns(errors.New("boom"))
 
 			stemcellCID, networks, err := methods.NewCreateVMMethod(
 				&imageServiceBuilder,

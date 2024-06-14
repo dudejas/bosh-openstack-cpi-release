@@ -12,7 +12,7 @@ import (
 
 //counterfeiter:generate . NetworkService
 type NetworkService interface {
-	ConfigureNetwork(
+	ConfigureVIPNetwork(
 		instanceId string,
 		networkConfig properties.NetworkConfig,
 	) error
@@ -40,7 +40,7 @@ func NewNetworkService(
 	}
 }
 
-func (c networkService) ConfigureNetwork(
+func (c networkService) ConfigureVIPNetwork(
 	instanceId string,
 	networkConfig properties.NetworkConfig,
 ) error {
