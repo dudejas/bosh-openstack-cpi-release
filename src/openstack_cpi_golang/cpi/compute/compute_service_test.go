@@ -22,6 +22,7 @@ var _ = Describe("ComputeService", func() {
 	var computeFacade computefakes.FakeComputeFacade
 	var flavorResolver computefakes.FakeFlavorResolver
 	var volumeConfigurator computefakes.FakeVolumeConfigurator
+	var availabilityZoneProvider computefakes.FakeAvailabilityZoneProvider
 	var logger utilsfakes.FakeLogger
 	var computeService compute.ComputeService
 	var networkConfig properties.NetworkConfig
@@ -33,14 +34,16 @@ var _ = Describe("ComputeService", func() {
 		computeFacade = computefakes.FakeComputeFacade{}
 		flavorResolver = computefakes.FakeFlavorResolver{}
 		volumeConfigurator = computefakes.FakeVolumeConfigurator{}
+		availabilityZoneProvider = computefakes.FakeAvailabilityZoneProvider{}
 		logger = utilsfakes.FakeLogger{}
-		computeService = compute.NewComputeService(&serviceClient, &computeFacade, &flavorResolver, &volumeConfigurator, &logger)
+		computeService = compute.NewComputeService(&serviceClient, &computeFacade, &flavorResolver, &volumeConfigurator, &availabilityZoneProvider, &logger)
 		networkConfig = properties.NetworkConfig{}
 		computeFacade.CreateServerReturns(&servers.Server{ID: "123-456"}, nil)
 		computeFacade.GetServerReturns(&servers.Server{ID: "123-456", Status: "ACTIVE"}, nil)
 		flavorResolver.ResolveFlavorForInstanceTypeReturns(flavors.Flavor{ID: "the_flavor_id", Name: "the_instance_type", RAM: 4096, Ephemeral: 10}, nil)
 		computeFacade.GetOSKeyPairReturns(&keypairs.KeyPair{Name: "the_os_keypair_name"}, nil)
 		defaultCloudConfig = properties.CreateVM{InstanceType: "the_instance_type", RootDisk: properties.Disk{Size: 1}}
+		availabilityZoneProvider.GetAvailabilityZonesReturns([]string{"z1"})
 	})
 
 	Context("CreateServer", func() {
@@ -163,7 +166,7 @@ var _ = Describe("ComputeService", func() {
 				apiv1.NewStemcellCID("the_stemcell_id"),
 				properties.CreateVM{
 					InstanceType:     "the_instance_type",
-					AvailabilityZone: "the_availability_zone",
+					AvailabilityZone: "z1",
 					RootDisk:         properties.Disk{Size: 1},
 					BootFromVolume:   &bootfromvolume,
 				},
@@ -186,14 +189,19 @@ var _ = Describe("ComputeService", func() {
 			Expect(serverNetworks[0]["uuid"]).To(Equal("the_net_id"))
 			Expect(serverSecurityGroups[0]["name"]).To(Equal("group_1"))
 			Expect(serverSecurityGroups[1]["name"]).To(Equal("group_2"))
-			Expect(server["availability_zone"]).To(Equal("the_availability_zone"))
+			Expect(server["availability_zone"]).To(Equal("z1"))
 			Expect(server["flavorRef"]).To(Equal("the_flavor_id"))
 			Expect(server["key_name"]).To(Equal("the_os_keypair_name"))
 			Expect(blockDevice[0]["uuid"]).To(Equal("the-stemcell-id"))
 			Expect(blockDevice[0]["volume_size"]).To(Equal(999.0))
 		})
 
-		It("creates a server", func() {
+		It("runs server creation in multiple AZs on creation failure", func() {
+			availabilityZoneProvider.GetAvailabilityZonesReturns([]string{"z1", "z2"})
+
+			computeFacade.CreateServerReturnsOnCall(0, nil, errors.New("boom"))
+			computeFacade.CreateServerReturnsOnCall(1, &servers.Server{ID: "123-456"}, nil)
+
 			computeService.CreateServer(
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
@@ -201,7 +209,44 @@ var _ = Describe("ComputeService", func() {
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
-			Expect(computeFacade.CreateServerCallCount()).To(Equal(1))
+			_, opts := computeFacade.CreateServerArgsForCall(0)
+			createMap, _ := opts.ToServerCreateMap()
+			server := createMap["server"].(map[string]interface{})
+			Expect(server["availability_zone"]).To(Equal("z1"))
+
+			_, opts = computeFacade.CreateServerArgsForCall(1)
+			createMap, _ = opts.ToServerCreateMap()
+			server = createMap["server"].(map[string]interface{})
+			Expect(server["availability_zone"]).To(Equal("z2"))
+
+			Expect(computeFacade.CreateServerCallCount()).To(Equal(2))
+		})
+
+		It("runs server creation in multiple AZs if waiting in server fails", func() {
+			availabilityZoneProvider.GetAvailabilityZonesReturns([]string{"z1", "z2"})
+
+			computeFacade.GetServerReturns(&servers.Server{ID: "123-456", Status: "not-active"}, nil)
+
+			compute.ComputeServicePollingInterval = 0
+
+			computeService.CreateServer(
+				apiv1.StemcellCID{},
+				defaultCloudConfig,
+				networkConfig,
+				config.OpenstackConfig{StateTimeOut: 0, DefaultKeyName: "the_key_name"},
+			)
+
+			_, opts := computeFacade.CreateServerArgsForCall(0)
+			createMap, _ := opts.ToServerCreateMap()
+			server := createMap["server"].(map[string]interface{})
+			Expect(server["availability_zone"]).To(Equal("z1"))
+
+			_, opts = computeFacade.CreateServerArgsForCall(1)
+			createMap, _ = opts.ToServerCreateMap()
+			server = createMap["server"].(map[string]interface{})
+			Expect(server["availability_zone"]).To(Equal("z2"))
+
+			Expect(computeFacade.CreateServerCallCount()).To(Equal(2))
 		})
 
 		It("returns an error if the server creation fails", func() {
@@ -214,7 +259,7 @@ var _ = Describe("ComputeService", func() {
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
-			Expect(err.Error()).To(Equal("failed to create server: boom"))
+			Expect(err.Error()).To(Equal("failed to create server in availability zone 'z1': boom"))
 			Expect(server).To(BeNil())
 		})
 
@@ -246,7 +291,7 @@ var _ = Describe("ComputeService", func() {
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
-			Expect(err.Error()).To(Equal("failed while waiting on the server creation: failed to retrieve server information: boom"))
+			Expect(err.Error()).To(Equal("failed while waiting on the server creation in availability zone 'z1': failed to retrieve server information: boom"))
 			Expect(server).To(BeNil())
 		})
 
@@ -260,7 +305,7 @@ var _ = Describe("ComputeService", func() {
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
-			Expect(err.Error()).To(Equal("failed while waiting on the server creation: server became ERROR state while waiting to become ACTIVE"))
+			Expect(err.Error()).To(Equal("failed while waiting on the server creation in availability zone 'z1': server became ERROR state while waiting to become ACTIVE"))
 			Expect(server).To(BeNil())
 		})
 
@@ -274,7 +319,7 @@ var _ = Describe("ComputeService", func() {
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
-			Expect(err.Error()).To(Equal("failed while waiting on the server creation: server became DELETED state while waiting to become ACTIVE"))
+			Expect(err.Error()).To(Equal("failed while waiting on the server creation in availability zone 'z1': server became DELETED state while waiting to become ACTIVE"))
 			Expect(server).To(BeNil())
 		})
 
@@ -288,7 +333,7 @@ var _ = Describe("ComputeService", func() {
 				config.OpenstackConfig{StateTimeOut: 0, DefaultKeyName: "the_key_name"},
 			)
 
-			Expect(err.Error()).To(Equal("failed while waiting on the server creation: timeout while waiting for server to become active"))
+			Expect(err.Error()).To(Equal("failed while waiting on the server creation in availability zone 'z1': timeout while waiting for server to become active"))
 			Expect(server).To(BeNil())
 		})
 

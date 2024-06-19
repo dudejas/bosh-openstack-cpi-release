@@ -27,6 +27,8 @@ type NetworkService interface {
 	) (properties.NetworkConfig, error)
 
 	GetSubnetID(networkID string, ip string) (string, error)
+
+	CreatePort(networkConfig properties.NetworkConfig, cloudProperties properties.CreateVM) (*ports.Port, error)
 }
 
 type networkService struct {
@@ -79,7 +81,8 @@ func (c networkService) GetNetworkConfiguration(
 ) (properties.NetworkConfig, error) {
 	securityGroupsResolver := NewSecurityGroupsResolver(c.serviceClient, c.networkingFacade)
 
-	return NewNetworkConfigBuilder(securityGroupsResolver, networks, openstackConfig, cloudProps).Build()
+	networkProperties, err := NewNetworkConfigBuilder(securityGroupsResolver, networks, openstackConfig, cloudProps).Build()
+	return networkProperties, err
 }
 
 func (c networkService) GetSubnetID(networkID string, ip string) (string, error) {
@@ -123,6 +126,103 @@ func (c networkService) GetSubnetID(networkID string, ip string) (string, error)
 	}
 
 	return matchingSubnets[0], nil
+}
+
+func (c networkService) CreatePort(networkConfig properties.NetworkConfig, cloudProperties properties.CreateVM) (*ports.Port, error) {
+	defaultNetwork := networkConfig.DefaultNetwork
+
+	createOpts, err := c.getPortCreationNetworkOpts(defaultNetwork, cloudProperties)
+	if err != nil {
+		return nil, fmt.Errorf("failed create network opts: %w", err)
+	}
+
+	createdPort, err := c.networkingFacade.CreatePort(c.serviceClient, createOpts)
+	if err != nil {
+		c.logger.Warn("network-service",
+			fmt.Sprintf("port creation on network '%s' for ip '%s' "+
+				"failed with: %v, checking conflicting ports now.",
+				defaultNetwork.CloudProps.NetID, defaultNetwork.IP, err))
+
+		listOpts := ports.ListOpts{
+			NetworkID: defaultNetwork.CloudProps.NetID,
+			FixedIPs:  []ports.FixedIPOpts{{IPAddress: defaultNetwork.IP}},
+		}
+		page, err := c.networkingFacade.ListPorts(c.serviceClient, listOpts)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list Ports: %w", err)
+		}
+
+		ports, err := c.networkingFacade.ExtractPorts(page)
+		if err != nil {
+			return nil, fmt.Errorf("failed to extract ports: %w", err)
+		}
+
+		for _, port := range ports {
+			if port.Status == "DOWN" && port.DeviceID == "" && port.DeviceOwner == "" {
+				c.logger.Warn("network-service", fmt.Sprintf("port on network '%s' for ip '%s' "+
+					"is already allocated but unused, deleting conflicting port now.",
+					defaultNetwork.CloudProps.NetID, defaultNetwork.IP))
+
+				err := c.networkingFacade.DeletePort(c.serviceClient, port.ID)
+				if err != nil {
+					return nil, fmt.Errorf("failed to delete port: %w", err)
+				}
+			}
+		}
+
+		createdPort, err = c.networkingFacade.CreatePort(c.serviceClient, createOpts)
+		if err != nil {
+			return nil, fmt.Errorf("port creation on network '%s' for ip '%s' "+
+				"failed with: %w, on second attempt",
+				defaultNetwork.CloudProps.NetID, defaultNetwork.IP, err)
+		}
+	}
+
+	return createdPort, nil
+}
+
+func (c networkService) getPortCreationNetworkOpts(defaultNetwork properties.Network, cloudProperties properties.CreateVM) (ports.CreateOpts, error) {
+	createOpts := ports.CreateOpts{
+		NetworkID: defaultNetwork.CloudProps.NetID,
+		FixedIPs:  []ports.IP{{IPAddress: defaultNetwork.IP}},
+	}
+
+	if cloudProperties.AllowedAddressPairs != "" {
+		vrrpPortExisting, err := c.isVRRPPortExisting(cloudProperties)
+		if err != nil {
+			return ports.CreateOpts{}, fmt.Errorf("VRRP port existence check failed: %w", err)
+		}
+
+		if !vrrpPortExisting {
+			return ports.CreateOpts{}, fmt.Errorf("configured VRRP port with ip '%s' does not exist", cloudProperties.AllowedAddressPairs)
+		}
+
+		createOpts.AllowedAddressPairs = []ports.AddressPair{{IPAddress: cloudProperties.AllowedAddressPairs}}
+	}
+	return createOpts, nil
+}
+
+func (c networkService) isVRRPPortExisting(cloudProperties properties.CreateVM) (bool, error) {
+	vrrpPortCheck := cloudProperties.VRRPPortCheck
+	if vrrpPortCheck != nil && *vrrpPortCheck {
+		listOpts := ports.ListOpts{
+			FixedIPs: []ports.FixedIPOpts{{IPAddress: cloudProperties.AllowedAddressPairs}},
+		}
+		page, err := c.networkingFacade.ListPorts(c.serviceClient, listOpts)
+		if err != nil {
+			return false, fmt.Errorf("failed to list VRRP ports: %w", err)
+		}
+
+		ports, err := c.networkingFacade.ExtractPorts(page)
+		if err != nil {
+			return false, fmt.Errorf("failed to extract ports: %w", err)
+		}
+
+		if len(ports) == 0 {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 func (c networkService) getFloatingIp(vipNetwork *properties.Network) (floatingips.FloatingIP, error) {

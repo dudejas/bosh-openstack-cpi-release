@@ -55,7 +55,7 @@ func (m CreateVMMethod) CreateVMV2(
 	cloudProps := properties.CreateVM{}
 	props.As(&cloudProps)
 
-	err := cloudProps.Validate()
+	err := cloudProps.Validate(m.config)
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to validate cloud properties: %w", err)
 	}
@@ -88,6 +88,13 @@ func (m CreateVMMethod) CreateVMV2(
 	networkConfig, err := networkService.GetNetworkConfiguration(networks, m.config, cloudProps)
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to create network config: %w", err)
+	}
+
+	if networkConfig.DefaultNetwork.Type == "manual" {
+		_, err = networkService.CreatePort(networkConfig, cloudProps)
+		if err != nil {
+			return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to create port: %w", err)
+		}
 	}
 
 	server, err := computeService.CreateServer(stemcellCID, cloudProps, networkConfig, m.config)

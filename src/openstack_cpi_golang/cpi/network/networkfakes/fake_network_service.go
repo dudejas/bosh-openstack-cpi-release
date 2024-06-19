@@ -8,6 +8,7 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/network"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 )
 
 type FakeNetworkService struct {
@@ -22,6 +23,20 @@ type FakeNetworkService struct {
 	}
 	configureVIPNetworkReturnsOnCall map[int]struct {
 		result1 error
+	}
+	CreatePortStub        func(properties.NetworkConfig, properties.CreateVM) (*ports.Port, error)
+	createPortMutex       sync.RWMutex
+	createPortArgsForCall []struct {
+		arg1 properties.NetworkConfig
+		arg2 properties.CreateVM
+	}
+	createPortReturns struct {
+		result1 *ports.Port
+		result2 error
+	}
+	createPortReturnsOnCall map[int]struct {
+		result1 *ports.Port
+		result2 error
 	}
 	GetNetworkConfigurationStub        func(apiv1.Networks, config.OpenstackConfig, properties.CreateVM) (properties.NetworkConfig, error)
 	getNetworkConfigurationMutex       sync.RWMutex
@@ -116,6 +131,71 @@ func (fake *FakeNetworkService) ConfigureVIPNetworkReturnsOnCall(i int, result1 
 	fake.configureVIPNetworkReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
+}
+
+func (fake *FakeNetworkService) CreatePort(arg1 properties.NetworkConfig, arg2 properties.CreateVM) (*ports.Port, error) {
+	fake.createPortMutex.Lock()
+	ret, specificReturn := fake.createPortReturnsOnCall[len(fake.createPortArgsForCall)]
+	fake.createPortArgsForCall = append(fake.createPortArgsForCall, struct {
+		arg1 properties.NetworkConfig
+		arg2 properties.CreateVM
+	}{arg1, arg2})
+	stub := fake.CreatePortStub
+	fakeReturns := fake.createPortReturns
+	fake.recordInvocation("CreatePort", []interface{}{arg1, arg2})
+	fake.createPortMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeNetworkService) CreatePortCallCount() int {
+	fake.createPortMutex.RLock()
+	defer fake.createPortMutex.RUnlock()
+	return len(fake.createPortArgsForCall)
+}
+
+func (fake *FakeNetworkService) CreatePortCalls(stub func(properties.NetworkConfig, properties.CreateVM) (*ports.Port, error)) {
+	fake.createPortMutex.Lock()
+	defer fake.createPortMutex.Unlock()
+	fake.CreatePortStub = stub
+}
+
+func (fake *FakeNetworkService) CreatePortArgsForCall(i int) (properties.NetworkConfig, properties.CreateVM) {
+	fake.createPortMutex.RLock()
+	defer fake.createPortMutex.RUnlock()
+	argsForCall := fake.createPortArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeNetworkService) CreatePortReturns(result1 *ports.Port, result2 error) {
+	fake.createPortMutex.Lock()
+	defer fake.createPortMutex.Unlock()
+	fake.CreatePortStub = nil
+	fake.createPortReturns = struct {
+		result1 *ports.Port
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeNetworkService) CreatePortReturnsOnCall(i int, result1 *ports.Port, result2 error) {
+	fake.createPortMutex.Lock()
+	defer fake.createPortMutex.Unlock()
+	fake.CreatePortStub = nil
+	if fake.createPortReturnsOnCall == nil {
+		fake.createPortReturnsOnCall = make(map[int]struct {
+			result1 *ports.Port
+			result2 error
+		})
+	}
+	fake.createPortReturnsOnCall[i] = struct {
+		result1 *ports.Port
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeNetworkService) GetNetworkConfiguration(arg1 apiv1.Networks, arg2 config.OpenstackConfig, arg3 properties.CreateVM) (properties.NetworkConfig, error) {
@@ -254,6 +334,8 @@ func (fake *FakeNetworkService) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.configureVIPNetworkMutex.RLock()
 	defer fake.configureVIPNetworkMutex.RUnlock()
+	fake.createPortMutex.RLock()
+	defer fake.createPortMutex.RUnlock()
 	fake.getNetworkConfigurationMutex.RLock()
 	defer fake.getNetworkConfigurationMutex.RUnlock()
 	fake.getSubnetIDMutex.RLock()

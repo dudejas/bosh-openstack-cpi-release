@@ -14,6 +14,32 @@ import (
 )
 
 type FakeNetworkingFacade struct {
+	CreatePortStub        func(*gophercloud.ServiceClient, ports.CreateOpts) (*ports.Port, error)
+	createPortMutex       sync.RWMutex
+	createPortArgsForCall []struct {
+		arg1 *gophercloud.ServiceClient
+		arg2 ports.CreateOpts
+	}
+	createPortReturns struct {
+		result1 *ports.Port
+		result2 error
+	}
+	createPortReturnsOnCall map[int]struct {
+		result1 *ports.Port
+		result2 error
+	}
+	DeletePortStub        func(*gophercloud.ServiceClient, string) error
+	deletePortMutex       sync.RWMutex
+	deletePortArgsForCall []struct {
+		arg1 *gophercloud.ServiceClient
+		arg2 string
+	}
+	deletePortReturns struct {
+		result1 error
+	}
+	deletePortReturnsOnCall map[int]struct {
+		result1 error
+	}
 	ExtractFloatingIPsStub        func(pagination.Page) ([]floatingips.FloatingIP, error)
 	extractFloatingIPsMutex       sync.RWMutex
 	extractFloatingIPsArgsForCall []struct {
@@ -153,6 +179,133 @@ type FakeNetworkingFacade struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeNetworkingFacade) CreatePort(arg1 *gophercloud.ServiceClient, arg2 ports.CreateOpts) (*ports.Port, error) {
+	fake.createPortMutex.Lock()
+	ret, specificReturn := fake.createPortReturnsOnCall[len(fake.createPortArgsForCall)]
+	fake.createPortArgsForCall = append(fake.createPortArgsForCall, struct {
+		arg1 *gophercloud.ServiceClient
+		arg2 ports.CreateOpts
+	}{arg1, arg2})
+	stub := fake.CreatePortStub
+	fakeReturns := fake.createPortReturns
+	fake.recordInvocation("CreatePort", []interface{}{arg1, arg2})
+	fake.createPortMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeNetworkingFacade) CreatePortCallCount() int {
+	fake.createPortMutex.RLock()
+	defer fake.createPortMutex.RUnlock()
+	return len(fake.createPortArgsForCall)
+}
+
+func (fake *FakeNetworkingFacade) CreatePortCalls(stub func(*gophercloud.ServiceClient, ports.CreateOpts) (*ports.Port, error)) {
+	fake.createPortMutex.Lock()
+	defer fake.createPortMutex.Unlock()
+	fake.CreatePortStub = stub
+}
+
+func (fake *FakeNetworkingFacade) CreatePortArgsForCall(i int) (*gophercloud.ServiceClient, ports.CreateOpts) {
+	fake.createPortMutex.RLock()
+	defer fake.createPortMutex.RUnlock()
+	argsForCall := fake.createPortArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeNetworkingFacade) CreatePortReturns(result1 *ports.Port, result2 error) {
+	fake.createPortMutex.Lock()
+	defer fake.createPortMutex.Unlock()
+	fake.CreatePortStub = nil
+	fake.createPortReturns = struct {
+		result1 *ports.Port
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeNetworkingFacade) CreatePortReturnsOnCall(i int, result1 *ports.Port, result2 error) {
+	fake.createPortMutex.Lock()
+	defer fake.createPortMutex.Unlock()
+	fake.CreatePortStub = nil
+	if fake.createPortReturnsOnCall == nil {
+		fake.createPortReturnsOnCall = make(map[int]struct {
+			result1 *ports.Port
+			result2 error
+		})
+	}
+	fake.createPortReturnsOnCall[i] = struct {
+		result1 *ports.Port
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeNetworkingFacade) DeletePort(arg1 *gophercloud.ServiceClient, arg2 string) error {
+	fake.deletePortMutex.Lock()
+	ret, specificReturn := fake.deletePortReturnsOnCall[len(fake.deletePortArgsForCall)]
+	fake.deletePortArgsForCall = append(fake.deletePortArgsForCall, struct {
+		arg1 *gophercloud.ServiceClient
+		arg2 string
+	}{arg1, arg2})
+	stub := fake.DeletePortStub
+	fakeReturns := fake.deletePortReturns
+	fake.recordInvocation("DeletePort", []interface{}{arg1, arg2})
+	fake.deletePortMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeNetworkingFacade) DeletePortCallCount() int {
+	fake.deletePortMutex.RLock()
+	defer fake.deletePortMutex.RUnlock()
+	return len(fake.deletePortArgsForCall)
+}
+
+func (fake *FakeNetworkingFacade) DeletePortCalls(stub func(*gophercloud.ServiceClient, string) error) {
+	fake.deletePortMutex.Lock()
+	defer fake.deletePortMutex.Unlock()
+	fake.DeletePortStub = stub
+}
+
+func (fake *FakeNetworkingFacade) DeletePortArgsForCall(i int) (*gophercloud.ServiceClient, string) {
+	fake.deletePortMutex.RLock()
+	defer fake.deletePortMutex.RUnlock()
+	argsForCall := fake.deletePortArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeNetworkingFacade) DeletePortReturns(result1 error) {
+	fake.deletePortMutex.Lock()
+	defer fake.deletePortMutex.Unlock()
+	fake.DeletePortStub = nil
+	fake.deletePortReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeNetworkingFacade) DeletePortReturnsOnCall(i int, result1 error) {
+	fake.deletePortMutex.Lock()
+	defer fake.deletePortMutex.Unlock()
+	fake.DeletePortStub = nil
+	if fake.deletePortReturnsOnCall == nil {
+		fake.deletePortReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.deletePortReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
 }
 
 func (fake *FakeNetworkingFacade) ExtractFloatingIPs(arg1 pagination.Page) ([]floatingips.FloatingIP, error) {
@@ -805,6 +958,10 @@ func (fake *FakeNetworkingFacade) UpdateFloatingIPReturnsOnCall(i int, result1 *
 func (fake *FakeNetworkingFacade) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.createPortMutex.RLock()
+	defer fake.createPortMutex.RUnlock()
+	fake.deletePortMutex.RLock()
+	defer fake.deletePortMutex.RUnlock()
 	fake.extractFloatingIPsMutex.RLock()
 	defer fake.extractFloatingIPsMutex.RUnlock()
 	fake.extractPortsMutex.RLock()

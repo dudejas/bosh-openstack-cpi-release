@@ -17,6 +17,10 @@ type NetworkingFacade interface {
 
 	UpdateFloatingIP(serviceClient *gophercloud.ServiceClient, floatingIpId string, updateOpts floatingips.UpdateOpts) (*floatingips.FloatingIP, error)
 
+	CreatePort(serviceClient *gophercloud.ServiceClient, createOpts ports.CreateOpts) (*ports.Port, error)
+
+	DeletePort(serviceClient *gophercloud.ServiceClient, portID string) error
+
 	ListPorts(client *gophercloud.ServiceClient, opts ports.ListOpts) (pagination.Page, error)
 
 	ExtractPorts(page pagination.Page) ([]ports.Port, error)
@@ -50,6 +54,13 @@ func (n networkingFacade) UpdateFloatingIP(serviceClient *gophercloud.ServiceCli
 	return floatingips.Update(serviceClient, floatingIpId, updateOpts).Extract()
 }
 
+func (n networkingFacade) CreatePort(serviceClient *gophercloud.ServiceClient, createOpts ports.CreateOpts) (*ports.Port, error) {
+	return ports.Create(serviceClient, createOpts).Extract()
+}
+
+func (n networkingFacade) DeletePort(serviceClient *gophercloud.ServiceClient, portID string) error {
+	return ports.Delete(serviceClient, portID).ExtractErr()
+}
 func (n networkingFacade) ListPorts(serviceClient *gophercloud.ServiceClient, opts ports.ListOpts) (pagination.Page, error) {
 	return ports.List(serviceClient, opts).AllPages()
 }

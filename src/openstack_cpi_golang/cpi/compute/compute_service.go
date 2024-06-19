@@ -10,6 +10,7 @@ import (
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/bootfromvolume"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"time"
 )
@@ -32,11 +33,12 @@ type ComputeService interface {
 }
 
 type computeService struct {
-	serviceClient      *gophercloud.ServiceClient
-	computeFacade      ComputeFacade
-	flavorResolver     FlavorResolver
-	volumeConfigurator VolumeConfigurator
-	logger             utils.Logger
+	serviceClient            *gophercloud.ServiceClient
+	computeFacade            ComputeFacade
+	flavorResolver           FlavorResolver
+	volumeConfigurator       VolumeConfigurator
+	availabilityZoneProvider AvailabilityZoneProvider
+	logger                   utils.Logger
 }
 
 func NewComputeService(
@@ -44,14 +46,16 @@ func NewComputeService(
 	computeFacade ComputeFacade,
 	flavorResolver FlavorResolver,
 	volumeConfigurator VolumeConfigurator,
+	availabilityZoneProvider AvailabilityZoneProvider,
 	logger utils.Logger,
 ) computeService {
 	return computeService{
-		serviceClient:      serviceClient,
-		computeFacade:      computeFacade,
-		flavorResolver:     flavorResolver,
-		volumeConfigurator: volumeConfigurator,
-		logger:             logger,
+		serviceClient:            serviceClient,
+		computeFacade:            computeFacade,
+		flavorResolver:           flavorResolver,
+		volumeConfigurator:       volumeConfigurator,
+		availabilityZoneProvider: availabilityZoneProvider,
+		logger:                   logger,
 	}
 }
 
@@ -76,13 +80,49 @@ func (c computeService) CreateServer(
 		return nil, fmt.Errorf("failed to configure volumes: %w", err)
 	}
 
+	var server *servers.Server
+	availabilityZones := c.availabilityZoneProvider.GetAvailabilityZones(cloudProps)
+	for _, availabilityZone := range availabilityZones {
+		createOpts := c.getServerCreateOpts(availabilityZone, stemcellCID, networkConfig, flavor, keyname, blockDevices)
+
+		server, err = c.computeFacade.CreateServer(c.serviceClient, createOpts)
+		if err != nil {
+			if availabilityZone == availabilityZones[len(availabilityZones)-1] {
+				return nil, fmt.Errorf("failed to create server in availability zone '%s': %w", availabilityZone, err)
+			}
+			c.logger.Warn("failed to create server in availability zone '%s': %v, "+
+				"retrying in a different availability zone", availabilityZone, err)
+
+			continue
+		}
+
+		server, err = c.waitForServerToBecomeActive(server.ID, time.Duration(config.StateTimeOut)*time.Second)
+		if err != nil {
+			if availabilityZone == availabilityZones[len(availabilityZones)-1] {
+				return nil, fmt.Errorf("failed while waiting on the server creation in availability zone '%s': %w", availabilityZone, err)
+			}
+			c.logger.Warn("failed while waiting on the server creation in availability zone '%s': %v, "+
+				"retrying in a different availability zone", availabilityZone, err)
+		}
+	}
+
+	return server, nil
+}
+
+func (c computeService) getServerCreateOpts(
+	availabilityZone string,
+	stemcellCID apiv1.StemcellCID,
+	networkConfig properties.NetworkConfig,
+	flavor flavors.Flavor, keyname string,
+	blockDevices []bootfromvolume.BlockDevice,
+) servers.CreateOptsBuilder {
 	var createOpts servers.CreateOptsBuilder
 	createOpts = servers.CreateOpts{
 		Name:             "vm-" + uuid.New().String(),
 		ImageRef:         stemcellCID.AsString(),
 		Networks:         c.getServerNetworks(networkConfig),
 		SecurityGroups:   networkConfig.SecurityGroups,
-		AvailabilityZone: cloudProps.AvailabilityZone,
+		AvailabilityZone: availabilityZone,
 		FlavorRef:        flavor.ID,
 	}
 
@@ -97,18 +137,7 @@ func (c computeService) CreateServer(
 			BlockDevice:       blockDevices,
 		}
 	}
-
-	server, err := c.computeFacade.CreateServer(c.serviceClient, createOpts)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create server: %w", err)
-	}
-
-	server, err = c.waitForServerToBecomeActive(server.ID, time.Duration(config.StateTimeOut)*time.Second)
-	if err != nil {
-		return nil, fmt.Errorf("failed while waiting on the server creation: %w", err)
-	}
-
-	return server, nil
+	return createOpts
 }
 
 func (c computeService) SetMetadata(server servers.Server, tags properties.ServerTags) error {

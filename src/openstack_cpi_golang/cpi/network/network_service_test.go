@@ -39,7 +39,7 @@ var _ = Describe("NetworkService", func() {
 		networkingFacade.ExtractPortsReturns([]ports.Port{{ID: "5678"}}, nil)
 
 		networkConfig = properties.NetworkConfig{
-			DefaultNetwork: properties.Network{CloudProps: properties.CreateVMNetwork{NetID: "the_net_id_1"}},
+			DefaultNetwork: properties.Network{IP: "9.9.9.9", CloudProps: properties.CreateVMNetwork{NetID: "the_net_id_1"}},
 			VIPNetwork:     &properties.Network{IP: "3.3.3.3"},
 		}
 	})
@@ -142,7 +142,9 @@ var _ = Describe("NetworkService", func() {
 		})
 
 		It("lists subnets", func() {
+			network.NewNetworkService(&serviceClient, &networkingFacade, &logger).GetSubnetID("the-net-id", "1.1.1.1")
 
+			Expect(networkingFacade.ListSubnetsCallCount()).To(Equal(1))
 		})
 
 		It("returns an error if listing subnets fails", func() {
@@ -154,15 +156,19 @@ var _ = Describe("NetworkService", func() {
 		})
 
 		It("extracts subnets", func() {
-
-		})
-
-		It("returns an error if extracting subnets fails", func() {
 			network.NewNetworkService(&serviceClient, &networkingFacade, &logger).GetSubnetID("the-net-id", "1.1.1.1")
 
 			page := networkingFacade.ExtractSubnetsArgsForCall(0)
 
 			Expect(page).To(Equal(subnetsPage))
+		})
+
+		It("returns an error if extracting subnets fails", func() {
+			networkingFacade.ExtractSubnetsReturns(nil, errors.New("boom"))
+
+			_, err := network.NewNetworkService(&serviceClient, &networkingFacade, &logger).GetSubnetID("the-net-id", "1.1.1.1")
+
+			Expect(err.Error()).To(Equal("failed to extract subnets: boom"))
 		})
 
 		It("returns an error if subnets are empty", func() {
@@ -174,7 +180,14 @@ var _ = Describe("NetworkService", func() {
 		})
 
 		It("calculates the matching subnet of the offered IP", func() {
+			networkingFacade.ExtractSubnetsReturns([]subnets.Subnet{
+				{ID: "the-subnet-id-1", CIDR: "1.1.1.0/24"}, {ID: "the-subnet-id-2", CIDR: "1.1.2.0/24"},
+			}, nil)
 
+			subnet, err := network.NewNetworkService(&serviceClient, &networkingFacade, &logger).GetSubnetID("the-net-id", "1.1.1.1")
+
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(subnet).To(Equal("the-subnet-id-1"))
 		})
 
 		It("returns an error if subnet CIDR cannot be parsed", func() {
@@ -202,6 +215,239 @@ var _ = Describe("NetworkService", func() {
 
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(subnetID).To(Equal("the-subnet-id-1"))
+		})
+	})
+
+	Context("CreatePort", func() {
+
+		var cloudProperties properties.CreateVM
+		var createdPort ports.Port
+
+		BeforeEach(func() {
+			createdPort = ports.Port{ID: "the-port-id"}
+			networkingFacade.CreatePortReturns(&createdPort, nil)
+			networkingFacade.ExtractPortsReturns([]ports.Port{createdPort}, nil)
+
+			vrrpPortCheck := true
+			cloudProperties = properties.CreateVM{
+				AllowedAddressPairs: "allowed-address-pairs",
+				VRRPPortCheck:       &vrrpPortCheck,
+			}
+		})
+
+		It("lists VRRP ports if the port check is enabled", func() {
+			network.NewNetworkService(&serviceClient, &networkingFacade, &logger).
+				CreatePort(networkConfig, cloudProperties)
+
+			Expect(networkingFacade.ListPortsCallCount()).To(Equal(1))
+		})
+
+		It("skips listing VRRP ports if the port check is not defined", func() {
+			cloudProperties := properties.CreateVM{
+				AllowedAddressPairs: "allowed-address-pairs",
+			}
+			network.NewNetworkService(&serviceClient, &networkingFacade, &logger).
+				CreatePort(networkConfig, cloudProperties)
+
+			Expect(networkingFacade.ListPortsCallCount()).To(Equal(0))
+		})
+
+		It("skips listing VRRP ports if the port check is false", func() {
+			cloudProperties := properties.CreateVM{
+				AllowedAddressPairs: "allowed-address-pairs",
+				VRRPPortCheck:       new(bool),
+			}
+			network.NewNetworkService(&serviceClient, &networkingFacade, &logger).
+				CreatePort(networkConfig, cloudProperties)
+
+			Expect(networkingFacade.ListPortsCallCount()).To(Equal(0))
+		})
+
+		It("returns an error if listing VRRP ports fails", func() {
+			networkingFacade.ListPortsReturns(nil, errors.New("boom"))
+
+			_, err := network.NewNetworkService(&serviceClient, &networkingFacade, &logger).
+				CreatePort(networkConfig, cloudProperties)
+
+			Expect(err.Error()).To(Equal("failed create network opts: VRRP port existence check failed: " +
+				"failed to list VRRP ports: boom"))
+		})
+
+		It("extracts VRRP ports if the port check is enabled", func() {
+			network.NewNetworkService(&serviceClient, &networkingFacade, &logger).
+				CreatePort(networkConfig, cloudProperties)
+
+			Expect(networkingFacade.ExtractPortsCallCount()).To(Equal(1))
+		})
+
+		It("returns an error if extracting VRRP ports fails", func() {
+			networkingFacade.ExtractPortsReturns(nil, errors.New("boom"))
+
+			_, err := network.NewNetworkService(&serviceClient, &networkingFacade, &logger).
+				CreatePort(networkConfig, cloudProperties)
+
+			Expect(err.Error()).To(Equal("failed create network opts: VRRP port existence check failed: " +
+				"failed to extract ports: boom"))
+		})
+
+		It("returns an error if VRRP ports cannot be found", func() {
+			networkingFacade.ExtractPortsReturns([]ports.Port{}, nil)
+
+			_, err := network.NewNetworkService(&serviceClient, &networkingFacade, &logger).
+				CreatePort(networkConfig, cloudProperties)
+
+			Expect(err.Error()).To(Equal("failed create network opts: " +
+				"configured VRRP port with ip 'allowed-address-pairs' does not exist"))
+		})
+
+		It("creates the port without VRRP ports", func() {
+			cloudProperties = properties.CreateVM{
+				VRRPPortCheck: new(bool),
+			}
+
+			network.NewNetworkService(&serviceClient, &networkingFacade, &logger).
+				CreatePort(networkConfig, cloudProperties)
+
+			_, createOpts := networkingFacade.CreatePortArgsForCall(0)
+
+			Expect(createOpts.NetworkID).To(ContainSubstring("the_net_id_1"))
+			Expect(createOpts.FixedIPs.([]ports.IP)[0].IPAddress).To(Equal("9.9.9.9"))
+			Expect(createOpts.AllowedAddressPairs).To(BeNil())
+		})
+
+		It("creates the port with VRRP ports", func() {
+			network.NewNetworkService(&serviceClient, &networkingFacade, &logger).
+				CreatePort(networkConfig, cloudProperties)
+
+			_, createOpts := networkingFacade.CreatePortArgsForCall(0)
+
+			Expect(createOpts.NetworkID).To(ContainSubstring("the_net_id_1"))
+			Expect(createOpts.FixedIPs.([]ports.IP)[0].IPAddress).To(Equal("9.9.9.9"))
+			Expect(createOpts.AllowedAddressPairs[0].IPAddress).To(Equal("allowed-address-pairs"))
+		})
+
+		It("debug logs that if initial port creation fails", func() {
+			networkingFacade.CreatePortReturns(nil, errors.New("boom"))
+
+			network.NewNetworkService(&serviceClient, &networkingFacade, &logger).
+				CreatePort(networkConfig, cloudProperties)
+
+			tag, msg, _ := logger.WarnArgsForCall(0)
+
+			Expect(tag).To(Equal("network-service"))
+			Expect(msg).To(ContainSubstring("port creation on network 'the_net_id_1' for ip '9.9.9.9' failed with: boom, " +
+				"checking conflicting ports now."))
+		})
+
+		It("lists potentially conflicting ports", func() {
+			networkingFacade.CreatePortReturns(nil, errors.New("boom"))
+
+			network.NewNetworkService(&serviceClient, &networkingFacade, &logger).
+				CreatePort(networkConfig, cloudProperties)
+
+			_, listOpts := networkingFacade.ListPortsArgsForCall(1)
+
+			Expect(listOpts.NetworkID).To(Equal("the_net_id_1"))
+			Expect(listOpts.FixedIPs[0].IPAddress).To(Equal("9.9.9.9"))
+		})
+
+		It("returns an error if lists potentially conflicting ports fails", func() {
+			networkingFacade.CreatePortReturns(nil, errors.New("boom"))
+			networkingFacade.ListPortsReturnsOnCall(0, nil, errors.New("boom"))
+
+			_, err := network.NewNetworkService(&serviceClient, &networkingFacade, &logger).
+				CreatePort(networkConfig, properties.CreateVM{})
+
+			Expect(err.Error()).To(Equal("failed to list Ports: boom"))
+		})
+
+		It("extracts potentially conflicting ports", func() {
+			networkingFacade.CreatePortReturnsOnCall(0, nil, errors.New("boom"))
+
+			network.NewNetworkService(&serviceClient, &networkingFacade, &logger).
+				CreatePort(networkConfig, properties.CreateVM{})
+
+			Expect(networkingFacade.ExtractPortsCallCount()).To(Equal(1))
+		})
+
+		It("returns an error if extracting potentially conflicting ports fails", func() {
+			networkingFacade.CreatePortReturnsOnCall(0, nil, errors.New("boom"))
+			networkingFacade.ExtractPortsReturns(nil, errors.New("boom"))
+
+			_, err := network.NewNetworkService(&serviceClient, &networkingFacade, &logger).
+				CreatePort(networkConfig, properties.CreateVM{})
+
+			Expect(err.Error()).To(Equal("failed to extract ports: boom"))
+		})
+
+		It("deletes a conflicting ports", func() {
+			networkingFacade.CreatePortReturnsOnCall(0, nil, errors.New("boom"))
+			networkingFacade.ExtractPortsReturns(
+				[]ports.Port{
+					{ID: "the-port-id-1", Status: "DOWN", FixedIPs: []ports.IP{{IPAddress: "9.9.9.9"}}},
+					{ID: "the-port-id-2", Status: "DOWN", FixedIPs: []ports.IP{{IPAddress: "9.9.9.9"}}},
+				}, nil)
+
+			network.NewNetworkService(&serviceClient, &networkingFacade, &logger).
+				CreatePort(networkConfig, properties.CreateVM{})
+
+			Expect(networkingFacade.DeletePortCallCount()).To(Equal(2))
+			_, portID := networkingFacade.DeletePortArgsForCall(0)
+			Expect(portID).To(Equal("the-port-id-1"))
+			_, portID = networkingFacade.DeletePortArgsForCall(1)
+			Expect(portID).To(Equal("the-port-id-2"))
+		})
+
+		It("skips deleting conflicting ports, if they are used", func() {
+			networkingFacade.CreatePortReturnsOnCall(0, nil, errors.New("boom"))
+			networkingFacade.ExtractPortsReturns(
+				[]ports.Port{
+					{ID: "the-port-id-1", Status: "DOWN", FixedIPs: []ports.IP{{IPAddress: "9.9.9.9"}}},
+					{ID: "the-port-id-2", Status: "UP", FixedIPs: []ports.IP{{IPAddress: "9.9.9.9"}}},
+				}, nil)
+
+			network.NewNetworkService(&serviceClient, &networkingFacade, &logger).
+				CreatePort(networkConfig, properties.CreateVM{})
+
+			Expect(networkingFacade.DeletePortCallCount()).To(Equal(1))
+			_, portID := networkingFacade.DeletePortArgsForCall(0)
+			Expect(portID).To(Equal("the-port-id-1"))
+		})
+
+		It("retries the port creation", func() {
+			networkingFacade.CreatePortReturnsOnCall(0, nil, errors.New("boom"))
+			networkingFacade.ExtractPortsReturns(
+				[]ports.Port{
+					{ID: "the-port-id-1", Status: "DOWN", FixedIPs: []ports.IP{{IPAddress: "9.9.9.9"}}},
+				}, nil)
+
+			network.NewNetworkService(&serviceClient, &networkingFacade, &logger).
+				CreatePort(networkConfig, properties.CreateVM{})
+
+			Expect(networkingFacade.CreatePortCallCount()).To(Equal(2))
+		})
+
+		It("retunrs an error if the second port creation fails as well", func() {
+			networkingFacade.CreatePortReturnsOnCall(0, nil, errors.New("boom"))
+			networkingFacade.CreatePortReturnsOnCall(1, nil, errors.New("boom"))
+			networkingFacade.ExtractPortsReturns(
+				[]ports.Port{
+					{ID: "the-port-id-1", Status: "DOWN", FixedIPs: []ports.IP{{IPAddress: "9.9.9.9"}}},
+				}, nil)
+
+			_, err := network.NewNetworkService(&serviceClient, &networkingFacade, &logger).
+				CreatePort(networkConfig, properties.CreateVM{})
+
+			Expect(err.Error()).To(Equal("port creation on network 'the_net_id_1' for ip '9.9.9.9' " +
+				"failed with: boom, on second attempt"))
+		})
+
+		It("returns the created port", func() {
+			port, err := network.NewNetworkService(&serviceClient, &networkingFacade, &logger).
+				CreatePort(networkConfig, properties.CreateVM{})
+
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(port.ID).To(Equal(createdPort.ID))
 		})
 	})
 })

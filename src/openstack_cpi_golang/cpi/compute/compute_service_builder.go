@@ -38,6 +38,7 @@ func (b computeServiceBuilder) Build() (ComputeService, error) {
 		computeFacade,
 		NewFlavorResolver(serviceClient, computeFacade),
 		NewVolumeConfigurator(),
+		NewAvailabilityZoneProvider(),
 		b.logger,
 	), nil
 }
