@@ -68,8 +68,7 @@ var _ = Describe("CreateVMMethod", func() {
 					"instance_type": "type1",
 					"loadbalancer_pools": [{"name": "the-pool-name","port": 1234,"monitoring_port": 5678}]
 				}`
-
-			networkService.GetSubnetReturns("the-subnet-id", nil)
+			networkService.GetSubnetIDReturns("the-subnet-id", nil)
 			loadbalancerService.GetPoolIDReturnsOnCall(0, "the-pool-id", nil)
 			loadbalancerService.GetPoolIDReturnsOnCall(1, "the-pool-id-1", nil)
 			loadbalancerService.CreatePoolMemberReturns(&pools.Member{ID: "the-member-id", PoolID: "the-pool-id"}, nil)
@@ -498,7 +497,7 @@ var _ = Describe("CreateVMMethod", func() {
 			})
 
 			It("returns an error if getting subnets fails", func() {
-				networkService.GetSubnetReturns("", errors.New("boom"))
+				networkService.GetSubnetIDReturns("", errors.New("boom"))
 
 				_, _, err := methods.NewCreateVMMethod(
 					&imageServiceBuilder,
