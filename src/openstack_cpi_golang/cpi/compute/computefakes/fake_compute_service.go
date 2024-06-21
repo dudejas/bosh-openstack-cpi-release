@@ -28,6 +28,18 @@ type FakeComputeService struct {
 		result1 *servers.Server
 		result2 error
 	}
+	DeleteServerStub        func(string, config.OpenstackConfig) error
+	deleteServerMutex       sync.RWMutex
+	deleteServerArgsForCall []struct {
+		arg1 string
+		arg2 config.OpenstackConfig
+	}
+	deleteServerReturns struct {
+		result1 error
+	}
+	deleteServerReturnsOnCall map[int]struct {
+		result1 error
+	}
 	SetMetadataStub        func(servers.Server, properties.ServerTags) error
 	setMetadataMutex       sync.RWMutex
 	setMetadataArgsForCall []struct {
@@ -111,6 +123,68 @@ func (fake *FakeComputeService) CreateServerReturnsOnCall(i int, result1 *server
 	}{result1, result2}
 }
 
+func (fake *FakeComputeService) DeleteServer(arg1 string, arg2 config.OpenstackConfig) error {
+	fake.deleteServerMutex.Lock()
+	ret, specificReturn := fake.deleteServerReturnsOnCall[len(fake.deleteServerArgsForCall)]
+	fake.deleteServerArgsForCall = append(fake.deleteServerArgsForCall, struct {
+		arg1 string
+		arg2 config.OpenstackConfig
+	}{arg1, arg2})
+	stub := fake.DeleteServerStub
+	fakeReturns := fake.deleteServerReturns
+	fake.recordInvocation("DeleteServer", []interface{}{arg1, arg2})
+	fake.deleteServerMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeComputeService) DeleteServerCallCount() int {
+	fake.deleteServerMutex.RLock()
+	defer fake.deleteServerMutex.RUnlock()
+	return len(fake.deleteServerArgsForCall)
+}
+
+func (fake *FakeComputeService) DeleteServerCalls(stub func(string, config.OpenstackConfig) error) {
+	fake.deleteServerMutex.Lock()
+	defer fake.deleteServerMutex.Unlock()
+	fake.DeleteServerStub = stub
+}
+
+func (fake *FakeComputeService) DeleteServerArgsForCall(i int) (string, config.OpenstackConfig) {
+	fake.deleteServerMutex.RLock()
+	defer fake.deleteServerMutex.RUnlock()
+	argsForCall := fake.deleteServerArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeComputeService) DeleteServerReturns(result1 error) {
+	fake.deleteServerMutex.Lock()
+	defer fake.deleteServerMutex.Unlock()
+	fake.DeleteServerStub = nil
+	fake.deleteServerReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeComputeService) DeleteServerReturnsOnCall(i int, result1 error) {
+	fake.deleteServerMutex.Lock()
+	defer fake.deleteServerMutex.Unlock()
+	fake.DeleteServerStub = nil
+	if fake.deleteServerReturnsOnCall == nil {
+		fake.deleteServerReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.deleteServerReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeComputeService) SetMetadata(arg1 servers.Server, arg2 properties.ServerTags) error {
 	fake.setMetadataMutex.Lock()
 	ret, specificReturn := fake.setMetadataReturnsOnCall[len(fake.setMetadataArgsForCall)]
@@ -178,6 +252,8 @@ func (fake *FakeComputeService) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.createServerMutex.RLock()
 	defer fake.createServerMutex.RUnlock()
+	fake.deleteServerMutex.RLock()
+	defer fake.deleteServerMutex.RUnlock()
 	fake.setMetadataMutex.RLock()
 	defer fake.setMetadataMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

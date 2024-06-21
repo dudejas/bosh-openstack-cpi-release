@@ -61,6 +61,7 @@ func (n networkingFacade) CreatePort(serviceClient *gophercloud.ServiceClient, c
 func (n networkingFacade) DeletePort(serviceClient *gophercloud.ServiceClient, portID string) error {
 	return ports.Delete(serviceClient, portID).ExtractErr()
 }
+
 func (n networkingFacade) ListPorts(serviceClient *gophercloud.ServiceClient, opts ports.ListOpts) (pagination.Page, error) {
 	return ports.List(serviceClient, opts).AllPages()
 }

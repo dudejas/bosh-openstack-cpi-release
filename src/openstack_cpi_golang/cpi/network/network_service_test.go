@@ -80,40 +80,27 @@ var _ = Describe("NetworkService", func() {
 			Expect(err.Error()).To(Equal("failed to get floating IP: floating IP 3.3.3.3 not allocated"))
 		})
 
-		It("lists ports", func() {
+		It("gets ports", func() {
 			network.NewNetworkService(&serviceClient, &networkingFacade, &logger).ConfigureVIPNetwork("123-456", networkConfig)
 
-			_, listOpts := networkingFacade.ListPortsArgsForCall(0)
+			serviceClient, listOpts := networkingFacade.ListPortsArgsForCall(0)
 			Expect(listOpts.DeviceID).To(Equal("123-456"))
 			Expect(listOpts.NetworkID).To(Equal("the_net_id_1"))
+			Expect(serviceClient.RetryFunc).To(Equal(gophercloud.RetryFunc(nil)))
 		})
 
-		It("returns an error if port listing fails", func() {
+		It("returns an error if getting ports failed", func() {
 			networkingFacade.ListPortsReturns(nil, errors.New("boom"))
 
 			err := network.NewNetworkService(&serviceClient, &networkingFacade, &logger).ConfigureVIPNetwork("123-456", networkConfig)
 			Expect(err.Error()).To(Equal("failed to get port: failed to list ports: boom"))
 		})
 
-		It("extracts ports", func() {
-			network.NewNetworkService(&serviceClient, &networkingFacade, &logger).ConfigureVIPNetwork("123-456", networkConfig)
-
-			pages := networkingFacade.ExtractPortsArgsForCall(0)
-			Expect(pages).To(Equal(portPage))
-		})
-
-		It("returns an error if ports cannot be extracted from pages", func() {
-			networkingFacade.ExtractPortsReturns(nil, errors.New("boom"))
-
-			err := network.NewNetworkService(&serviceClient, &networkingFacade, &logger).ConfigureVIPNetwork("123-456", networkConfig)
-			Expect(err.Error()).To(Equal("failed to get port: failed to extract ports: boom"))
-		})
-
-		It("returns an error if ports are empty", func() {
+		It("returns an error if no ports are allocated", func() {
 			networkingFacade.ExtractPortsReturns([]ports.Port{}, nil)
 
 			err := network.NewNetworkService(&serviceClient, &networkingFacade, &logger).ConfigureVIPNetwork("123-456", networkConfig)
-			Expect(err.Error()).To(Equal("failed to get port: no port allocated by instance 123-456 and network the_net_id_1"))
+			Expect(err.Error()).To(Equal("no port allocated by instance 123-456 and network the_net_id_1"))
 		})
 
 		It("associates the floating ip to a port", func() {
@@ -448,6 +435,86 @@ var _ = Describe("NetworkService", func() {
 
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(port.ID).To(Equal(createdPort.ID))
+		})
+	})
+
+	Context("GetPorts", func() {
+
+		It("serviceClient is retryable", func() {
+			network.NewNetworkService(&serviceClient, &networkingFacade, &logger).GetPorts("123-456", networkConfig.DefaultNetwork, true)
+
+			act, _ := networkingFacade.ListPortsArgsForCall(0)
+
+			Expect(act.RetryFunc).ToNot(Equal(gophercloud.RetryFunc(nil)))
+		})
+
+		It("serviceClient is not retryable", func() {
+			network.NewNetworkService(&serviceClient, &networkingFacade, &logger).GetPorts("123-456", networkConfig.DefaultNetwork, false)
+
+			act, _ := networkingFacade.ListPortsArgsForCall(0)
+
+			Expect(act.RetryFunc).To(Equal(gophercloud.RetryFunc(nil)))
+		})
+
+		It("lists ports", func() {
+			network.NewNetworkService(&serviceClient, &networkingFacade, &logger).GetPorts("123-456", networkConfig.DefaultNetwork, false)
+
+			_, listOpts := networkingFacade.ListPortsArgsForCall(0)
+			Expect(listOpts.DeviceID).To(Equal("123-456"))
+			Expect(listOpts.NetworkID).To(Equal("the_net_id_1"))
+		})
+
+		It("returns an error if port listing fails", func() {
+			networkingFacade.ListPortsReturns(nil, errors.New("boom"))
+
+			_, err := network.NewNetworkService(&serviceClient, &networkingFacade, &logger).GetPorts("123-456", networkConfig.DefaultNetwork, false)
+			Expect(err.Error()).To(Equal("failed to list ports: boom"))
+		})
+
+		It("extracts ports", func() {
+			network.NewNetworkService(&serviceClient, &networkingFacade, &logger).GetPorts("123-456", networkConfig.DefaultNetwork, false)
+
+			pages := networkingFacade.ExtractPortsArgsForCall(0)
+			Expect(pages).To(Equal(portPage))
+		})
+
+		It("returns an error if ports cannot be extracted from pages", func() {
+			networkingFacade.ExtractPortsReturns(nil, errors.New("boom"))
+
+			_, err := network.NewNetworkService(&serviceClient, &networkingFacade, &logger).GetPorts("123-456", networkConfig.DefaultNetwork, false)
+			Expect(err.Error()).To(Equal("failed to extract ports: boom"))
+		})
+	})
+
+	Context("DeletePorts", func() {
+
+		var ports = []ports.Port{{ID: "test"}}
+
+		It("serviceClient is retryable", func() {
+			network.NewNetworkService(&serviceClient, &networkingFacade, &logger).DeletePorts(ports)
+			act, _ := networkingFacade.DeletePortArgsForCall(0)
+
+			Expect(act.RetryFunc).ToNot(Equal(gophercloud.RetryFunc(nil)))
+		})
+
+		It("deletes the port with the correct ID", func() {
+			network.NewNetworkService(&serviceClient, &networkingFacade, &logger).DeletePorts(ports)
+			_, act := networkingFacade.DeletePortArgsForCall(0)
+
+			Expect(act).To(Equal("test"))
+		})
+
+		It("returns an error while deleting a port", func() {
+			networkingFacade.DeletePortReturns(errors.New("boom"))
+
+			err := network.NewNetworkService(&serviceClient, &networkingFacade, &logger).DeletePorts(ports)
+			Expect(err.Error()).To(Equal("failed to delete port: boom"))
+		})
+
+		It("returns nil, ports were deleted", func() {
+			err := network.NewNetworkService(&serviceClient, &networkingFacade, &logger).DeletePorts(ports)
+
+			Expect(err).ToNot(HaveOccurred())
 		})
 	})
 })

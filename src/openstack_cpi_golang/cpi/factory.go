@@ -66,6 +66,7 @@ func (cpiFactory Factory) New(ctx apiv1.CallContext) (apiv1.CPI, error) {
 			cpiFactory.openstackConfig,
 			cpiFactory.logger,
 		),
+
 		methods.NewDeleteStemcellMethod(
 			image.NewImageServiceBuilder(openstackService, openstackConfig, cpiFactory.logger),
 			cpiFactory.logger,
@@ -79,7 +80,14 @@ func (cpiFactory Factory) New(ctx apiv1.CallContext) (apiv1.CPI, error) {
 			cpiFactory.openstackConfig,
 			cpiFactory.logger,
 		),
-		methods.NewDeleteVMMethod(),
+
+		methods.NewDeleteVMMethod(
+			network.NewNetworkServiceBuilder(openstackService, openstackConfig, cpiFactory.logger),
+			compute.NewComputeServiceBuilder(openstackService, openstackConfig, cpiFactory.logger),
+			cpiFactory.openstackConfig,
+			cpiFactory.logger,
+		),
+
 		methods.NewCalculateVMCloudPropertiesMethod(),
 		methods.NewHasVMMethod(),
 		methods.NewRebootVMMethod(),

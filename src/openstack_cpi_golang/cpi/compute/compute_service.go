@@ -12,6 +12,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
+	"strings"
 	"time"
 )
 
@@ -25,6 +26,11 @@ type ComputeService interface {
 		networkConfig properties.NetworkConfig,
 		config config.OpenstackConfig,
 	) (*servers.Server, error)
+
+	DeleteServer(
+		vmcid string,
+		config config.OpenstackConfig,
+	) error
 
 	SetMetadata(
 		server servers.Server,
@@ -139,6 +145,45 @@ func (c computeService) getServerCreateOpts(
 	}
 	return createOpts
 }
+func (c computeService) DeleteServer(
+	serverID string,
+	config config.OpenstackConfig,
+) error {
+	serviceClient := c.serviceClient
+	serviceClient.RetryFunc = utils.RetryOnError(c.logger)
+
+	_, err := c.computeFacade.GetServer(serviceClient, serverID)
+	if err != nil {
+		if strings.Contains(err.Error(), "Resource not found") {
+			return nil
+		}
+		return fmt.Errorf("failed to retrieve server information: %w", err)
+	}
+
+	serverTags, err := c.computeFacade.GetServerTags(serviceClient, serverID)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve server tags: %w", err)
+	}
+
+	if len(serverTags) > 0 {
+		// clean membership (remove vm) from pool
+	}
+
+	err = c.computeFacade.DeleteServer(serviceClient, serverID)
+	if err != nil {
+		return fmt.Errorf("failed to delete server: %w", err)
+	}
+
+	err = c.waitForServerToBecomeDeleted(serverID, time.Duration(config.StateTimeOut)*time.Second)
+	if err != nil {
+		return fmt.Errorf("failed while waiting on the server deletion: %w", err)
+	}
+
+	// deleting registry settings - Seems that it is not needed for V2
+	// https://bosh.io/docs/cpi-api-v2/#reference-table-based-on-each-component-version
+
+	return nil
+}
 
 func (c computeService) SetMetadata(server servers.Server, tags properties.ServerTags) error {
 
@@ -211,6 +256,36 @@ func (c computeService) waitForServerToBecomeActive(serverID string, timeout tim
 				return nil, fmt.Errorf("server became ERROR state while waiting to become ACTIVE")
 			case "DELETED":
 				return nil, fmt.Errorf("server became DELETED state while waiting to become ACTIVE")
+			}
+
+			time.Sleep(ComputeServicePollingInterval)
+		}
+	}
+}
+
+func (c computeService) waitForServerToBecomeDeleted(serverID string, timeout time.Duration) error {
+	timeoutTimer := time.NewTimer(timeout)
+	serviceClient := c.serviceClient
+	serviceClient.RetryFunc = utils.RetryOnError(c.logger)
+
+	for {
+		select {
+		case <-timeoutTimer.C:
+			return fmt.Errorf("timeout while waiting for server to become deleted")
+		default:
+			server, err := c.computeFacade.GetServer(serviceClient, serverID)
+			// @TODO: check if we should Skip instead of returning an error
+			if err != nil {
+				return fmt.Errorf("failed to retrieve server information: %w", err)
+			}
+
+			switch server.Status {
+			case "DELETED":
+				return nil
+			case "TERMINATED":
+				return nil
+			case "ERROR":
+				return fmt.Errorf("server became ERROR state while waiting to become DELETED")
 			}
 
 			time.Sleep(ComputeServicePollingInterval)

@@ -1,3 +1,4 @@
+## workspace
 # github.com/cloudfoundry/bosh-cpi-go v0.0.0-20240224100157-0922490cd354
 ## explicit; go 1.21.0
 github.com/cloudfoundry/bosh-cpi-go/apiv1
@@ -32,6 +33,7 @@ github.com/gophercloud/gophercloud
 github.com/gophercloud/gophercloud/openstack
 github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/bootfromvolume
 github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs
+github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/tags
 github.com/gophercloud/gophercloud/openstack/compute/v2/flavors
 github.com/gophercloud/gophercloud/openstack/compute/v2/servers
 github.com/gophercloud/gophercloud/openstack/identity/v2/tenants

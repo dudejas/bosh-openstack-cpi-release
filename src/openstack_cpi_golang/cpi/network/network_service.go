@@ -11,6 +11,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 	"net"
+	"strings"
 )
 
 //counterfeiter:generate . NetworkService
@@ -29,6 +30,16 @@ type NetworkService interface {
 	GetSubnetID(networkID string, ip string) (string, error)
 
 	CreatePort(networkConfig properties.NetworkConfig, cloudProperties properties.CreateVM) (*ports.Port, error)
+
+	GetPorts(
+		instanceId string,
+		defaultNetwork properties.Network,
+		retryable bool,
+	) ([]ports.Port, error)
+
+	DeletePorts(
+		ports []ports.Port,
+	) error
 }
 
 type networkService struct {
@@ -61,12 +72,15 @@ func (c networkService) ConfigureVIPNetwork(
 			return fmt.Errorf("failed to get floating IP: %w", err)
 		}
 
-		port, err := c.getPort(instanceId, err, networkConfig.DefaultNetwork)
+		ports, err := c.GetPorts(instanceId, networkConfig.DefaultNetwork, false)
 		if err != nil {
 			return fmt.Errorf("failed to get port: %w", err)
 		}
+		if len(ports) == 0 {
+			return fmt.Errorf("no port allocated by instance %s and network %s", instanceId, networkConfig.DefaultNetwork.CloudProps.NetID)
+		}
 
-		err = c.associateFloatingIp(c.serviceClient, floatingIp.ID, port.ID)
+		err = c.associateFloatingIp(c.serviceClient, floatingIp.ID, ports[0].ID)
 		if err != nil {
 			return fmt.Errorf("failed to associate floating ip to port: %w", err)
 		}
@@ -247,27 +261,48 @@ func (c networkService) getFloatingIp(vipNetwork *properties.Network) (floatingi
 	return allFIPs[0], err
 }
 
-func (c networkService) getPort(instanceId string, err error, defaultNetwork properties.Network) (ports.Port, error) {
-	listOpts := ports.ListOpts{
-		DeviceID:  instanceId,
-		NetworkID: defaultNetwork.CloudProps.NetID,
+func (c networkService) GetPorts(instanceId string, defaultNetwork properties.Network, retryable bool) ([]ports.Port, error) {
+	serviceClient := c.serviceClient
+	if retryable {
+		serviceClient.RetryFunc = utils.RetryOnError(c.logger)
 	}
 
-	allPages, err := c.networkingFacade.ListPorts(c.serviceClient, listOpts)
+	listOpts := ports.ListOpts{
+		DeviceID: instanceId,
+	}
+
+	if defaultNetwork.CloudProps.NetID != "" {
+		listOpts.NetworkID = defaultNetwork.CloudProps.NetID
+	}
+
+	allPages, err := c.networkingFacade.ListPorts(serviceClient, listOpts)
 	if err != nil {
-		return ports.Port{}, fmt.Errorf("failed to list ports: %w", err)
+		return []ports.Port{}, fmt.Errorf("failed to list ports: %w", err)
 	}
 
 	allPorts, err := c.networkingFacade.ExtractPorts(allPages)
 	if err != nil {
-		return ports.Port{}, fmt.Errorf("failed to extract ports: %w", err)
+		return []ports.Port{}, fmt.Errorf("failed to extract ports: %w", err)
 	}
 
-	if len(allPorts) == 0 {
-		return ports.Port{}, fmt.Errorf("no port allocated by instance %s and network %s", instanceId, defaultNetwork.CloudProps.NetID)
+	return allPorts, nil
+}
+
+func (c networkService) DeletePorts(ports []ports.Port) error {
+	serviceClient := c.serviceClient
+	serviceClient.RetryFunc = utils.RetryOnError(c.logger)
+
+	for _, port := range ports {
+		err := c.networkingFacade.DeletePort(serviceClient, port.ID)
+		if err != nil {
+			if strings.Contains(err.Error(), "Resource not found") {
+				return nil
+			}
+			return fmt.Errorf("failed to delete port: %w", err)
+		}
 	}
 
-	return allPorts[0], nil
+	return nil
 }
 
 func (c networkService) associateFloatingIp(serviceClient *gophercloud.ServiceClient, floatingIpId string, portId string) error {

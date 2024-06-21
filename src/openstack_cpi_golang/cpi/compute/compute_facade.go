@@ -3,6 +3,7 @@ package compute
 import (
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/tags"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/pagination"
@@ -12,7 +13,11 @@ import (
 type ComputeFacade interface {
 	CreateServer(client *gophercloud.ServiceClient, opts servers.CreateOptsBuilder) (*servers.Server, error)
 
+	DeleteServer(client *gophercloud.ServiceClient, serverID string) error
+
 	GetServer(client *gophercloud.ServiceClient, serverID string) (*servers.Server, error)
+
+	GetServerTags(client *gophercloud.ServiceClient, serverID string) ([]string, error)
 
 	ListFlavors(client *gophercloud.ServiceClient, opts flavors.ListOpts) (pagination.Page, error)
 
@@ -34,8 +39,16 @@ func (c computeFacade) CreateServer(client *gophercloud.ServiceClient, opts serv
 	return servers.Create(client, opts).Extract()
 }
 
+func (c computeFacade) DeleteServer(client *gophercloud.ServiceClient, serverID string) error {
+	return servers.Delete(client, serverID).ExtractErr()
+}
+
 func (c computeFacade) GetServer(client *gophercloud.ServiceClient, serverID string) (*servers.Server, error) {
 	return servers.Get(client, serverID).Extract()
+}
+
+func (c computeFacade) GetServerTags(client *gophercloud.ServiceClient, serverID string) ([]string, error) {
+	return tags.List(client, serverID).Extract()
 }
 
 func (c computeFacade) ListFlavors(client *gophercloud.ServiceClient, opts flavors.ListOpts) (pagination.Page, error) {

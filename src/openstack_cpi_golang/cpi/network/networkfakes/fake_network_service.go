@@ -38,6 +38,17 @@ type FakeNetworkService struct {
 		result1 *ports.Port
 		result2 error
 	}
+	DeletePortsStub        func([]ports.Port) error
+	deletePortsMutex       sync.RWMutex
+	deletePortsArgsForCall []struct {
+		arg1 []ports.Port
+	}
+	deletePortsReturns struct {
+		result1 error
+	}
+	deletePortsReturnsOnCall map[int]struct {
+		result1 error
+	}
 	GetNetworkConfigurationStub        func(apiv1.Networks, config.OpenstackConfig, properties.CreateVM) (properties.NetworkConfig, error)
 	getNetworkConfigurationMutex       sync.RWMutex
 	getNetworkConfigurationArgsForCall []struct {
@@ -51,6 +62,21 @@ type FakeNetworkService struct {
 	}
 	getNetworkConfigurationReturnsOnCall map[int]struct {
 		result1 properties.NetworkConfig
+		result2 error
+	}
+	GetPortsStub        func(string, properties.Network, bool) ([]ports.Port, error)
+	getPortsMutex       sync.RWMutex
+	getPortsArgsForCall []struct {
+		arg1 string
+		arg2 properties.Network
+		arg3 bool
+	}
+	getPortsReturns struct {
+		result1 []ports.Port
+		result2 error
+	}
+	getPortsReturnsOnCall map[int]struct {
+		result1 []ports.Port
 		result2 error
 	}
 	GetSubnetIDStub        func(string, string) (string, error)
@@ -198,6 +224,72 @@ func (fake *FakeNetworkService) CreatePortReturnsOnCall(i int, result1 *ports.Po
 	}{result1, result2}
 }
 
+func (fake *FakeNetworkService) DeletePorts(arg1 []ports.Port) error {
+	var arg1Copy []ports.Port
+	if arg1 != nil {
+		arg1Copy = make([]ports.Port, len(arg1))
+		copy(arg1Copy, arg1)
+	}
+	fake.deletePortsMutex.Lock()
+	ret, specificReturn := fake.deletePortsReturnsOnCall[len(fake.deletePortsArgsForCall)]
+	fake.deletePortsArgsForCall = append(fake.deletePortsArgsForCall, struct {
+		arg1 []ports.Port
+	}{arg1Copy})
+	stub := fake.DeletePortsStub
+	fakeReturns := fake.deletePortsReturns
+	fake.recordInvocation("DeletePorts", []interface{}{arg1Copy})
+	fake.deletePortsMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeNetworkService) DeletePortsCallCount() int {
+	fake.deletePortsMutex.RLock()
+	defer fake.deletePortsMutex.RUnlock()
+	return len(fake.deletePortsArgsForCall)
+}
+
+func (fake *FakeNetworkService) DeletePortsCalls(stub func([]ports.Port) error) {
+	fake.deletePortsMutex.Lock()
+	defer fake.deletePortsMutex.Unlock()
+	fake.DeletePortsStub = stub
+}
+
+func (fake *FakeNetworkService) DeletePortsArgsForCall(i int) []ports.Port {
+	fake.deletePortsMutex.RLock()
+	defer fake.deletePortsMutex.RUnlock()
+	argsForCall := fake.deletePortsArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeNetworkService) DeletePortsReturns(result1 error) {
+	fake.deletePortsMutex.Lock()
+	defer fake.deletePortsMutex.Unlock()
+	fake.DeletePortsStub = nil
+	fake.deletePortsReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeNetworkService) DeletePortsReturnsOnCall(i int, result1 error) {
+	fake.deletePortsMutex.Lock()
+	defer fake.deletePortsMutex.Unlock()
+	fake.DeletePortsStub = nil
+	if fake.deletePortsReturnsOnCall == nil {
+		fake.deletePortsReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.deletePortsReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeNetworkService) GetNetworkConfiguration(arg1 apiv1.Networks, arg2 config.OpenstackConfig, arg3 properties.CreateVM) (properties.NetworkConfig, error) {
 	fake.getNetworkConfigurationMutex.Lock()
 	ret, specificReturn := fake.getNetworkConfigurationReturnsOnCall[len(fake.getNetworkConfigurationArgsForCall)]
@@ -260,6 +352,72 @@ func (fake *FakeNetworkService) GetNetworkConfigurationReturnsOnCall(i int, resu
 	}
 	fake.getNetworkConfigurationReturnsOnCall[i] = struct {
 		result1 properties.NetworkConfig
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeNetworkService) GetPorts(arg1 string, arg2 properties.Network, arg3 bool) ([]ports.Port, error) {
+	fake.getPortsMutex.Lock()
+	ret, specificReturn := fake.getPortsReturnsOnCall[len(fake.getPortsArgsForCall)]
+	fake.getPortsArgsForCall = append(fake.getPortsArgsForCall, struct {
+		arg1 string
+		arg2 properties.Network
+		arg3 bool
+	}{arg1, arg2, arg3})
+	stub := fake.GetPortsStub
+	fakeReturns := fake.getPortsReturns
+	fake.recordInvocation("GetPorts", []interface{}{arg1, arg2, arg3})
+	fake.getPortsMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeNetworkService) GetPortsCallCount() int {
+	fake.getPortsMutex.RLock()
+	defer fake.getPortsMutex.RUnlock()
+	return len(fake.getPortsArgsForCall)
+}
+
+func (fake *FakeNetworkService) GetPortsCalls(stub func(string, properties.Network, bool) ([]ports.Port, error)) {
+	fake.getPortsMutex.Lock()
+	defer fake.getPortsMutex.Unlock()
+	fake.GetPortsStub = stub
+}
+
+func (fake *FakeNetworkService) GetPortsArgsForCall(i int) (string, properties.Network, bool) {
+	fake.getPortsMutex.RLock()
+	defer fake.getPortsMutex.RUnlock()
+	argsForCall := fake.getPortsArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *FakeNetworkService) GetPortsReturns(result1 []ports.Port, result2 error) {
+	fake.getPortsMutex.Lock()
+	defer fake.getPortsMutex.Unlock()
+	fake.GetPortsStub = nil
+	fake.getPortsReturns = struct {
+		result1 []ports.Port
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeNetworkService) GetPortsReturnsOnCall(i int, result1 []ports.Port, result2 error) {
+	fake.getPortsMutex.Lock()
+	defer fake.getPortsMutex.Unlock()
+	fake.GetPortsStub = nil
+	if fake.getPortsReturnsOnCall == nil {
+		fake.getPortsReturnsOnCall = make(map[int]struct {
+			result1 []ports.Port
+			result2 error
+		})
+	}
+	fake.getPortsReturnsOnCall[i] = struct {
+		result1 []ports.Port
 		result2 error
 	}{result1, result2}
 }
@@ -336,8 +494,12 @@ func (fake *FakeNetworkService) Invocations() map[string][][]interface{} {
 	defer fake.configureVIPNetworkMutex.RUnlock()
 	fake.createPortMutex.RLock()
 	defer fake.createPortMutex.RUnlock()
+	fake.deletePortsMutex.RLock()
+	defer fake.deletePortsMutex.RUnlock()
 	fake.getNetworkConfigurationMutex.RLock()
 	defer fake.getNetworkConfigurationMutex.RUnlock()
+	fake.getPortsMutex.RLock()
+	defer fake.getPortsMutex.RUnlock()
 	fake.getSubnetIDMutex.RLock()
 	defer fake.getSubnetIDMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

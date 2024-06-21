@@ -71,7 +71,7 @@ func (c imageService) CreateImage(cloudProps properties.CreateStemcell, config c
 
 func (c imageService) GetImage(imageID string) (string, error) {
 	serviceClient := c.serviceClient
-	serviceClient.RetryFunc = RetryOnError(c.logger)
+	serviceClient.RetryFunc = utils.RetryOnError(c.logger)
 
 	image, err := c.imagesFacade.Get(serviceClient, imageID)
 	if err != nil {
@@ -123,7 +123,7 @@ func (c imageService) UploadImage(imageID string, imageFilePath string) error {
 
 func (c imageService) DeleteImage(imageID string) error {
 	serviceClient := c.serviceClient
-	serviceClient.RetryFunc = RetryOnError(c.logger)
+	serviceClient.RetryFunc = utils.RetryOnError(c.logger)
 
 	err := c.imagesFacade.Delete(serviceClient, imageID)
 	if err != nil {

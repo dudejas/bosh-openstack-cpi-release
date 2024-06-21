@@ -37,9 +37,9 @@ var _ = Describe("ComputeService", func() {
 		availabilityZoneProvider = computefakes.FakeAvailabilityZoneProvider{}
 		logger = utilsfakes.FakeLogger{}
 		computeService = compute.NewComputeService(&serviceClient, &computeFacade, &flavorResolver, &volumeConfigurator, &availabilityZoneProvider, &logger)
+		compute.ComputeServicePollingInterval = 0
 		networkConfig = properties.NetworkConfig{}
 		computeFacade.CreateServerReturns(&servers.Server{ID: "123-456"}, nil)
-		computeFacade.GetServerReturns(&servers.Server{ID: "123-456", Status: "ACTIVE"}, nil)
 		flavorResolver.ResolveFlavorForInstanceTypeReturns(flavors.Flavor{ID: "the_flavor_id", Name: "the_instance_type", RAM: 4096, Ephemeral: 10}, nil)
 		computeFacade.GetOSKeyPairReturns(&keypairs.KeyPair{Name: "the_os_keypair_name"}, nil)
 		defaultCloudConfig = properties.CreateVM{InstanceType: "the_instance_type", RootDisk: properties.Disk{Size: 1}}
@@ -47,6 +47,10 @@ var _ = Describe("ComputeService", func() {
 	})
 
 	Context("CreateServer", func() {
+		BeforeEach(func() {
+			computeFacade.GetServerReturns(&servers.Server{ID: "123-456", Status: "ACTIVE"}, nil)
+		})
+
 		It("resolves flavors by instance type", func() {
 			_, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
@@ -267,8 +271,6 @@ var _ = Describe("ComputeService", func() {
 			computeFacade.GetServerReturnsOnCall(0, &servers.Server{ID: "123-456", Status: "not-active"}, nil)
 			computeFacade.GetServerReturnsOnCall(1, &servers.Server{ID: "123-456", Status: "ACTIVE"}, nil)
 
-			compute.ComputeServicePollingInterval = 0
-
 			server, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
@@ -347,6 +349,118 @@ var _ = Describe("ComputeService", func() {
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(server.ID).To(Equal("123-456"))
+		})
+	})
+
+	Context("DeleteServer", func() {
+		BeforeEach(func() {
+			computeFacade.GetServerReturns(&servers.Server{ID: "123-456", Status: "DELETED"}, nil)
+			computeFacade.GetServerTagsReturns([]string{"tag1", "tag2"}, nil)
+			computeFacade.DeleteServerReturns(nil)
+		})
+
+		It("returns a server that is to be deleted", func() {
+			err := computeService.DeleteServer(
+				"123-456",
+				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+			)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(computeFacade.GetServerCallCount()).To(Equal(2))
+		})
+
+		It("returns an error during getServer", func() {
+			computeFacade.GetServerReturns(nil, errors.New("boom"))
+			err := computeService.DeleteServer(
+				"123-456",
+				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+			)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("failed to retrieve server information: boom"))
+		})
+
+		It("returns nil if no server is found", func() {
+			computeFacade.GetServerReturns(nil, errors.New("Resource not found"))
+			err := computeService.DeleteServer(
+				"123-456",
+				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+			)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("returns tags for a server", func() {
+			err := computeService.DeleteServer(
+				"123-456",
+				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+			)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(computeFacade.GetServerTagsCallCount()).To(Equal(1))
+		})
+
+		It("returns an error if tags retrieval fail", func() {
+			computeFacade.GetServerTagsReturns(nil, errors.New("boom"))
+			err := computeService.DeleteServer(
+				"123-456",
+				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+			)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("failed to retrieve server tags: boom"))
+		})
+
+		It("Skips cleaning up membership if no tags are present", func() {
+			// Skips clean up membership from pool if no tags are there
+		})
+
+		It("deletes a server", func() {
+			err := computeService.DeleteServer(
+				"123-456",
+				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+			)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(computeFacade.DeleteServerCallCount()).To(Equal(1))
+		})
+
+		It("returns an error if delete server fails", func() {
+			computeFacade.DeleteServerReturns(errors.New("boom"))
+			err := computeService.DeleteServer(
+				"123-456",
+				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+			)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("failed to delete server: boom"))
+		})
+
+		It("waits for the server to become DELETED", func() {
+			computeFacade.GetServerReturnsOnCall(0, &servers.Server{ID: "123-456", Status: "ACTIVE"}, nil)
+			computeFacade.GetServerReturnsOnCall(1, &servers.Server{ID: "123-456", Status: "DELETED"}, nil)
+
+			err := computeService.DeleteServer(
+				"123-456",
+				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+			)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(computeFacade.GetServerCallCount()).To(Equal(2))
+		})
+
+		It("returns an error while waiting for the server to become DELETED", func() {
+			computeFacade.GetServerReturns(&servers.Server{ID: "123-456", Status: "ACTIVE"}, nil)
+
+			err := computeService.DeleteServer(
+				"123-456",
+				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+			)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("failed while waiting on the server deletion: timeout while waiting for server to become deleted"))
+		})
+
+		It("returns nil if the server got deleted", func() {
+			err := computeService.DeleteServer(
+				"123-456",
+				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+			)
+
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 

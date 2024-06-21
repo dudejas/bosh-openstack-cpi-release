@@ -1,8 +1,8 @@
-package image_test
+package utils_test
 
 import (
 	"errors"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/image"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils/utilsfakes"
 	"github.com/gophercloud/gophercloud"
 	. "github.com/onsi/ginkgo/v2"
@@ -24,17 +24,17 @@ var _ = Describe("RetryOnError", func() {
 	var logger utilsfakes.FakeLogger
 
 	BeforeEach(func() {
-		image.DefaultRetrySleepDuration = 0 * time.Second
+		utils.DefaultRetrySleepDuration = 0 * time.Second
 		logger = utilsfakes.FakeLogger{}
 	})
 
 	It("returns an error if max retries is reached", func() {
-		err := image.RetryOnError(&logger)(nil, "", "", nil, errors.New("boom"), 10)
+		err := utils.RetryOnError(&logger)(nil, "", "", nil, errors.New("boom"), 10)
 		Expect(err.Error()).To(Equal("max retry attempts (10) reached, err: boom"))
 	})
 
 	It("logs the current error", func() {
-		image.RetryOnError(&logger)(nil, "", "", nil, errors.New("boom"), 0)
+		utils.RetryOnError(&logger)(nil, "", "", nil, errors.New("boom"), 0)
 
 		tag, msg, _ := logger.WarnArgsForCall(0)
 		Expect(tag).To(Equal("retry on error"))
@@ -42,7 +42,7 @@ var _ = Describe("RetryOnError", func() {
 	})
 
 	It("raises received errors that should not be retried", func() {
-		err := image.RetryOnError(&logger)(nil, "", "", nil, errors.New("boom"), 0)
+		err := utils.RetryOnError(&logger)(nil, "", "", nil, errors.New("boom"), 0)
 
 		Expect(err.Error()).To(Equal("boom"))
 	})
@@ -52,7 +52,7 @@ var _ = Describe("RetryOnError", func() {
 			Actual: 500,
 		}
 
-		err := image.RetryOnError(&logger)(nil, "", "", nil, testError, 0)
+		err := utils.RetryOnError(&logger)(nil, "", "", nil, testError, 0)
 		Expect(err).To(BeNil())
 
 		tag, msg, _ := logger.WarnArgsForCall(1)
@@ -65,7 +65,7 @@ var _ = Describe("RetryOnError", func() {
 			Actual: 503,
 		}
 
-		err := image.RetryOnError(&logger)(nil, "", "", nil, testError, 0)
+		err := utils.RetryOnError(&logger)(nil, "", "", nil, testError, 0)
 		Expect(err).To(BeNil())
 
 		tag, msg, _ := logger.WarnArgsForCall(1)
@@ -79,7 +79,7 @@ var _ = Describe("RetryOnError", func() {
 			text:    "boom",
 		}
 
-		err := image.RetryOnError(&logger)(nil, "", "", nil, &netError, 0)
+		err := utils.RetryOnError(&logger)(nil, "", "", nil, &netError, 0)
 		Expect(err).To(BeNil())
 
 		tag, msg, _ := logger.WarnArgsForCall(1)
@@ -91,7 +91,7 @@ var _ = Describe("RetryOnError", func() {
 		opError := net.OpError{
 			Op: "boom",
 		}
-		err := image.RetryOnError(&logger)(nil, "", "", nil, &opError, 0)
+		err := utils.RetryOnError(&logger)(nil, "", "", nil, &opError, 0)
 		Expect(err).To(BeNil())
 
 		tag, msg, _ := logger.WarnArgsForCall(1)

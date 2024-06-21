@@ -1,10 +1,9 @@
-package image
+package utils
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/gophercloud/gophercloud"
 	"net"
 	"time"
@@ -14,7 +13,7 @@ const maxRetries = 10
 
 var DefaultRetrySleepDuration = 3 * time.Second
 
-func RetryOnError(logger utils.Logger) func(
+func RetryOnError(logger Logger) func(
 	ctx context.Context,
 	method string, url string,
 	options *gophercloud.RequestOpts,
