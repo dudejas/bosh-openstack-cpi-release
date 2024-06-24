@@ -31,7 +31,7 @@ type OpenstackConfig struct {
 	WaitResourcePollInterval     int      `json:"wait_resource_poll_interval"`
 	BootFromVolume               bool     `json:"boot_from_volume"`
 	ConfigDrive                  string   `json:"config_drive"`
-	UseDhcp                      bool     `json:"use_dhcp"`
+	UseDHCP                      bool     `json:"use_dhcp"`
 	IgnoreServerAvailabilityZone bool     `json:"ignore_server_availability_zone"`
 	HumanReadableVMNames         bool     `json:"human_readable_vm_names"`
 	UseNovaNetworking            bool     `json:"use_nova_networking"`

@@ -1,6 +1,8 @@
 package compute_test
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/compute"
@@ -14,6 +16,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -30,6 +33,9 @@ var _ = Describe("ComputeService", func() {
 	var defaultCloudConfig properties.CreateVM
 	var loadbalancerServiceBuilder loadbalancerfakes.FakeLoadbalancerServiceBuilder
 	var loadbalancerService loadbalancerfakes.FakeLoadbalancerService
+	var port *ports.Port
+	var agentID apiv1.AgentID
+	var env apiv1.VMEnv
 
 	BeforeEach(func() {
 		providerClient := gophercloud.ProviderClient{TokenID: "the_token"}
@@ -52,6 +58,9 @@ var _ = Describe("ComputeService", func() {
 		computeFacade.GetOSKeyPairReturns(&keypairs.KeyPair{Name: "the_os_keypair_name"}, nil)
 		defaultCloudConfig = properties.CreateVM{InstanceType: "the_instance_type", RootDisk: properties.Disk{Size: 1}}
 		availabilityZoneProvider.GetAvailabilityZonesReturns([]string{"z1"})
+		port = &ports.Port{ID: "the_port_id"}
+		agentID = apiv1.NewAgentID("agent-id")
+		env = apiv1.VMEnv{}
 	})
 
 	Context("CreateServer", func() {
@@ -64,6 +73,9 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
+				port,
+				agentID,
+				env,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
@@ -78,6 +90,9 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
+				port,
+				agentID,
+				env,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
@@ -95,6 +110,9 @@ var _ = Describe("ComputeService", func() {
 					RootDisk:     properties.Disk{Size: 0},
 				},
 				networkConfig,
+				port,
+				agentID,
+				env,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
@@ -109,6 +127,9 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
+				port,
+				agentID,
+				env,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "key_name_from_config"},
 			)
 
@@ -123,6 +144,9 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
+				port,
+				agentID,
+				env,
 				config.OpenstackConfig{StateTimeOut: 10},
 			)
 
@@ -136,6 +160,9 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
+				port,
+				agentID,
+				env,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
@@ -149,63 +176,136 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "the_instance_type", RootDisk: properties.Disk{Size: 0}},
 				networkConfig,
+				port,
+				agentID,
+				env,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "key_name_from_config"},
 			)
 
 			Expect(err.Error()).To(ContainSubstring("failed to configure volumes: boom"))
 		})
 
-		It("creates ops for the server", func() {
-			volumeConfigurator.ConfigureVolumesReturns([]bootfromvolume.BlockDevice{{
-				UUID:                "the-stemcell-id",
-				SourceType:          bootfromvolume.SourceImage,
-				DestinationType:     bootfromvolume.DestinationVolume,
-				VolumeSize:          999,
-				BootIndex:           0,
-				DeleteOnTermination: true,
-			}}, nil)
+		Context("with server create opts", func() {
 
-			networkConfig = properties.NetworkConfig{
-				ManualNetworks: []properties.Network{
-					{IP: "1.2.3.4", CloudProps: properties.CreateVMNetwork{NetID: "the_net_id"}},
-				},
-				SecurityGroups: []string{"group_1", "group_2"},
-			}
+			var bootFromVolume bool
+			var networkConfig properties.NetworkConfig
 
-			bootfromvolume := true
+			BeforeEach(func() {
+				volumeConfigurator.ConfigureVolumesReturns([]bootfromvolume.BlockDevice{{
+					UUID:                "the-stemcell-id",
+					SourceType:          bootfromvolume.SourceImage,
+					DestinationType:     bootfromvolume.DestinationVolume,
+					VolumeSize:          999,
+					BootIndex:           0,
+					DeleteOnTermination: true,
+				}}, nil)
 
-			_, err := computeService.CreateServer(
-				apiv1.NewStemcellCID("the_stemcell_id"),
-				properties.CreateVM{
-					InstanceType:     "the_instance_type",
-					AvailabilityZone: "z1",
-					RootDisk:         properties.Disk{Size: 1},
-					BootFromVolume:   &bootfromvolume,
-				},
-				networkConfig,
-				config.OpenstackConfig{DefaultKeyName: "the_key_name"},
-			)
-			Expect(err).ToNot(HaveOccurred())
+				networkConfig = properties.NetworkConfig{
+					ManualNetworks: []properties.Network{
+						{Key: "bosh", Type: "manual", IP: "1.2.3.4", CloudProps: properties.NetworkCloudProps{NetID: "the_net_id"}},
+					},
+					VIPNetwork: &properties.Network{
+						Key: "bosh-vip", Type: "vip", IP: "5.6.7.8", CloudProps: properties.NetworkCloudProps{NetID: "the_net_id"},
+					},
+					SecurityGroups: []string{"group_1", "group_2"},
+				}
 
-			sClient, opts := computeFacade.CreateServerArgsForCall(0)
-			Expect(sClient).To(Equal(&serviceClient))
+				bootFromVolume = true
+			})
 
-			createMap, err := opts.ToServerCreateMap()
-			server := createMap["server"].(map[string]interface{})
-			serverSecurityGroups := server["security_groups"].([]map[string]interface{})
-			serverNetworks := server["networks"].([]map[string]interface{})
-			blockDevice := server["block_device_mapping_v2"].([]map[string]interface{})
+			It("creates opts for the server", func() {
+				_, err := computeService.CreateServer(
+					apiv1.NewStemcellCID("the_stemcell_id"),
+					properties.CreateVM{
+						InstanceType:     "the_instance_type",
+						AvailabilityZone: "z1",
+						RootDisk:         properties.Disk{Size: 1},
+						BootFromVolume:   &bootFromVolume,
+					},
+					networkConfig,
+					port,
+					agentID,
+					env,
+					config.OpenstackConfig{DefaultKeyName: "the_key_name", UseDHCP: true},
+				)
+				Expect(err).ToNot(HaveOccurred())
 
-			Expect(server["name"]).To(ContainSubstring("vm-"))
-			Expect(server["imageRef"]).To(Equal("the_stemcell_id"))
-			Expect(serverNetworks[0]["uuid"]).To(Equal("the_net_id"))
-			Expect(serverSecurityGroups[0]["name"]).To(Equal("group_1"))
-			Expect(serverSecurityGroups[1]["name"]).To(Equal("group_2"))
-			Expect(server["availability_zone"]).To(Equal("z1"))
-			Expect(server["flavorRef"]).To(Equal("the_flavor_id"))
-			Expect(server["key_name"]).To(Equal("the_os_keypair_name"))
-			Expect(blockDevice[0]["uuid"]).To(Equal("the-stemcell-id"))
-			Expect(blockDevice[0]["volume_size"]).To(Equal(999.0))
+				sClient, opts := computeFacade.CreateServerArgsForCall(0)
+				Expect(sClient).To(Equal(&serviceClient))
+
+				createMap, err := opts.ToServerCreateMap()
+				Expect(err).ToNot(HaveOccurred())
+				server := createMap["server"].(map[string]interface{})
+				serverSecurityGroups := server["security_groups"].([]map[string]interface{})
+				serverNetworks := server["networks"].([]map[string]interface{})
+				blockDevice := server["block_device_mapping_v2"].([]map[string]interface{})
+
+				Expect(server["name"]).To(ContainSubstring("vm-"))
+				Expect(server["imageRef"]).To(Equal("the_stemcell_id"))
+				Expect(serverNetworks[0]["uuid"]).To(Equal("the_net_id"))
+				Expect(serverNetworks[0]["port"]).To(Equal("the_port_id"))
+				Expect(serverSecurityGroups[0]["name"]).To(Equal("group_1"))
+				Expect(serverSecurityGroups[1]["name"]).To(Equal("group_2"))
+				Expect(server["availability_zone"]).To(Equal("z1"))
+				Expect(server["flavorRef"]).To(Equal("the_flavor_id"))
+				Expect(server["key_name"]).To(Equal("the_os_keypair_name"))
+				Expect(blockDevice[0]["uuid"]).To(Equal("the-stemcell-id"))
+				Expect(blockDevice[0]["volume_size"]).To(Equal(999.0))
+			})
+
+			It("creates user data", func() {
+				testEnv := map[string]interface{}{
+					"key1": "value1",
+					"key2": 1,
+				}
+				env = apiv1.NewVMEnv(testEnv)
+
+				_, err := computeService.CreateServer(
+					apiv1.NewStemcellCID("the_stemcell_id"),
+					properties.CreateVM{
+						InstanceType:     "the_instance_type",
+						AvailabilityZone: "z1",
+						RootDisk:         properties.Disk{Size: 1},
+						BootFromVolume:   &bootFromVolume,
+					},
+					networkConfig,
+					port,
+					agentID,
+					env,
+					config.OpenstackConfig{DefaultKeyName: "the_key_name", UseDHCP: true},
+				)
+				Expect(err).ToNot(HaveOccurred())
+
+				sClient, opts := computeFacade.CreateServerArgsForCall(0)
+				Expect(sClient).To(Equal(&serviceClient))
+
+				createMap, err := opts.ToServerCreateMap()
+				Expect(err).ToNot(HaveOccurred())
+				server := createMap["server"].(map[string]interface{})
+
+				userDataBytes, err := base64.StdEncoding.DecodeString(*server["user_data"].(*string))
+				Expect(err).ToNot(HaveOccurred())
+
+				userData := properties.UserData{}
+				json.Unmarshal(userDataBytes, &userData)
+				Expect(userData.Server.Name).To(Equal(server["name"]))
+				Expect(userData.VM.Name).To(Equal(server["name"]))
+				Expect(userData.Disks.System).To(Equal("/dev/sda"))
+
+				Expect(userData.Networks["bosh"].IP).To(Equal("1.2.3.4"))
+				Expect(*userData.Networks["bosh"].UseDHCP).To(BeTrue())
+				Expect(userData.Networks["bosh-vip"].IP).To(Equal("5.6.7.8"))
+				Expect(userData.Networks["bosh-vip"].UseDHCP).To(BeNil())
+				Expect(userData.AgentID).To(Equal("agent-id"))
+
+				environment, err := json.Marshal(userData.Env)
+				Expect(err).ToNot(HaveOccurred())
+
+				expectedEnv, err := json.Marshal(testEnv)
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(environment).To(Equal(expectedEnv))
+			})
 		})
 
 		It("runs server creation in multiple AZs on creation failure", func() {
@@ -218,6 +318,9 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
+				port,
+				agentID,
+				env,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
@@ -245,6 +348,9 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
+				port,
+				agentID,
+				env,
 				config.OpenstackConfig{StateTimeOut: 0, DefaultKeyName: "the_key_name"},
 			)
 
@@ -268,6 +374,9 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
+				port,
+				agentID,
+				env,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
@@ -283,6 +392,9 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
+				port,
+				agentID,
+				env,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
@@ -298,6 +410,9 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
+				port,
+				agentID,
+				env,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
@@ -312,6 +427,9 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
+				port,
+				agentID,
+				env,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
@@ -326,6 +444,9 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
+				port,
+				agentID,
+				env,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
@@ -340,6 +461,9 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
+				port,
+				agentID,
+				env,
 				config.OpenstackConfig{StateTimeOut: 0, DefaultKeyName: "the_key_name"},
 			)
 
@@ -352,6 +476,9 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
+				port,
+				agentID,
+				env,
 				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
 			)
 
@@ -512,7 +639,7 @@ var _ = Describe("ComputeService", func() {
 
 			err := computeService.DeleteServer(
 				"123-456",
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+				config.OpenstackConfig{StateTimeOut: 0, DefaultKeyName: "the_key_name"},
 			)
 
 			Expect(err).To(HaveOccurred())

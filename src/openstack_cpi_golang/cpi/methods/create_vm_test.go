@@ -14,6 +14,7 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils/utilsfakes"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/pools"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -32,6 +33,7 @@ var _ = Describe("CreateVMMethod", func() {
 	var networks apiv1.Networks
 	var jsonStr string
 	var openstackConfig config.OpenstackConfig
+	var env apiv1.VMEnv
 
 	Context("CreateVMV2", func() {
 
@@ -45,6 +47,7 @@ var _ = Describe("CreateVMMethod", func() {
 			imageService = imagefakes.FakeImageService{}
 			loadbalancerService = loadbalancerfakes.FakeLoadbalancerService{}
 			logger = utilsfakes.FakeLogger{}
+			env = apiv1.VMEnv{}
 
 			computeServiceBuilder.BuildReturns(&computeService, nil)
 			networkServiceBuilder.BuildReturns(&networkService, nil)
@@ -57,15 +60,21 @@ var _ = Describe("CreateVMMethod", func() {
 
 			networkConfig := properties.NetworkConfig{
 				DefaultNetwork: properties.Network{
-					Type: "manual",
-					IP:   "1.1.1.1",
+					Type:       "manual",
+					IP:         "1.1.1.1",
+					CloudProps: properties.NetworkCloudProps{NetID: "the-net-id"},
 				},
+				ManualNetworks: []properties.Network{{
+					Key:        "key-1",
+					Type:       "manual",
+					IP:         "1.1.1.1",
+					CloudProps: properties.NetworkCloudProps{NetID: "the-net-id"},
+				}},
 			}
 			networkService.GetNetworkConfigurationReturns(networkConfig, nil)
+			networkService.CreatePortReturns(&ports.Port{ID: "the-port-id"}, nil)
 
-			networks = apiv1.Networks{
-				"network1": apiv1.NewNetwork(apiv1.NetworkOpts{}),
-			}
+			networks = apiv1.Networks{}
 
 			jsonStr = `{
 					"instance_type": "type1",
@@ -93,7 +102,7 @@ var _ = Describe("CreateVMMethod", func() {
 				apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
 				networks,
 				[]apiv1.DiskCID{},
-				apiv1.VMEnv{},
+				env,
 			)
 
 			Expect(computeServiceBuilder.BuildCallCount()).To(Equal(1))
@@ -115,7 +124,7 @@ var _ = Describe("CreateVMMethod", func() {
 				apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
 				networks,
 				[]apiv1.DiskCID{},
-				apiv1.VMEnv{},
+				env,
 			)
 
 			Expect(err.Error()).To(Equal("failed to create compute service: boom"))
@@ -137,7 +146,7 @@ var _ = Describe("CreateVMMethod", func() {
 				apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
 				networks,
 				[]apiv1.DiskCID{},
-				apiv1.VMEnv{},
+				env,
 			)
 
 			Expect(networkServiceBuilder.BuildCallCount()).To(Equal(1))
@@ -159,7 +168,7 @@ var _ = Describe("CreateVMMethod", func() {
 				apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
 				networks,
 				[]apiv1.DiskCID{},
-				apiv1.VMEnv{},
+				env,
 			)
 
 			Expect(err.Error()).To(Equal("failed to create networking service: boom"))
@@ -181,7 +190,7 @@ var _ = Describe("CreateVMMethod", func() {
 				apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
 				networks,
 				[]apiv1.DiskCID{},
-				apiv1.VMEnv{},
+				env,
 			)
 
 			Expect(imageServiceBuilder.BuildCallCount()).To(Equal(1))
@@ -203,7 +212,7 @@ var _ = Describe("CreateVMMethod", func() {
 				apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
 				networks,
 				[]apiv1.DiskCID{},
-				apiv1.VMEnv{},
+				env,
 			)
 
 			Expect(err.Error()).To(Equal("failed to create image service: boom"))
@@ -225,7 +234,7 @@ var _ = Describe("CreateVMMethod", func() {
 				apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
 				networks,
 				[]apiv1.DiskCID{},
-				apiv1.VMEnv{},
+				env,
 			)
 
 			Expect(loadbalancerServiceBuilder.BuildCallCount()).To(Equal(1))
@@ -247,7 +256,7 @@ var _ = Describe("CreateVMMethod", func() {
 				apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
 				networks,
 				[]apiv1.DiskCID{},
-				apiv1.VMEnv{},
+				env,
 			)
 
 			Expect(err.Error()).To(Equal("failed to create loadbalancer service: boom"))
@@ -271,7 +280,7 @@ var _ = Describe("CreateVMMethod", func() {
 				apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
 				networks,
 				[]apiv1.DiskCID{},
-				apiv1.VMEnv{},
+				env,
 			)
 
 			Expect(err.Error()).To(ContainSubstring("failed to resolve stemcell: boom"))
@@ -295,7 +304,7 @@ var _ = Describe("CreateVMMethod", func() {
 				apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
 				networks,
 				[]apiv1.DiskCID{},
-				apiv1.VMEnv{},
+				env,
 			)
 
 			Expect(err.Error()).To(ContainSubstring("failed to create network config: boom"))
@@ -318,13 +327,13 @@ var _ = Describe("CreateVMMethod", func() {
 				apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
 				networks,
 				[]apiv1.DiskCID{},
-				apiv1.VMEnv{},
+				env,
 			)
 
 			Expect(networkService.CreatePortCallCount()).To(Equal(1))
 		})
 
-		It("returns an error if pool creation fails", func() {
+		It("returns an error if port creation fails", func() {
 			networkService.CreatePortReturns(nil, errors.New("boom"))
 
 			_, _, err := methods.NewCreateVMMethod(
@@ -340,7 +349,7 @@ var _ = Describe("CreateVMMethod", func() {
 				apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
 				networks,
 				[]apiv1.DiskCID{},
-				apiv1.VMEnv{},
+				env,
 			)
 
 			Expect(err.Error()).To(Equal("failed to create port: boom"))
@@ -360,11 +369,14 @@ var _ = Describe("CreateVMMethod", func() {
 				apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
 				networks,
 				[]apiv1.DiskCID{},
-				apiv1.VMEnv{},
+				env,
 			)
 
-			stemcellCID, _, _, _ := computeService.CreateServerArgsForCall(0)
+			stemcellCID, _, _, port, agentID, environment, _ := computeService.CreateServerArgsForCall(0)
 			Expect(stemcellCID.AsString()).To(Equal("stemcell-id"))
+			Expect(port.ID).To(Equal("the-port-id"))
+			Expect(agentID.AsString()).To(Equal("the_agent-id"))
+			Expect(environment).To(Equal(env))
 		})
 
 		It("returns an error if the server creation fails", func() {
@@ -383,7 +395,7 @@ var _ = Describe("CreateVMMethod", func() {
 				apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
 				networks,
 				[]apiv1.DiskCID{},
-				apiv1.VMEnv{},
+				env,
 			)
 
 			Expect(err.Error()).To(Equal("failed to create server: boom"))
@@ -422,7 +434,7 @@ var _ = Describe("CreateVMMethod", func() {
 				apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
 				networks,
 				[]apiv1.DiskCID{},
-				apiv1.VMEnv{},
+				env,
 			)
 
 			_, config := networkService.ConfigureVIPNetworkArgsForCall(0)
@@ -443,7 +455,7 @@ var _ = Describe("CreateVMMethod", func() {
 				apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
 				networks,
 				[]apiv1.DiskCID{},
-				apiv1.VMEnv{},
+				env,
 			)
 
 			serverID, _ := networkService.ConfigureVIPNetworkArgsForCall(0)
@@ -466,7 +478,7 @@ var _ = Describe("CreateVMMethod", func() {
 				apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
 				networks,
 				[]apiv1.DiskCID{},
-				apiv1.VMEnv{},
+				env,
 			)
 
 			Expect(err.Error()).To(Equal("failed to configure network for server '123-456': boom"))
@@ -490,7 +502,7 @@ var _ = Describe("CreateVMMethod", func() {
 					apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
 					networks,
 					[]apiv1.DiskCID{},
-					apiv1.VMEnv{},
+					env,
 				)
 
 				poolName := loadbalancerService.GetPoolIDArgsForCall(0)
@@ -513,7 +525,7 @@ var _ = Describe("CreateVMMethod", func() {
 					apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
 					networks,
 					[]apiv1.DiskCID{},
-					apiv1.VMEnv{},
+					env,
 				)
 
 				Expect(err.Error()).To(ContainSubstring("failed to get pool ID of pool 'the-pool-name': boom"))
@@ -539,7 +551,7 @@ var _ = Describe("CreateVMMethod", func() {
 					apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
 					networks,
 					[]apiv1.DiskCID{},
-					apiv1.VMEnv{},
+					env,
 				)
 
 				Expect(loadbalancerService.CreatePoolMemberCallCount()).To(Equal(1))
@@ -561,7 +573,7 @@ var _ = Describe("CreateVMMethod", func() {
 					apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
 					networks,
 					[]apiv1.DiskCID{},
-					apiv1.VMEnv{},
+					env,
 				)
 
 				Expect(err.Error()).To(ContainSubstring("failed to get subnet: boom"))
@@ -581,7 +593,7 @@ var _ = Describe("CreateVMMethod", func() {
 					apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
 					networks,
 					[]apiv1.DiskCID{},
-					apiv1.VMEnv{},
+					env,
 				)
 
 				poolID, ip, pool, subnetID, stateTimeOut := loadbalancerService.CreatePoolMemberArgsForCall(0)
@@ -615,7 +627,7 @@ var _ = Describe("CreateVMMethod", func() {
 					apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
 					networks,
 					[]apiv1.DiskCID{},
-					apiv1.VMEnv{},
+					env,
 				)
 
 				poolID, ip, pool, subnetID, stateTimeOut := loadbalancerService.CreatePoolMemberArgsForCall(0)
@@ -649,7 +661,7 @@ var _ = Describe("CreateVMMethod", func() {
 					apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
 					networks,
 					[]apiv1.DiskCID{},
-					apiv1.VMEnv{},
+					env,
 				)
 
 				Expect(err.Error()).To(ContainSubstring("failed to create pool membership of IP '1.1.1.1' in pool 'the-pool-name': boom"))
@@ -682,7 +694,7 @@ var _ = Describe("CreateVMMethod", func() {
 				apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
 				networks,
 				[]apiv1.DiskCID{},
-				apiv1.VMEnv{},
+				env,
 			)
 
 			_, tags := computeService.SetMetadataArgsForCall(0)
@@ -690,8 +702,8 @@ var _ = Describe("CreateVMMethod", func() {
 			Expect(tags["lbaas_pool_2"]).To(Equal("the-pool-id-1/the-member-id-1"))
 		})
 
-		It("returns a server ID", func() {
-			stemcellCID, _, err := methods.NewCreateVMMethod(
+		It("returns a server ID and a network spec", func() {
+			stemcellCID, networkSpec, err := methods.NewCreateVMMethod(
 				&imageServiceBuilder,
 				&networkServiceBuilder,
 				&computeServiceBuilder,
@@ -704,32 +716,15 @@ var _ = Describe("CreateVMMethod", func() {
 				apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
 				networks,
 				[]apiv1.DiskCID{},
-				apiv1.VMEnv{},
+				env,
 			)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stemcellCID.AsString()).To(Equal("123-456"))
-		})
+			cloudProps := properties.NetworkCloudProps{}
+			networkSpec["key-1"].CloudProps().As(&cloudProps)
+			Expect(cloudProps.NetID).To(Equal("the-net-id"))
 
-		It("returns networks", func() {
-			_, networks, err := methods.NewCreateVMMethod(
-				&imageServiceBuilder,
-				&networkServiceBuilder,
-				&computeServiceBuilder,
-				&loadbalancerServiceBuilder,
-				openstackConfig,
-				&logger,
-			).CreateVMV2(
-				apiv1.NewAgentID("the_agent-id"),
-				apiv1.NewStemcellCID("stemcell-id"),
-				apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
-				networks,
-				[]apiv1.DiskCID{},
-				apiv1.VMEnv{},
-			)
-
-			Expect(err).ToNot(HaveOccurred())
-			Expect(networks["network1"]).To(Equal(apiv1.NewNetwork(apiv1.NetworkOpts{})))
 		})
 	})
 })

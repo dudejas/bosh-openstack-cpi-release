@@ -5,6 +5,7 @@ import (
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"slices"
 )
 
@@ -30,7 +31,7 @@ func NewNetworkConfigBuilder(
 }
 
 func (b networkConfigBuilder) Build() (properties.NetworkConfig, error) {
-	defaultNetwork := b.createNetwork(b.networks.Default())
+	defaultNetwork := b.createNetwork("", b.networks.Default())
 
 	manualNetworks, err := b.createManualNetwork(b.networks, b.openstackConfig)
 	if err != nil {
@@ -92,21 +93,12 @@ func (b networkConfigBuilder) securityGroups(networks []properties.Network) ([]s
 
 func (b networkConfigBuilder) securityGroupsFromNetworks(networks []properties.Network) []string {
 	var securityGroups []string
-	var uniqueSecurityGroups []string
-	securityGroupsMap := make(map[string]bool)
 
 	for _, network := range networks {
 		securityGroups = append(securityGroups, network.CloudProps.SecurityGroups...)
 	}
 
-	for _, entry := range securityGroups {
-		if _, value := securityGroupsMap[entry]; !value {
-			securityGroupsMap[entry] = true
-			uniqueSecurityGroups = append(uniqueSecurityGroups, entry)
-		}
-	}
-
-	return uniqueSecurityGroups
+	return utils.UniqueArray(securityGroups)
 }
 
 func (b networkConfigBuilder) combineNetworks(manualNetworks []properties.Network, dynamicNetwork *properties.Network, vipNetwork *properties.Network) []properties.Network {
@@ -128,9 +120,9 @@ func (b networkConfigBuilder) combineNetworks(manualNetworks []properties.Networ
 func (b networkConfigBuilder) createManualNetwork(networks apiv1.Networks, openstackConfig config.OpenstackConfig) ([]properties.Network, error) {
 	var manualNetworks []properties.Network
 
-	for _, network := range networks {
+	for key, network := range networks {
 		if network.Type() == "manual" {
-			createdNetwork := b.createNetwork(network)
+			createdNetwork := b.createNetwork(key, network)
 
 			netID := createdNetwork.CloudProps.NetID
 			if netID == "" {
@@ -142,7 +134,7 @@ func (b networkConfigBuilder) createManualNetwork(networks apiv1.Networks, opens
 	}
 
 	if len(manualNetworks) > 1 {
-		if openstackConfig.UseDhcp || openstackConfig.ConfigDrive != "" {
+		if openstackConfig.UseDHCP || openstackConfig.ConfigDrive != "" {
 			return []properties.Network{}, fmt.Errorf("multiple manual networks can only be used with 'openstack.use_dhcp=false' and 'openstack.config_drive=cdrom|disk'")
 		}
 	}
@@ -153,13 +145,13 @@ func (b networkConfigBuilder) createManualNetwork(networks apiv1.Networks, opens
 func (b networkConfigBuilder) createSingleNetwork(networks apiv1.Networks, networkType string) (*properties.Network, error) {
 	var network *properties.Network
 
-	for _, net := range networks {
+	for key, net := range networks {
 		if net.Type() == networkType {
 			if network != nil {
 				return &properties.Network{}, fmt.Errorf("only one %s should be defined per instance", networkType)
 			}
 
-			createdNetwork := b.createNetwork(net)
+			createdNetwork := b.createNetwork(key, net)
 			network = &createdNetwork
 		}
 	}
@@ -167,14 +159,19 @@ func (b networkConfigBuilder) createSingleNetwork(networks apiv1.Networks, netwo
 	return network, nil
 }
 
-func (b networkConfigBuilder) createNetwork(network apiv1.Network) properties.Network {
-	vmNetworkProps := properties.CreateVMNetwork{}
+func (b networkConfigBuilder) createNetwork(key string, network apiv1.Network) properties.Network {
+	vmNetworkProps := properties.NetworkCloudProps{}
 	network.CloudProps().As(&vmNetworkProps)
 
 	return properties.Network{
+		Key:        key,
+		Default:    network.Default(),
+		DNS:        network.DNS(),
+		IP:         network.IP(),
+		Gateway:    network.Gateway(),
+		Netmask:    network.Netmask(),
 		Type:       network.Type(),
 		CloudProps: vmNetworkProps,
-		IP:         network.IP(),
 	}
 }
 

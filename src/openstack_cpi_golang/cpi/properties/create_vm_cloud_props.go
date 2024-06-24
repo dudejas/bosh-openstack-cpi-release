@@ -54,8 +54,3 @@ func (c CreateVM) Validate(opentackConfig config.OpenstackConfig) error {
 	}
 	return nil
 }
-
-type CreateVMNetwork struct {
-	NetID          string   `json:"net_id"`
-	SecurityGroups []string `json:"security_groups"`
-}

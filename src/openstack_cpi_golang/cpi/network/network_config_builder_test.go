@@ -82,7 +82,7 @@ var _ = Describe("NetworkConfigBuilder", func() {
 					"ip":      "",
 					"cloud_properties": {"net_id": "the_net_id_2"}
 				}
-			}`), config.OpenstackConfig{UseDhcp: true}, cloudProperties)
+			}`), config.OpenstackConfig{UseDHCP: true}, cloudProperties)
 
 			Expect(err.Error()).To(Equal("invalid manual network configuration: multiple manual networks can only be used with 'openstack.use_dhcp=false' and 'openstack.config_drive=cdrom|disk'"))
 		})

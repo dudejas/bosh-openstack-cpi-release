@@ -1,6 +1,7 @@
 package compute
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
@@ -13,6 +14,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 	"strings"
 	"time"
 )
@@ -25,6 +27,9 @@ type ComputeService interface {
 		stemcellCID apiv1.StemcellCID,
 		cloudProps properties.CreateVM,
 		networkConfig properties.NetworkConfig,
+		port *ports.Port,
+		agentID apiv1.AgentID,
+		env apiv1.VMEnv,
 		config config.OpenstackConfig,
 	) (*servers.Server, error)
 
@@ -73,6 +78,9 @@ func (c computeService) CreateServer(
 	stemcellCID apiv1.StemcellCID,
 	cloudProps properties.CreateVM,
 	networkConfig properties.NetworkConfig,
+	port *ports.Port,
+	agentID apiv1.AgentID,
+	env apiv1.VMEnv,
 	config config.OpenstackConfig,
 ) (*servers.Server, error) {
 	flavor, err := c.flavorResolver.ResolveFlavorForInstanceType(cloudProps.InstanceType)
@@ -90,10 +98,22 @@ func (c computeService) CreateServer(
 		return nil, fmt.Errorf("failed to configure volumes: %w", err)
 	}
 
+	vmName := c.getVMName()
+
+	userData, err := c.createServerUserData(networkConfig, config, vmName, flavor, agentID, env)
+	if err != nil {
+		fmt.Errorf("failed to create user data: %w", err)
+	}
+
+	userDataJson, err := json.Marshal(userData)
+	if err != nil {
+		fmt.Errorf("failed to marshal user data: %w", err)
+	}
+
 	var server *servers.Server
 	availabilityZones := c.availabilityZoneProvider.GetAvailabilityZones(cloudProps)
 	for _, availabilityZone := range availabilityZones {
-		createOpts := c.getServerCreateOpts(availabilityZone, stemcellCID, networkConfig, flavor, keyname, blockDevices)
+		createOpts := c.getServerCreateOpts(vmName, availabilityZone, stemcellCID, networkConfig, flavor, keyname, blockDevices, userDataJson, port)
 
 		server, err = c.computeFacade.CreateServer(c.serviceClient, createOpts)
 		if err != nil {
@@ -203,21 +223,69 @@ func (c computeService) SetMetadata(server servers.Server, tags properties.Serve
 	return nil
 }
 
+func (c computeService) createServerUserData(
+	networkConfig properties.NetworkConfig,
+	config config.OpenstackConfig,
+	vmName string,
+	flavor flavors.Flavor,
+	agentID apiv1.AgentID,
+	env apiv1.VMEnv,
+) (properties.UserData, error) {
+	userDataNetwork := map[string]properties.UserdataNetwork{}
+	for _, network := range networkConfig.AllNetworks() {
+		userdataNetwork := properties.UserdataNetwork{
+			Default:    network.Default,
+			DNS:        network.DNS,
+			IP:         network.IP,
+			Gateway:    network.Gateway,
+			Netmask:    network.Netmask,
+			Type:       network.Type,
+			CloudProps: network.CloudProps,
+		}
+
+		if network.Type != "vip" {
+			userdataNetwork.UseDHCP = &config.UseDHCP
+		}
+
+		userDataNetwork[network.Key] = userdataNetwork
+	}
+
+	environment, err := env.MarshalJSON()
+	if err != nil {
+		return properties.UserData{}, fmt.Errorf("failed to marshal environment")
+	}
+
+	return properties.NewUserDataBuilder().
+		WithServer(properties.Server{Name: vmName}).
+		WithNetworks(userDataNetwork).
+		WithVM(properties.VM{Name: vmName}).
+		WithNetworks(userDataNetwork).
+		WithEphemeralDiskSize(flavor.Disk).
+		WithAgentID(agentID).
+		WithEnvironment(environment).
+		Build(), nil
+}
+
 func (c computeService) getServerCreateOpts(
+	vmName string,
 	availabilityZone string,
 	stemcellCID apiv1.StemcellCID,
 	networkConfig properties.NetworkConfig,
 	flavor flavors.Flavor, keyname string,
 	blockDevices []bootfromvolume.BlockDevice,
+	userDataJson []byte,
+	port *ports.Port,
 ) servers.CreateOptsBuilder {
+
 	var createOpts servers.CreateOptsBuilder
 	createOpts = servers.CreateOpts{
-		Name:             "vm-" + uuid.New().String(),
+		Name:             vmName,
 		ImageRef:         stemcellCID.AsString(),
-		Networks:         c.getServerNetworks(networkConfig),
+		Networks:         c.getServerNetworks(networkConfig, port),
 		SecurityGroups:   networkConfig.SecurityGroups,
 		AvailabilityZone: availabilityZone,
 		FlavorRef:        flavor.ID,
+		UserData:         userDataJson,
 	}
 
 	createOpts = keypairs.CreateOptsExt{
@@ -255,10 +323,10 @@ func (c computeService) getKeyPairName(cloudProps properties.CreateVM, openstack
 	return keypair.Name, nil
 }
 
-func (c computeService) getServerNetworks(networkConfig properties.NetworkConfig) []servers.Network {
+func (c computeService) getServerNetworks(networkConfig properties.NetworkConfig, port *ports.Port) []servers.Network {
 	var serverNetworks []servers.Network
 	for _, network := range networkConfig.ManualNetworks {
-		serverNetworks = append(serverNetworks, servers.Network{UUID: network.CloudProps.NetID, FixedIP: network.IP})
+		serverNetworks = append(serverNetworks, servers.Network{UUID: network.CloudProps.NetID, Port: port.ID})
 	}
 
 	dynamicNetwork := networkConfig.DynamicNetwork
@@ -266,6 +334,10 @@ func (c computeService) getServerNetworks(networkConfig properties.NetworkConfig
 		serverNetworks = append(serverNetworks, servers.Network{UUID: dynamicNetwork.CloudProps.NetID})
 	}
 	return serverNetworks
+}
+
+func (c computeService) getVMName() string {
+	return "vm-" + uuid.New().String()
 }
 
 func (c computeService) waitForServerToBecomeActive(serverID string, timeout time.Duration) (*servers.Server, error) {

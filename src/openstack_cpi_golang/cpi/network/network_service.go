@@ -150,6 +150,8 @@ func (c networkService) CreatePort(networkConfig properties.NetworkConfig, cloud
 		return nil, fmt.Errorf("failed create network opts: %w", err)
 	}
 
+	c.logger.Info("network-service", fmt.Sprintf("Creating port with opts '%+v'", createOpts))
+
 	createdPort, err := c.networkingFacade.CreatePort(c.serviceClient, createOpts)
 	if err != nil {
 		c.logger.Warn("network-service",
@@ -195,10 +197,64 @@ func (c networkService) CreatePort(networkConfig properties.NetworkConfig, cloud
 	return createdPort, nil
 }
 
+func (c networkService) GetPorts(instanceId string, defaultNetwork properties.Network, retryable bool) ([]ports.Port, error) {
+	serviceClient := c.serviceClient
+	if retryable {
+		serviceClient.RetryFunc = utils.RetryOnError(c.logger)
+	}
+
+	listOpts := ports.ListOpts{
+		DeviceID: instanceId,
+	}
+
+	if defaultNetwork.CloudProps.NetID != "" {
+		listOpts.NetworkID = defaultNetwork.CloudProps.NetID
+	}
+
+	allPages, err := c.networkingFacade.ListPorts(serviceClient, listOpts)
+	if err != nil {
+		return []ports.Port{}, fmt.Errorf("failed to list ports: %w", err)
+	}
+
+	allPorts, err := c.networkingFacade.ExtractPorts(allPages)
+	if err != nil {
+		return []ports.Port{}, fmt.Errorf("failed to extract ports: %w", err)
+	}
+
+	return allPorts, nil
+}
+
+func (c networkService) DeletePorts(ports []ports.Port) error {
+	serviceClient := c.serviceClient
+	serviceClient.RetryFunc = utils.RetryOnError(c.logger)
+
+	for _, port := range ports {
+		err := c.networkingFacade.DeletePort(serviceClient, port.ID)
+		if err != nil {
+			if strings.Contains(err.Error(), "Resource not found") {
+				c.logger.Info("network_service", fmt.Sprintf("SKIPPING: Port deletion with id '%s' is not found", port.ID))
+				return nil
+			}
+			return fmt.Errorf("failed to delete port: %w", err)
+		}
+		c.logger.Info("network_service", fmt.Sprintf("Deleted port with id '%s'", port.ID))
+	}
+
+	return nil
+}
+
 func (c networkService) getPortCreationNetworkOpts(defaultNetwork properties.Network, cloudProperties properties.CreateVM) (ports.CreateOpts, error) {
+
+	subnetID, err := c.GetSubnetID(defaultNetwork.CloudProps.NetID, defaultNetwork.IP)
+	if err != nil {
+		return ports.CreateOpts{}, fmt.Errorf("failed to get subnet: %w", err)
+	}
+
 	createOpts := ports.CreateOpts{
 		NetworkID: defaultNetwork.CloudProps.NetID,
-		FixedIPs:  []ports.IP{{IPAddress: defaultNetwork.IP}},
+		FixedIPs: []ports.IP{
+			{SubnetID: subnetID, IPAddress: defaultNetwork.IP},
+		},
 	}
 
 	if cloudProperties.AllowedAddressPairs != "" {
@@ -259,52 +315,6 @@ func (c networkService) getFloatingIp(vipNetwork *properties.Network) (floatingi
 	}
 
 	return allFIPs[0], err
-}
-
-func (c networkService) GetPorts(instanceId string, defaultNetwork properties.Network, retryable bool) ([]ports.Port, error) {
-	serviceClient := c.serviceClient
-	if retryable {
-		serviceClient.RetryFunc = utils.RetryOnError(c.logger)
-	}
-
-	listOpts := ports.ListOpts{
-		DeviceID: instanceId,
-	}
-
-	if defaultNetwork.CloudProps.NetID != "" {
-		listOpts.NetworkID = defaultNetwork.CloudProps.NetID
-	}
-
-	allPages, err := c.networkingFacade.ListPorts(serviceClient, listOpts)
-	if err != nil {
-		return []ports.Port{}, fmt.Errorf("failed to list ports: %w", err)
-	}
-
-	allPorts, err := c.networkingFacade.ExtractPorts(allPages)
-	if err != nil {
-		return []ports.Port{}, fmt.Errorf("failed to extract ports: %w", err)
-	}
-
-	return allPorts, nil
-}
-
-func (c networkService) DeletePorts(ports []ports.Port) error {
-	serviceClient := c.serviceClient
-	serviceClient.RetryFunc = utils.RetryOnError(c.logger)
-
-	for _, port := range ports {
-		err := c.networkingFacade.DeletePort(serviceClient, port.ID)
-		if err != nil {
-			if strings.Contains(err.Error(), "Resource not found") {
-				c.logger.Info("network_service", fmt.Sprintf("SKIPPING: Port deletion with id '%s' is not found", port.ID))
-				return nil
-			}
-			return fmt.Errorf("failed to delete port: %w", err)
-		}
-		c.logger.Info("network_service", fmt.Sprintf("Deleted port with id '%s'", port.ID))
-	}
-
-	return nil
 }
 
 func (c networkService) associateFloatingIp(serviceClient *gophercloud.ServiceClient, floatingIpId string, portId string) error {

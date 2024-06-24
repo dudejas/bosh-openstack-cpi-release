@@ -134,6 +134,47 @@ var _ = Describe("Create VM", func() {
 				}
 			}`)
 		})
+
+		Mux.HandleFunc("/v2.0/ports", func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == "GET" {
+				w.Header().Add("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+
+				fmt.Fprintf(w, `{
+					"ports": [
+					]
+				}`)
+			}
+
+			if r.Method == "POST" {
+				w.Header().Add("Content-Type", "application/json")
+				w.WriteHeader(http.StatusCreated)
+
+				fmt.Fprintf(w, `{
+					"port": {
+						"device_id": "",
+						"device_owner": "",
+						"id": "65c0ee9f-d634-4522-8954-51021b570b0d",
+						"status": "ACTIVE"
+					}
+				}`)
+			}
+		})
+
+		Mux.HandleFunc("/v2.0/subnets", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Add("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+
+			fmt.Fprintf(w, `{
+				"subnets": [
+					{
+						"cidr": "10.0.11.0/24",
+						"id": "08eae331-0402-425a-923c-34f7cfe39c1b"
+					}
+				]
+			}`)
+
+		})
 	})
 
 	AfterEach(func() {
@@ -148,7 +189,8 @@ var _ = Describe("Create VM", func() {
 				"5bba0da5-dfb3-49d8-a005-d799507518f7",
 				{
 					"instance_type": "m1.tiny",
-					"key_name": "default_key_name"
+					"key_name": "default_key_name",
+					"availability_zones": ["z1"]
 				},
 				{
 					"bosh": {
@@ -179,7 +221,8 @@ var _ = Describe("Create VM", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 
 		stdOutWriter.Close()
-		Expect(<-outChannel).To(ContainSubstring(`"result":["f5dc173b-6804-445a-a6d8-c705dad5b5eb",{"bosh":{"type":"manual","ip":"10.0.11.16","netmask":"255.255.255.0","gateway":"10.0.11.1","dns":null,"default":["dns","gateway"],"routes":null,"cloud_properties":{"availability_zone":"z1",net_id":"fbe64fb7-b47c-4fd1-b158-9411d5c3ebf3","security_groups":["0c8a5d1a-8922-4d65-a0b2-dd78ab869e04"]}}}],"error":null`))
+		actual := <-outChannel
+		Expect(actual).To(ContainSubstring(`"result":["f5dc173b-6804-445a-a6d8-c705dad5b5eb",{"bosh":{"type":"manual","ip":"10.0.11.16","netmask":"255.255.255.0","gateway":"10.0.11.1","dns":null,"default":["dns","gateway"],"routes":null,"cloud_properties":{"net_id":"fbe64fb7-b47c-4fd1-b158-9411d5c3ebf3","security_groups":["0c8a5d1a-8922-4d65-a0b2-dd78ab869e04"]}}}],"error":null`))
 	})
 
 	It("fails if a wrong flavorName is given", func() {
@@ -189,7 +232,8 @@ var _ = Describe("Create VM", func() {
 				"a694d798-0b41-4255-9c8e-b282cd504a52",
 				"5bba0da5-dfb3-49d8-a005-d799507518f7",
 				{
-					"instance_type": "wrong_flavor"
+					"instance_type": "wrong_flavor",
+					"availability_zones": ["z1"]
 				},
 				{
 					"bosh": {
@@ -230,7 +274,8 @@ var _ = Describe("Create VM", func() {
 				"a694d798-0b41-4255-9c8e-b282cd504a52",
 				"5bba0da5-dfb3-49d8-a005-d799507518f7",
 				{
-					"instance_type": "m1.tiny"
+					"instance_type": "m1.tiny",
+					"availability_zones": ["z1"]
 				},
 				{
 					"bosh": {
@@ -276,7 +321,8 @@ var _ = Describe("Create VM", func() {
 				"a694d798-0b41-4255-9c8e-b282cd504a52",
 				"5bba0da5-dfb3-49d8-a005-d799507518f7",
 				{
-					"instance_type": "m1.tiny"
+					"instance_type": "m1.tiny",
+					"availability_zones": ["z1"]
 				},
 				{
 					"bosh": {

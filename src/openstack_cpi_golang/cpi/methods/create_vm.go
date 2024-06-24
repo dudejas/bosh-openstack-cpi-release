@@ -11,6 +11,7 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/pools"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 	"strconv"
 )
 
@@ -90,14 +91,15 @@ func (m CreateVMMethod) CreateVMV2(
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to create network config: %w", err)
 	}
 
+	var port *ports.Port
 	if networkConfig.DefaultNetwork.Type == "manual" {
-		_, err = networkService.CreatePort(networkConfig, cloudProps)
+		port, err = networkService.CreatePort(networkConfig, cloudProps)
 		if err != nil {
 			return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to create port: %w", err)
 		}
 	}
 
-	server, err := computeService.CreateServer(stemcellCID, cloudProps, networkConfig, m.config)
+	server, err := computeService.CreateServer(stemcellCID, cloudProps, networkConfig, port, agentID, env, m.config)
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to create server: %w", err)
 	}
@@ -116,7 +118,12 @@ func (m CreateVMMethod) CreateVMV2(
 
 	computeService.SetMetadata(*server, m.getServerTags(poolMembers))
 
-	return apiv1.NewVMCID(server.ID), networks, nil
+	networkSpec, err := networkConfig.AsNetworkSpec()
+	if err != nil {
+		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to get network spec: %w", err)
+	}
+
+	return apiv1.NewVMCID(server.ID), networkSpec, nil
 }
 
 func (m CreateVMMethod) configureLoadbalancerPools(
@@ -132,6 +139,7 @@ func (m CreateVMMethod) configureLoadbalancerPools(
 		if err != nil {
 			return []pools.Member{}, fmt.Errorf("failed to get pool ID of pool '%s': %w", pool.Name, err)
 		}
+		m.logger.Info("create_vm_method", fmt.Sprintf("Resolved pool id '%s' for pool '%s'", poolID, pool.Name))
 
 		ip := networkConfig.DefaultNetwork.IP
 
@@ -147,7 +155,10 @@ func (m CreateVMMethod) configureLoadbalancerPools(
 			return []pools.Member{}, fmt.Errorf("failed to create pool membership of IP '%s' in pool '%s': %w", ip, pool.Name, err)
 		}
 
+		poolMember.PoolID = poolID
 		poolMemberships = append(poolMemberships, *poolMember)
+
+		m.logger.Info("create_vm_method", fmt.Sprintf("Created pool member '%+v' in pool '%s'", *poolMember, pool.Name))
 	}
 	return poolMemberships, nil
 }
