@@ -17,7 +17,12 @@ type DeleteVMMethod struct {
 	logger                utils.Logger
 }
 
-func NewDeleteVMMethod(networkServiceBuilder network.NetworkServiceBuilder, computeServiceBuilder compute.ComputeServiceBuilder, config config.OpenstackConfig, logger utils.Logger) DeleteVMMethod {
+func NewDeleteVMMethod(
+	networkServiceBuilder network.NetworkServiceBuilder,
+	computeServiceBuilder compute.ComputeServiceBuilder,
+	config config.OpenstackConfig,
+	logger utils.Logger,
+) DeleteVMMethod {
 	return DeleteVMMethod{
 		networkServiceBuilder: networkServiceBuilder,
 		computeServiceBuilder: computeServiceBuilder,

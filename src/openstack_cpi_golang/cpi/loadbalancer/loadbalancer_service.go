@@ -16,6 +16,8 @@ type LoadbalancerService interface {
 	GetPoolID(poolName string) (string, error)
 
 	CreatePoolMember(poolID string, ip string, pool properties.LoadbalancerPool, subnetID string, timeout int) (*pools.Member, error)
+
+	DeletePoolMember(poolID string, memberID string) error
 }
 
 type loadbalancerService struct {
@@ -84,6 +86,17 @@ func (l loadbalancerService) CreatePoolMember(poolID string, ip string, pool pro
 	}
 
 	return member, nil
+}
+
+func (l loadbalancerService) DeletePoolMember(poolID string, memberID string) error {
+	l.serviceClient.RetryFunc = utils.RetryOnError(l.logger)
+
+	err := l.loadbalancerFacade.DeletePoolMember(l.serviceClient, poolID, memberID)
+	if err != nil {
+		return fmt.Errorf("failed to delete pool member: %w", err)
+	}
+
+	return nil
 }
 
 func (l loadbalancerService) waitForPoolMemberToBecomeActive(poolID string, memberID string, timeout time.Duration) (*pools.Member, error) {

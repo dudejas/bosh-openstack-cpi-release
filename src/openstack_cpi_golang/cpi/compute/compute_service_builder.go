@@ -3,6 +3,7 @@ package compute
 import (
 	"fmt"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/loadbalancer"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/openstack"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 )
@@ -39,6 +40,7 @@ func (b computeServiceBuilder) Build() (ComputeService, error) {
 		NewFlavorResolver(serviceClient, computeFacade),
 		NewVolumeConfigurator(),
 		NewAvailabilityZoneProvider(),
+		loadbalancer.NewLoadbalancerServiceBuilder(b.openstackService, b.openstackConfig, b.logger),
 		b.logger,
 	), nil
 }

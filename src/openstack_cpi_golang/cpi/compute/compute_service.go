@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/loadbalancer"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/google/uuid"
@@ -39,12 +40,13 @@ type ComputeService interface {
 }
 
 type computeService struct {
-	serviceClient            *gophercloud.ServiceClient
-	computeFacade            ComputeFacade
-	flavorResolver           FlavorResolver
-	volumeConfigurator       VolumeConfigurator
-	availabilityZoneProvider AvailabilityZoneProvider
-	logger                   utils.Logger
+	serviceClient              *gophercloud.ServiceClient
+	computeFacade              ComputeFacade
+	flavorResolver             FlavorResolver
+	volumeConfigurator         VolumeConfigurator
+	availabilityZoneProvider   AvailabilityZoneProvider
+	loadbalancerServiceBuilder loadbalancer.LoadbalancerServiceBuilder
+	logger                     utils.Logger
 }
 
 func NewComputeService(
@@ -53,15 +55,17 @@ func NewComputeService(
 	flavorResolver FlavorResolver,
 	volumeConfigurator VolumeConfigurator,
 	availabilityZoneProvider AvailabilityZoneProvider,
+	loadbalancerServiceBuilder loadbalancer.LoadbalancerServiceBuilder,
 	logger utils.Logger,
 ) computeService {
 	return computeService{
-		serviceClient:            serviceClient,
-		computeFacade:            computeFacade,
-		flavorResolver:           flavorResolver,
-		volumeConfigurator:       volumeConfigurator,
-		availabilityZoneProvider: availabilityZoneProvider,
-		logger:                   logger,
+		serviceClient:              serviceClient,
+		computeFacade:              computeFacade,
+		flavorResolver:             flavorResolver,
+		volumeConfigurator:         volumeConfigurator,
+		availabilityZoneProvider:   availabilityZoneProvider,
+		loadbalancerServiceBuilder: loadbalancerServiceBuilder,
+		logger:                     logger,
 	}
 }
 
@@ -115,36 +119,6 @@ func (c computeService) CreateServer(
 	return server, nil
 }
 
-func (c computeService) getServerCreateOpts(
-	availabilityZone string,
-	stemcellCID apiv1.StemcellCID,
-	networkConfig properties.NetworkConfig,
-	flavor flavors.Flavor, keyname string,
-	blockDevices []bootfromvolume.BlockDevice,
-) servers.CreateOptsBuilder {
-	var createOpts servers.CreateOptsBuilder
-	createOpts = servers.CreateOpts{
-		Name:             "vm-" + uuid.New().String(),
-		ImageRef:         stemcellCID.AsString(),
-		Networks:         c.getServerNetworks(networkConfig),
-		SecurityGroups:   networkConfig.SecurityGroups,
-		AvailabilityZone: availabilityZone,
-		FlavorRef:        flavor.ID,
-	}
-
-	createOpts = keypairs.CreateOptsExt{
-		CreateOptsBuilder: createOpts,
-		KeyName:           keyname,
-	}
-
-	if len(blockDevices) > 0 {
-		createOpts = bootfromvolume.CreateOptsExt{
-			CreateOptsBuilder: createOpts,
-			BlockDevice:       blockDevices,
-		}
-	}
-	return createOpts
-}
 func (c computeService) DeleteServer(
 	serverID string,
 	config config.OpenstackConfig,
@@ -162,11 +136,29 @@ func (c computeService) DeleteServer(
 
 	serverTags, err := c.computeFacade.GetServerTags(serviceClient, serverID)
 	if err != nil {
-		return fmt.Errorf("failed to retrieve server tags: %w", err)
+		if strings.Contains(err.Error(), "Resource not found") {
+			serverTags = []string{}
+		} else {
+			return fmt.Errorf("failed to retrieve server tags: %w", err)
+		}
 	}
 
 	if len(serverTags) > 0 {
-		// clean membership (remove vm) from pool
+		loadbalancerService, err := c.loadbalancerServiceBuilder.Build()
+		if err != nil {
+			return fmt.Errorf("failed to create loadbalancer service: %w", err)
+		}
+
+		for _, tag := range serverTags {
+			if strings.HasPrefix(tag, "lbaas_pool_") {
+				tag = strings.TrimPrefix(tag, "lbaas_pool_")
+				parts := strings.Split(tag, "/")
+				err = loadbalancerService.DeletePoolMember(parts[0], parts[1])
+				if err != nil {
+					return fmt.Errorf("failed to delete pool member: %w", err)
+				}
+			}
+		}
 	}
 
 	err = c.computeFacade.DeleteServer(serviceClient, serverID)
@@ -200,6 +192,37 @@ func (c computeService) SetMetadata(server servers.Server, tags properties.Serve
 	}
 
 	return nil
+}
+
+func (c computeService) getServerCreateOpts(
+	availabilityZone string,
+	stemcellCID apiv1.StemcellCID,
+	networkConfig properties.NetworkConfig,
+	flavor flavors.Flavor, keyname string,
+	blockDevices []bootfromvolume.BlockDevice,
+) servers.CreateOptsBuilder {
+	var createOpts servers.CreateOptsBuilder
+	createOpts = servers.CreateOpts{
+		Name:             "vm-" + uuid.New().String(),
+		ImageRef:         stemcellCID.AsString(),
+		Networks:         c.getServerNetworks(networkConfig),
+		SecurityGroups:   networkConfig.SecurityGroups,
+		AvailabilityZone: availabilityZone,
+		FlavorRef:        flavor.ID,
+	}
+
+	createOpts = keypairs.CreateOptsExt{
+		CreateOptsBuilder: createOpts,
+		KeyName:           keyname,
+	}
+
+	if len(blockDevices) > 0 {
+		createOpts = bootfromvolume.CreateOptsExt{
+			CreateOptsBuilder: createOpts,
+			BlockDevice:       blockDevices,
+		}
+	}
+	return createOpts
 }
 
 func (c computeService) getKeyPairName(cloudProps properties.CreateVM, openstackConfig config.OpenstackConfig) (string, error) {
@@ -274,8 +297,10 @@ func (c computeService) waitForServerToBecomeDeleted(serverID string, timeout ti
 			return fmt.Errorf("timeout while waiting for server to become deleted")
 		default:
 			server, err := c.computeFacade.GetServer(serviceClient, serverID)
-			// @TODO: check if we should Skip instead of returning an error
 			if err != nil {
+				if strings.Contains(err.Error(), "Resource not found") {
+					return nil
+				}
 				return fmt.Errorf("failed to retrieve server information: %w", err)
 			}
 

@@ -26,6 +26,19 @@ type FakeLoadbalancerFacade struct {
 		result1 *pools.Member
 		result2 error
 	}
+	DeletePoolMemberStub        func(*gophercloud.ServiceClient, string, string) error
+	deletePoolMemberMutex       sync.RWMutex
+	deletePoolMemberArgsForCall []struct {
+		arg1 *gophercloud.ServiceClient
+		arg2 string
+		arg3 string
+	}
+	deletePoolMemberReturns struct {
+		result1 error
+	}
+	deletePoolMemberReturnsOnCall map[int]struct {
+		result1 error
+	}
 	ExtractPoolsStub        func(pagination.Page) ([]pools.Pool, error)
 	extractPoolsMutex       sync.RWMutex
 	extractPoolsArgsForCall []struct {
@@ -136,6 +149,69 @@ func (fake *FakeLoadbalancerFacade) CreatePoolMemberReturnsOnCall(i int, result1
 		result1 *pools.Member
 		result2 error
 	}{result1, result2}
+}
+
+func (fake *FakeLoadbalancerFacade) DeletePoolMember(arg1 *gophercloud.ServiceClient, arg2 string, arg3 string) error {
+	fake.deletePoolMemberMutex.Lock()
+	ret, specificReturn := fake.deletePoolMemberReturnsOnCall[len(fake.deletePoolMemberArgsForCall)]
+	fake.deletePoolMemberArgsForCall = append(fake.deletePoolMemberArgsForCall, struct {
+		arg1 *gophercloud.ServiceClient
+		arg2 string
+		arg3 string
+	}{arg1, arg2, arg3})
+	stub := fake.DeletePoolMemberStub
+	fakeReturns := fake.deletePoolMemberReturns
+	fake.recordInvocation("DeletePoolMember", []interface{}{arg1, arg2, arg3})
+	fake.deletePoolMemberMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeLoadbalancerFacade) DeletePoolMemberCallCount() int {
+	fake.deletePoolMemberMutex.RLock()
+	defer fake.deletePoolMemberMutex.RUnlock()
+	return len(fake.deletePoolMemberArgsForCall)
+}
+
+func (fake *FakeLoadbalancerFacade) DeletePoolMemberCalls(stub func(*gophercloud.ServiceClient, string, string) error) {
+	fake.deletePoolMemberMutex.Lock()
+	defer fake.deletePoolMemberMutex.Unlock()
+	fake.DeletePoolMemberStub = stub
+}
+
+func (fake *FakeLoadbalancerFacade) DeletePoolMemberArgsForCall(i int) (*gophercloud.ServiceClient, string, string) {
+	fake.deletePoolMemberMutex.RLock()
+	defer fake.deletePoolMemberMutex.RUnlock()
+	argsForCall := fake.deletePoolMemberArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *FakeLoadbalancerFacade) DeletePoolMemberReturns(result1 error) {
+	fake.deletePoolMemberMutex.Lock()
+	defer fake.deletePoolMemberMutex.Unlock()
+	fake.DeletePoolMemberStub = nil
+	fake.deletePoolMemberReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeLoadbalancerFacade) DeletePoolMemberReturnsOnCall(i int, result1 error) {
+	fake.deletePoolMemberMutex.Lock()
+	defer fake.deletePoolMemberMutex.Unlock()
+	fake.DeletePoolMemberStub = nil
+	if fake.deletePoolMemberReturnsOnCall == nil {
+		fake.deletePoolMemberReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.deletePoolMemberReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
 }
 
 func (fake *FakeLoadbalancerFacade) ExtractPools(arg1 pagination.Page) ([]pools.Pool, error) {
@@ -338,6 +414,8 @@ func (fake *FakeLoadbalancerFacade) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.createPoolMemberMutex.RLock()
 	defer fake.createPoolMemberMutex.RUnlock()
+	fake.deletePoolMemberMutex.RLock()
+	defer fake.deletePoolMemberMutex.RUnlock()
 	fake.extractPoolsMutex.RLock()
 	defer fake.extractPoolsMutex.RUnlock()
 	fake.getPoolMemberMutex.RLock()

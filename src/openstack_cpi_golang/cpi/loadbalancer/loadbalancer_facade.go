@@ -15,6 +15,9 @@ type LoadbalancerFacade interface {
 	CreatePoolMember(client *gophercloud.ServiceClient, poolID string, opts pools.CreateMemberOpts) (*pools.Member, error)
 
 	GetPoolMember(client *gophercloud.ServiceClient, poolID string, memberID string) (*pools.Member, error)
+
+	//https://pkg.go.dev/github.com/gophercloud/gophercloud/v2/openstack/loadbalancer/v2/pools
+	DeletePoolMember(client *gophercloud.ServiceClient, poolID string, memberID string) error
 }
 
 type loadbalancerFacade struct {
@@ -38,4 +41,8 @@ func (l loadbalancerFacade) CreatePoolMember(client *gophercloud.ServiceClient, 
 
 func (l loadbalancerFacade) GetPoolMember(client *gophercloud.ServiceClient, poolID string, memberID string) (*pools.Member, error) {
 	return pools.GetMember(client, poolID, memberID).Extract()
+}
+
+func (l loadbalancerFacade) DeletePoolMember(client *gophercloud.ServiceClient, poolID string, memberID string) error {
+	return pools.DeleteMember(client, poolID, memberID).ExtractErr()
 }

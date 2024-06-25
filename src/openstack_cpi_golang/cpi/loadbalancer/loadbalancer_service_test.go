@@ -208,4 +208,31 @@ var _ = Describe("LoadbalancerService", func() {
 			Expect(poolMember.ID).To(Equal("the-member-id"))
 		})
 	})
+
+	Context("DeletePoolMember", func() {
+
+		BeforeEach(func() {
+			loadbalancerFacade.ListPoolsReturns(poolsPage, nil)
+			loadbalancerFacade.ExtractPoolsReturns([]pools.Pool{{Name: "pool-name", ID: "pool-id"}}, nil)
+		})
+
+		It("deletes pool member", func() {
+			loadbalancer.NewLoadbalancerService(&serviceClient, &loadbalancerFacade, &logger).
+				DeletePoolMember("pool-name", "member-id")
+
+			test, _, _ := loadbalancerFacade.DeletePoolMemberArgsForCall(0)
+			Expect(test).To(Equal(&serviceClient))
+			Expect(test.RetryFunc).ToNot(Equal(nil))
+		})
+
+		It("returns an error if deleting pool member fails", func() {
+			loadbalancerFacade.DeletePoolMemberReturns(errors.New("boom"))
+
+			err := loadbalancer.NewLoadbalancerService(&serviceClient, &loadbalancerFacade, &logger).
+				DeletePoolMember("pool-name", "member-id")
+
+			Expect(err.Error()).To(Equal("failed to delete pool member: boom"))
+		})
+	})
+
 })
