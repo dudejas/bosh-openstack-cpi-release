@@ -296,10 +296,12 @@ func (c networkService) DeletePorts(ports []ports.Port) error {
 		err := c.networkingFacade.DeletePort(serviceClient, port.ID)
 		if err != nil {
 			if strings.Contains(err.Error(), "Resource not found") {
+				c.logger.Info("network_service", fmt.Sprintf("SKIPPING: Port with id '%s' is not found", port.ID))
 				return nil
 			}
 			return fmt.Errorf("failed to delete port: %w", err)
 		}
+		c.logger.Info("network_service", fmt.Sprintf("Deleted port with id '%s'", port.ID))
 	}
 
 	return nil

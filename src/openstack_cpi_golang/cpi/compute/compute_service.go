@@ -129,40 +129,45 @@ func (c computeService) DeleteServer(
 	_, err := c.computeFacade.GetServer(serviceClient, serverID)
 	if err != nil {
 		if strings.Contains(err.Error(), "Resource not found") {
+			c.logger.Info("compute_service", fmt.Sprintf("SKIPPING: Server with id '%s' is not found", serverID))
 			return nil
 		}
 		return fmt.Errorf("failed to retrieve server information: %w", err)
 	}
 
-	serverTags, err := c.computeFacade.GetServerTags(serviceClient, serverID)
+	serverMetadata, err := c.computeFacade.GetServerMetadata(serviceClient, serverID)
 	if err != nil {
 		if strings.Contains(err.Error(), "Resource not found") {
-			serverTags = []string{}
+			serverMetadata = map[string]string{}
 		} else {
-			return fmt.Errorf("failed to retrieve server tags: %w", err)
+			return fmt.Errorf("failed to retrieve server metadata: %w", err)
 		}
 	}
 
-	if len(serverTags) > 0 {
+	if len(serverMetadata) > 0 {
 		loadbalancerService, err := c.loadbalancerServiceBuilder.Build()
 		if err != nil {
 			return fmt.Errorf("failed to create loadbalancer service: %w", err)
 		}
 
-		for _, tag := range serverTags {
-			if strings.HasPrefix(tag, "lbaas_pool_") {
-				tag = strings.TrimPrefix(tag, "lbaas_pool_")
-				parts := strings.Split(tag, "/")
+		for key, value := range serverMetadata {
+			if strings.HasPrefix(key, "lbaas_pool_") {
+				parts := strings.Split(value, "/")
 				err = loadbalancerService.DeletePoolMember(parts[0], parts[1])
 				if err != nil {
-					return fmt.Errorf("failed to delete pool member: %w", err)
+					if strings.Contains(err.Error(), "Resource not found") {
+						continue
+					} else {
+						return fmt.Errorf("failed to delete pool member: %w", err)
+					}
 				}
+				c.logger.Info("compute_service", fmt.Sprintf("Deleted pool member with id '%s' from pool '%s'", parts[1], parts[0]))
 			}
 		}
 	}
 
 	err = c.computeFacade.DeleteServer(serviceClient, serverID)
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "Resource not found") {
 		return fmt.Errorf("failed to delete server: %w", err)
 	}
 
@@ -170,6 +175,8 @@ func (c computeService) DeleteServer(
 	if err != nil {
 		return fmt.Errorf("failed while waiting on the server deletion: %w", err)
 	}
+
+	c.logger.Info("compute_service", fmt.Sprintf("Deleted server with id '%s'", serverID))
 
 	// deleting registry settings - Seems that it is not needed for V2
 	// https://bosh.io/docs/cpi-api-v2/#reference-table-based-on-each-component-version

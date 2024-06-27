@@ -42,14 +42,15 @@ func (a DeleteVMMethod) DeleteVM(cid apiv1.VMCID) error {
 		return fmt.Errorf("failed to create network service: %w", err)
 	}
 
-	err = computeService.DeleteServer(cid.AsString(), a.config)
-	if err != nil {
-		return fmt.Errorf("failed to delete server: %w", err)
-	}
-
+	// Get ports before deleting the server so that it is still assigned to the server
 	ports, err := networkService.GetPorts(cid.AsString(), properties.Network{}, true)
 	if err != nil {
 		return fmt.Errorf("failed to get ports: %w", err)
+	}
+
+	err = computeService.DeleteServer(cid.AsString(), a.config)
+	if err != nil {
+		return fmt.Errorf("failed to delete server: %w", err)
 	}
 
 	err = networkService.DeletePorts(ports)

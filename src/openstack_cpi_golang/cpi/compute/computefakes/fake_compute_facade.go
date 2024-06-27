@@ -81,18 +81,18 @@ type FakeComputeFacade struct {
 		result1 *servers.Server
 		result2 error
 	}
-	GetServerTagsStub        func(*gophercloud.ServiceClient, string) ([]string, error)
-	getServerTagsMutex       sync.RWMutex
-	getServerTagsArgsForCall []struct {
+	GetServerMetadataStub        func(*gophercloud.ServiceClient, string) (map[string]string, error)
+	getServerMetadataMutex       sync.RWMutex
+	getServerMetadataArgsForCall []struct {
 		arg1 *gophercloud.ServiceClient
 		arg2 string
 	}
-	getServerTagsReturns struct {
-		result1 []string
+	getServerMetadataReturns struct {
+		result1 map[string]string
 		result2 error
 	}
-	getServerTagsReturnsOnCall map[int]struct {
-		result1 []string
+	getServerMetadataReturnsOnCall map[int]struct {
+		result1 map[string]string
 		result2 error
 	}
 	ListFlavorsStub        func(*gophercloud.ServiceClient, flavors.ListOpts) (pagination.Page, error)
@@ -450,17 +450,17 @@ func (fake *FakeComputeFacade) GetServerReturnsOnCall(i int, result1 *servers.Se
 	}{result1, result2}
 }
 
-func (fake *FakeComputeFacade) GetServerTags(arg1 *gophercloud.ServiceClient, arg2 string) ([]string, error) {
-	fake.getServerTagsMutex.Lock()
-	ret, specificReturn := fake.getServerTagsReturnsOnCall[len(fake.getServerTagsArgsForCall)]
-	fake.getServerTagsArgsForCall = append(fake.getServerTagsArgsForCall, struct {
+func (fake *FakeComputeFacade) GetServerMetadata(arg1 *gophercloud.ServiceClient, arg2 string) (map[string]string, error) {
+	fake.getServerMetadataMutex.Lock()
+	ret, specificReturn := fake.getServerMetadataReturnsOnCall[len(fake.getServerMetadataArgsForCall)]
+	fake.getServerMetadataArgsForCall = append(fake.getServerMetadataArgsForCall, struct {
 		arg1 *gophercloud.ServiceClient
 		arg2 string
 	}{arg1, arg2})
-	stub := fake.GetServerTagsStub
-	fakeReturns := fake.getServerTagsReturns
-	fake.recordInvocation("GetServerTags", []interface{}{arg1, arg2})
-	fake.getServerTagsMutex.Unlock()
+	stub := fake.GetServerMetadataStub
+	fakeReturns := fake.getServerMetadataReturns
+	fake.recordInvocation("GetServerMetadata", []interface{}{arg1, arg2})
+	fake.getServerMetadataMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2)
 	}
@@ -470,47 +470,47 @@ func (fake *FakeComputeFacade) GetServerTags(arg1 *gophercloud.ServiceClient, ar
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *FakeComputeFacade) GetServerTagsCallCount() int {
-	fake.getServerTagsMutex.RLock()
-	defer fake.getServerTagsMutex.RUnlock()
-	return len(fake.getServerTagsArgsForCall)
+func (fake *FakeComputeFacade) GetServerMetadataCallCount() int {
+	fake.getServerMetadataMutex.RLock()
+	defer fake.getServerMetadataMutex.RUnlock()
+	return len(fake.getServerMetadataArgsForCall)
 }
 
-func (fake *FakeComputeFacade) GetServerTagsCalls(stub func(*gophercloud.ServiceClient, string) ([]string, error)) {
-	fake.getServerTagsMutex.Lock()
-	defer fake.getServerTagsMutex.Unlock()
-	fake.GetServerTagsStub = stub
+func (fake *FakeComputeFacade) GetServerMetadataCalls(stub func(*gophercloud.ServiceClient, string) (map[string]string, error)) {
+	fake.getServerMetadataMutex.Lock()
+	defer fake.getServerMetadataMutex.Unlock()
+	fake.GetServerMetadataStub = stub
 }
 
-func (fake *FakeComputeFacade) GetServerTagsArgsForCall(i int) (*gophercloud.ServiceClient, string) {
-	fake.getServerTagsMutex.RLock()
-	defer fake.getServerTagsMutex.RUnlock()
-	argsForCall := fake.getServerTagsArgsForCall[i]
+func (fake *FakeComputeFacade) GetServerMetadataArgsForCall(i int) (*gophercloud.ServiceClient, string) {
+	fake.getServerMetadataMutex.RLock()
+	defer fake.getServerMetadataMutex.RUnlock()
+	argsForCall := fake.getServerMetadataArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeComputeFacade) GetServerTagsReturns(result1 []string, result2 error) {
-	fake.getServerTagsMutex.Lock()
-	defer fake.getServerTagsMutex.Unlock()
-	fake.GetServerTagsStub = nil
-	fake.getServerTagsReturns = struct {
-		result1 []string
+func (fake *FakeComputeFacade) GetServerMetadataReturns(result1 map[string]string, result2 error) {
+	fake.getServerMetadataMutex.Lock()
+	defer fake.getServerMetadataMutex.Unlock()
+	fake.GetServerMetadataStub = nil
+	fake.getServerMetadataReturns = struct {
+		result1 map[string]string
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeComputeFacade) GetServerTagsReturnsOnCall(i int, result1 []string, result2 error) {
-	fake.getServerTagsMutex.Lock()
-	defer fake.getServerTagsMutex.Unlock()
-	fake.GetServerTagsStub = nil
-	if fake.getServerTagsReturnsOnCall == nil {
-		fake.getServerTagsReturnsOnCall = make(map[int]struct {
-			result1 []string
+func (fake *FakeComputeFacade) GetServerMetadataReturnsOnCall(i int, result1 map[string]string, result2 error) {
+	fake.getServerMetadataMutex.Lock()
+	defer fake.getServerMetadataMutex.Unlock()
+	fake.GetServerMetadataStub = nil
+	if fake.getServerMetadataReturnsOnCall == nil {
+		fake.getServerMetadataReturnsOnCall = make(map[int]struct {
+			result1 map[string]string
 			result2 error
 		})
 	}
-	fake.getServerTagsReturnsOnCall[i] = struct {
-		result1 []string
+	fake.getServerMetadataReturnsOnCall[i] = struct {
+		result1 map[string]string
 		result2 error
 	}{result1, result2}
 }
@@ -659,8 +659,8 @@ func (fake *FakeComputeFacade) Invocations() map[string][][]interface{} {
 	defer fake.getOSKeyPairMutex.RUnlock()
 	fake.getServerMutex.RLock()
 	defer fake.getServerMutex.RUnlock()
-	fake.getServerTagsMutex.RLock()
-	defer fake.getServerTagsMutex.RUnlock()
+	fake.getServerMetadataMutex.RLock()
+	defer fake.getServerMetadataMutex.RUnlock()
 	fake.listFlavorsMutex.RLock()
 	defer fake.listFlavorsMutex.RUnlock()
 	fake.setServerMetadataMutex.RLock()

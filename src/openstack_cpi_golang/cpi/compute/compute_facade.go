@@ -3,7 +3,6 @@ package compute
 import (
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
-	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/tags"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/pagination"
@@ -17,13 +16,13 @@ type ComputeFacade interface {
 
 	GetServer(client *gophercloud.ServiceClient, serverID string) (*servers.Server, error)
 
-	GetServerTags(client *gophercloud.ServiceClient, serverID string) ([]string, error)
-
 	ListFlavors(client *gophercloud.ServiceClient, opts flavors.ListOpts) (pagination.Page, error)
 
 	ExtractFlavors(page pagination.Page) ([]flavors.Flavor, error)
 
 	GetOSKeyPair(client *gophercloud.ServiceClient, keyPairName string, ops keypairs.GetOpts) (*keypairs.KeyPair, error)
+
+	GetServerMetadata(client *gophercloud.ServiceClient, serverID string) (map[string]string, error)
 
 	SetServerMetadata(client *gophercloud.ServiceClient, serverID string, opts servers.MetadatumOpts) (map[string]string, error)
 }
@@ -47,10 +46,6 @@ func (c computeFacade) GetServer(client *gophercloud.ServiceClient, serverID str
 	return servers.Get(client, serverID).Extract()
 }
 
-func (c computeFacade) GetServerTags(client *gophercloud.ServiceClient, serverID string) ([]string, error) {
-	return tags.List(client, serverID).Extract()
-}
-
 func (c computeFacade) ListFlavors(client *gophercloud.ServiceClient, opts flavors.ListOpts) (pagination.Page, error) {
 	return flavors.ListDetail(client, opts).AllPages()
 }
@@ -61,6 +56,10 @@ func (c computeFacade) ExtractFlavors(page pagination.Page) ([]flavors.Flavor, e
 
 func (c computeFacade) GetOSKeyPair(client *gophercloud.ServiceClient, keyPairName string, opts keypairs.GetOpts) (*keypairs.KeyPair, error) {
 	return keypairs.Get(client, keyPairName, opts).Extract()
+}
+
+func (c computeFacade) GetServerMetadata(client *gophercloud.ServiceClient, serverID string) (map[string]string, error) {
+	return servers.Metadata(client, serverID).Extract()
 }
 
 func (c computeFacade) SetServerMetadata(client *gophercloud.ServiceClient, serverID string, opts servers.MetadatumOpts) (map[string]string, error) {

@@ -362,9 +362,13 @@ var _ = Describe("ComputeService", func() {
 
 	Context("DeleteServer", func() {
 		BeforeEach(func() {
+			serverMetadata := make(map[string]string)
+			serverMetadata["tag1"] = "tag1Value"
+			serverMetadata["lbaas_pool_1"] = "poolID/memberID"
+
 			computeFacade.GetServerReturnsOnCall(0, &servers.Server{ID: "123-456", Status: "ACTIVE"}, nil)
 			computeFacade.GetServerReturnsOnCall(1, &servers.Server{ID: "123-456", Status: "DELETED"}, nil)
-			computeFacade.GetServerTagsReturns([]string{"tag1", "lbaas_pool_poolID/memberID"}, nil)
+			computeFacade.GetServerMetadataReturns(serverMetadata, nil)
 			loadbalancerService.DeletePoolMemberReturns(nil)
 			computeFacade.DeleteServerReturns(nil)
 		})
@@ -415,12 +419,12 @@ var _ = Describe("ComputeService", func() {
 			Expect(poolID).To(Equal("poolID"))
 			Expect(memberID).To(Equal("memberID"))
 			Expect(err).ToNot(HaveOccurred())
-			Expect(computeFacade.GetServerTagsCallCount()).To(Equal(1))
+			Expect(computeFacade.GetServerMetadataCallCount()).To(Equal(1))
 			Expect(loadbalancerService.DeletePoolMemberCallCount()).To(Equal(1))
 		})
 
 		It("does not remove pool memberships if no server tags are found", func() {
-			computeFacade.GetServerTagsReturns(nil, errors.New("Resource not found"))
+			computeFacade.GetServerMetadataReturns(nil, errors.New("Resource not found"))
 
 			err := computeService.DeleteServer(
 				"123-456",
@@ -432,8 +436,8 @@ var _ = Describe("ComputeService", func() {
 			Expect(computeFacade.DeleteServerCallCount()).To(Equal(1))
 		})
 
-		It("returns an error if tags retrieval fail", func() {
-			computeFacade.GetServerTagsReturns(nil, errors.New("boom"))
+		It("returns an error if metadata retrieval fail", func() {
+			computeFacade.GetServerMetadataReturns(nil, errors.New("boom"))
 
 			err := computeService.DeleteServer(
 				"123-456",
@@ -441,11 +445,10 @@ var _ = Describe("ComputeService", func() {
 			)
 
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("failed to retrieve server tags: boom"))
+			Expect(err.Error()).To(Equal("failed to retrieve server metadata: boom"))
 		})
 
 		It("returns an error if building loadbalancerService fails", func() {
-			computeFacade.GetServerTagsReturns([]string{"serverTag"}, nil)
 			loadbalancerServiceBuilder.BuildReturns(nil, errors.New("boom"))
 
 			err := computeService.DeleteServer(

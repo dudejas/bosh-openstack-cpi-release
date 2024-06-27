@@ -86,13 +86,15 @@ var _ = Describe("Delete VM", func() {
 				fmt.Fprintf(w, `{}`)
 
 			case http.MethodGet:
-				deviceID := r.URL.Query().Get("device_id")
-				if deviceID != "1" && deviceID != "2" && deviceID != "wrong-vm-id" {
-					return
-				}
-
 				w.Header().Add("Content-Type", "application/json")
 				w.WriteHeader(http.StatusOK)
+
+				deviceID := r.URL.Query().Get("device_id")
+				if deviceID != "1" && deviceID != "2" && deviceID != "wrong-vm-id" {
+					fmt.Fprintf(w, `{
+						"ports": []
+					}`)
+				}
 
 				if deviceID == "wrong-vm-id" {
 					fmt.Fprintf(w, `{"ports": []}`)
@@ -154,6 +156,21 @@ var _ = Describe("Delete VM", func() {
 			}
 		})
 
+		Mux.HandleFunc("/v2.1/servers/1/metadata", func(w http.ResponseWriter, r *http.Request) {
+			switch r.Method {
+			case http.MethodGet:
+				w.WriteHeader(http.StatusOK)
+
+				fmt.Fprintf(w, `{
+					"metadata": {
+						"foo": "foo_value",
+						"lbaas_pool_1": "pool_id_1/member_id_1",
+						"lbaas_pool_2": "pool_id_2/member_id_not_existing"
+					}
+				}`)
+			}
+		})
+
 		Mux.HandleFunc("/v2.1/servers/2", func(w http.ResponseWriter, r *http.Request) {
 			switch r.Method {
 			case http.MethodDelete:
@@ -185,10 +202,108 @@ var _ = Describe("Delete VM", func() {
 			}
 		})
 
+		Mux.HandleFunc("/v2.1/servers/3", func(w http.ResponseWriter, r *http.Request) {
+			switch r.Method {
+			case http.MethodDelete:
+				w.WriteHeader(http.StatusNoContent)
+				fmt.Fprintf(w, `{}`)
+
+			case http.MethodGet:
+				getServerCount++
+				switchCase := getServerCount % 2
+
+				w.WriteHeader(http.StatusOK)
+
+				switch switchCase {
+				case 1:
+					fmt.Fprintf(w, `{
+						"server": {
+							"id": "1",
+							"status": "ACTIVE"
+						}
+					}`)
+				case 0:
+					fmt.Fprintf(w, `{
+						"server": {
+							"id": "1",
+							"status": "DELETED"
+						}
+					}`)
+				}
+			}
+		})
+
+		Mux.HandleFunc("/v2.1/servers/4", func(w http.ResponseWriter, r *http.Request) {
+			switch r.Method {
+			case http.MethodDelete:
+				w.WriteHeader(http.StatusNotFound)
+				fmt.Fprintf(w, `{}`)
+
+			case http.MethodGet:
+				getServerCount++
+				switchCase := getServerCount % 2
+
+				switch switchCase {
+				case 1:
+					w.WriteHeader(http.StatusOK)
+					fmt.Fprintf(w, `{
+						"server": {
+							"id": "1",
+							"status": "ACTIVE"
+						}
+					}`)
+				case 0:
+					w.WriteHeader(http.StatusNotFound)
+					fmt.Fprintf(w, `{}`)
+				}
+			}
+		})
+
+		Mux.HandleFunc("/v2.1/servers/3/metadata", func(w http.ResponseWriter, r *http.Request) {
+			switch r.Method {
+			case http.MethodGet:
+				w.WriteHeader(http.StatusOK)
+
+				fmt.Fprintf(w, `{
+					"metadata": {
+						"lbaas_pool_1": "pool_id_1/member_id_1",
+						"lbaas_pool_3": "pool_id_3/member_id_error"
+					}
+				}`)
+			}
+		})
+
 		Mux.HandleFunc("/v2.1/servers/wrong-vm-id", func(w http.ResponseWriter, r *http.Request) {
 			switch r.Method {
 			case http.MethodGet:
 				w.WriteHeader(http.StatusNotFound)
+				fmt.Fprintf(w, `{}`)
+			}
+		})
+
+		Mux.HandleFunc("/v2.0/lbaas/pools/pool_id_1/members/member_id_1", func(w http.ResponseWriter, r *http.Request) {
+			switch r.Method {
+			case http.MethodDelete:
+				w.WriteHeader(http.StatusNoContent)
+
+				fmt.Fprintf(w, `{}`)
+			}
+		})
+
+		Mux.HandleFunc("/v2.0/lbaas/pools/pool_id_2/members/member_id_not_existing", func(w http.ResponseWriter, r *http.Request) {
+			switch r.Method {
+			case http.MethodDelete:
+				w.WriteHeader(http.StatusNotFound)
+
+				fmt.Fprintf(w, `{}`)
+			}
+		})
+
+		Mux.HandleFunc("/v2.0/lbaas/pools/pool_id_3/members/member_id_error", func(w http.ResponseWriter, r *http.Request) {
+			switch r.Method {
+			case http.MethodDelete:
+				w.WriteHeader(http.StatusInternalServerError)
+
 				fmt.Fprintf(w, `{}`)
 			}
 		})
@@ -239,5 +354,33 @@ var _ = Describe("Delete VM", func() {
 
 		stdOutWriter.Close()
 		Expect(<-outChannel).To(ContainSubstring(`"result":null,"error":null`))
+	})
+
+	It("does not fail when deleting a vm which no longer exists", func() {
+		writeJsonParamToStdIn(`{
+			"method": "delete_vm",
+			"arguments": ["4"],
+			"api_version": 2
+		}`)
+
+		err := cpi.Execute(getDefaultConfig(Endpoint()), logger)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		stdOutWriter.Close()
+		Expect(<-outChannel).To(ContainSubstring(`"result":null,"error":null`))
+	})
+
+	It("raises an error if it fails to delete pool member", func() {
+		writeJsonParamToStdIn(`{
+			"method": "delete_vm",
+			"arguments": ["3"],
+			"api_version": 2
+		}`)
+
+		err := cpi.Execute(getDefaultConfig(Endpoint()), logger)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		stdOutWriter.Close()
+		Expect(<-outChannel).To(ContainSubstring(`failed to delete pool member`))
 	})
 })
