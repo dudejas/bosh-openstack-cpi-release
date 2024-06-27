@@ -129,7 +129,7 @@ func (c computeService) DeleteServer(
 	_, err := c.computeFacade.GetServer(serviceClient, serverID)
 	if err != nil {
 		if strings.Contains(err.Error(), "Resource not found") {
-			c.logger.Info("compute_service", fmt.Sprintf("SKIPPING: Server with id '%s' is not found", serverID))
+			c.logger.Info("compute_service", fmt.Sprintf("SKIPPING: Server deletion with id '%s' is not found", serverID))
 			return nil
 		}
 		return fmt.Errorf("failed to retrieve server information: %w", err)
@@ -138,6 +138,7 @@ func (c computeService) DeleteServer(
 	serverMetadata, err := c.computeFacade.GetServerMetadata(serviceClient, serverID)
 	if err != nil {
 		if strings.Contains(err.Error(), "Resource not found") {
+			c.logger.Info("compute_service", fmt.Sprintf("SKIPPING: Metadata retrieval for server with id '%s' is not found", serverID))
 			serverMetadata = map[string]string{}
 		} else {
 			return fmt.Errorf("failed to retrieve server metadata: %w", err)
@@ -156,6 +157,7 @@ func (c computeService) DeleteServer(
 				err = loadbalancerService.DeletePoolMember(parts[0], parts[1])
 				if err != nil {
 					if strings.Contains(err.Error(), "Resource not found") {
+						c.logger.Info("compute_service", fmt.Sprintf("SKIPPING: pool member deletion with id '%s' in pool '%s' is not found", parts[1], parts[0]))
 						continue
 					} else {
 						return fmt.Errorf("failed to delete pool member: %w", err)
