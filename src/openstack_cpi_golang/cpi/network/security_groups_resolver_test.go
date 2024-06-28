@@ -7,6 +7,7 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/mocks"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/network"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/network/networkfakes"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils/utilsfakes"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 	. "github.com/onsi/ginkgo/v2"
@@ -17,12 +18,14 @@ var _ = Describe("NetworkService", func() {
 	var serviceClient gophercloud.ServiceClient
 	var networkingFacade networkfakes.FakeNetworkingFacade
 	var securityGroupsPage mocks.MockPage
+	var logger utilsfakes.FakeLogger
 
 	BeforeEach(func() {
 		providerClient := gophercloud.ProviderClient{TokenID: "the_token"}
 		serviceClient = gophercloud.ServiceClient{ProviderClient: &providerClient}
 		networkingFacade = networkfakes.FakeNetworkingFacade{}
 		securityGroupsPage = mocks.MockPage{}
+		logger = utilsfakes.FakeLogger{}
 
 		var networks apiv1.Networks
 		err := json.Unmarshal([]byte(`{
@@ -46,17 +49,27 @@ var _ = Describe("NetworkService", func() {
 
 	Context("Resolve", func() {
 		It("resolves security groups by id", func() {
-			network.NewSecurityGroupsResolver(&serviceClient, &networkingFacade).Resolve([]string{"the_group_id"})
+			network.NewSecurityGroupsResolver(&serviceClient, &networkingFacade, &logger).Resolve([]string{"the_group_id"})
 
 			_, securityGroupID := networkingFacade.GetSecurityGroupsArgsForCall(0)
 			Expect(securityGroupID).To(Equal("the_group_id"))
 		})
 
-		It("returns an error if getting security group by id fails", func() {
+		It("logs a warning if getting security group by id fails", func() {
 			networkingFacade.GetSecurityGroupsReturns(nil, errors.New("boom"))
 
-			_, err := network.NewSecurityGroupsResolver(&serviceClient, &networkingFacade).Resolve([]string{"the_group_id"})
-			Expect(err.Error()).To(Equal("failed to get security group 'the_group_id' by id: boom"))
+			network.NewSecurityGroupsResolver(&serviceClient, &networkingFacade, &logger).Resolve([]string{"the_group_id"})
+
+			_, msg, _ := logger.WarnArgsForCall(0)
+			Expect(msg).To(Equal("failed to get security group 'the_group_id' by id: boom. Trying to get security group by name"))
+		})
+
+		It("returns an error is resolved security group is nil", func() {
+			networkingFacade.GetSecurityGroupsReturns(nil, nil)
+
+			_, err := network.NewSecurityGroupsResolver(&serviceClient, &networkingFacade, &logger).Resolve([]string{"the_group_id"})
+
+			Expect(err.Error()).To(Equal("could not resolve security group 'the_group_id'"))
 		})
 
 		Context("resolution by ID failed", func() {
@@ -64,57 +77,57 @@ var _ = Describe("NetworkService", func() {
 				networkingFacade.GetSecurityGroupsReturns(nil, nil)
 				networkingFacade.ListSecurityGroupsReturns(securityGroupsPage, nil)
 
-				network.NewSecurityGroupsResolver(&serviceClient, &networkingFacade).Resolve([]string{"the_group_id"})
+				network.NewSecurityGroupsResolver(&serviceClient, &networkingFacade, &logger).Resolve([]string{"the_group_id"})
 
 				Expect(networkingFacade.GetSecurityGroupsCallCount()).To(Equal(1))
 			})
 
-			It("returns an error of listing security groups fails", func() {
-				networkingFacade.GetSecurityGroupsReturns(nil, nil)
+			It("returns an error if listing security groups fails", func() {
+				networkingFacade.GetSecurityGroupsReturns(nil, errors.New("baam"))
 				networkingFacade.ListSecurityGroupsReturns(nil, errors.New("boom"))
 
-				_, err := network.NewSecurityGroupsResolver(&serviceClient, &networkingFacade).Resolve([]string{"the_group_name"})
+				_, err := network.NewSecurityGroupsResolver(&serviceClient, &networkingFacade, &logger).Resolve([]string{"the_group_name"})
 
 				Expect(err.Error()).To(Equal("failed to get security group 'the_group_name' by name: failed to list security groups: boom"))
 			})
 
 			It("extracts security groups", func() {
-				networkingFacade.GetSecurityGroupsReturns(nil, nil)
+				networkingFacade.GetSecurityGroupsReturns(nil, errors.New("baam"))
 				networkingFacade.ListSecurityGroupsReturns(securityGroupsPage, nil)
 
-				network.NewSecurityGroupsResolver(&serviceClient, &networkingFacade).Resolve([]string{"the_group_id"})
+				network.NewSecurityGroupsResolver(&serviceClient, &networkingFacade, &logger).Resolve([]string{"the_group_id"})
 
 				page := networkingFacade.ExtractSecurityGroupsArgsForCall(0)
 				Expect(page).To(Equal(securityGroupsPage))
 			})
 
 			It("returns an error if extracts security groups fails", func() {
-				networkingFacade.GetSecurityGroupsReturns(nil, nil)
+				networkingFacade.GetSecurityGroupsReturns(nil, errors.New("baam"))
 				networkingFacade.ListSecurityGroupsReturns(securityGroupsPage, nil)
 				networkingFacade.ExtractSecurityGroupsReturns(nil, errors.New("boom"))
 
-				_, err := network.NewSecurityGroupsResolver(&serviceClient, &networkingFacade).Resolve([]string{"the_group_name"})
+				_, err := network.NewSecurityGroupsResolver(&serviceClient, &networkingFacade, &logger).Resolve([]string{"the_group_name"})
 
 				Expect(err.Error()).To(Equal("failed to get security group 'the_group_name' by name: failed to extract security groups: boom"))
 			})
 
 			It("returns an error if extracts security groups are empty", func() {
-				networkingFacade.GetSecurityGroupsReturns(nil, nil)
+				networkingFacade.GetSecurityGroupsReturns(nil, errors.New("baam"))
 				networkingFacade.ListSecurityGroupsReturns(securityGroupsPage, nil)
 				networkingFacade.ExtractSecurityGroupsReturns([]groups.SecGroup{}, nil)
 
-				_, err := network.NewSecurityGroupsResolver(&serviceClient, &networkingFacade).Resolve([]string{"the_group_name"})
+				_, err := network.NewSecurityGroupsResolver(&serviceClient, &networkingFacade, &logger).Resolve([]string{"the_group_name"})
 
 				Expect(err.Error()).To(Equal("failed to get security group 'the_group_name' by name: security group 'the_group_name' could not be found"))
 			})
 
 			It("returns security group ids", func() {
 				networkingFacade.GetSecurityGroupsReturnsOnCall(0, &groups.SecGroup{ID: "id1"}, nil)
-				networkingFacade.GetSecurityGroupsReturnsOnCall(1, nil, nil)
+				networkingFacade.GetSecurityGroupsReturnsOnCall(1, nil, errors.New("baam"))
 				networkingFacade.ListSecurityGroupsReturns(securityGroupsPage, nil)
 				networkingFacade.ExtractSecurityGroupsReturns([]groups.SecGroup{{ID: "id2"}}, nil)
 
-				securityGroups, err := network.NewSecurityGroupsResolver(&serviceClient, &networkingFacade).Resolve([]string{"id1", "not_id"})
+				securityGroups, err := network.NewSecurityGroupsResolver(&serviceClient, &networkingFacade, &logger).Resolve([]string{"id1", "not_id"})
 				Expect(err).ToNot(HaveOccurred())
 				Expect(securityGroups).To(Equal([]string{"id1", "id2"}))
 			})

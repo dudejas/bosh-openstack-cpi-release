@@ -2,6 +2,7 @@ package network
 
 import (
 	"fmt"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 )
@@ -14,13 +15,18 @@ type SecurityGroupsResolver interface {
 type securityGroupsResolver struct {
 	serviceClient    *gophercloud.ServiceClient
 	networkingFacade NetworkingFacade
+	logger           utils.Logger
 }
 
-func NewSecurityGroupsResolver(serviceClient *gophercloud.ServiceClient,
-	networkingFacade NetworkingFacade) securityGroupsResolver {
+func NewSecurityGroupsResolver(
+	serviceClient *gophercloud.ServiceClient,
+	networkingFacade NetworkingFacade,
+	logger utils.Logger,
+) securityGroupsResolver {
 	return securityGroupsResolver{
 		serviceClient:    serviceClient,
 		networkingFacade: networkingFacade,
+		logger:           logger,
 	}
 }
 
@@ -32,22 +38,19 @@ func (s securityGroupsResolver) Resolve(securityGroupIDsAndNames []string) ([]st
 	for _, securityGroup := range securityGroupIDsAndNames {
 		resolvedSecurityGroup, err = s.resolveSecurityGroupById(securityGroup)
 		if err != nil {
-			return []string{}, fmt.Errorf("failed to get security group '%s' by id: %w", securityGroup, err)
-		}
+			s.logger.Warn("security-group-resolver", fmt.Sprintf("failed to get security group '%s' by id: %v. Trying to get security group by name", securityGroup, err))
 
-		if resolvedSecurityGroup != nil {
-			securityGroupIds = append(securityGroupIds, resolvedSecurityGroup.ID)
-			continue
-		} else {
 			resolvedSecurityGroup, err = s.resolveSecurityGroupByName(securityGroup)
 			if err != nil {
 				return []string{}, fmt.Errorf("failed to get security group '%s' by name: %w", securityGroup, err)
 			}
-
-			securityGroupIds = append(securityGroupIds, resolvedSecurityGroup.ID)
-			continue
 		}
 
+		if resolvedSecurityGroup == nil {
+			return []string{}, fmt.Errorf("could not resolve security group '%s'", securityGroup)
+		}
+
+		securityGroupIds = append(securityGroupIds, resolvedSecurityGroup.ID)
 	}
 	return securityGroupIds, nil
 }

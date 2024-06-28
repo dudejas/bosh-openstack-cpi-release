@@ -306,7 +306,7 @@ var _ = Describe("Create VM", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 
 		stdOutWriter.Close()
-		Expect(<-outChannel).To(ContainSubstring("failed to resolve security group: failed to get security group 'not-exiting-group' by name"))
+		Expect(<-outChannel).To(ContainSubstring("failed to resolve security group: could not resolve security group 'not-exiting-group'"))
 	})
 
 	It("fails if a key pair name cannot be resolved", func() {
