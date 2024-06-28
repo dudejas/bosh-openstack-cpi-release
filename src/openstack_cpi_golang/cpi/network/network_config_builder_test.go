@@ -8,6 +8,8 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/network"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/network/networkfakes"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils/utilsfakes"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"net"
@@ -19,11 +21,13 @@ var _ = Describe("NetworkConfigBuilder", func() {
 	var securityGroupsResolver networkfakes.FakeSecurityGroupsResolver
 	var openstackConfig config.OpenstackConfig
 	var cloudProperties properties.CreateVM
+	var logger utils.Logger
 
 	BeforeEach(func() {
 		openstackConfig = config.OpenstackConfig{}
 		cloudProperties = properties.CreateVM{}
 		securityGroupsResolver = networkfakes.FakeSecurityGroupsResolver{}
+		logger = &utilsfakes.FakeLogger{}
 	})
 
 	Context("NewNetworkConfig", func() {
@@ -50,7 +54,7 @@ var _ = Describe("NetworkConfigBuilder", func() {
 					"ip":      "4.4.4.4",
 					"cloud_properties": {"net_id": "the_net_id_4", "security_groups": ["security_group_4"]}
 				}
-			}`), openstackConfig, cloudProperties)
+			}`), openstackConfig, cloudProperties, logger)
 		})
 
 		It("returns an error if a manual network is missing a netid", func() {
@@ -65,7 +69,7 @@ var _ = Describe("NetworkConfigBuilder", func() {
 					"ip":      "",
 					"cloud_properties": {"net_id": "the_net_id_2"}
 				}
-			}`), openstackConfig, cloudProperties)
+			}`), openstackConfig, cloudProperties, logger)
 
 			Expect(err.Error()).To(Equal("invalid manual network configuration: manual network must have a net_id"))
 		})
@@ -82,7 +86,7 @@ var _ = Describe("NetworkConfigBuilder", func() {
 					"ip":      "",
 					"cloud_properties": {"net_id": "the_net_id_2"}
 				}
-			}`), config.OpenstackConfig{UseDHCP: true}, cloudProperties)
+			}`), config.OpenstackConfig{UseDHCP: true}, cloudProperties, logger)
 
 			Expect(err.Error()).To(Equal("invalid manual network configuration: multiple manual networks can only be used with 'openstack.use_dhcp=false' and 'openstack.config_drive=cdrom|disk'"))
 		})
@@ -99,7 +103,7 @@ var _ = Describe("NetworkConfigBuilder", func() {
 					"ip":      "",
 					"cloud_properties": {}
 				}
-			}`), openstackConfig, cloudProperties)
+			}`), openstackConfig, cloudProperties, logger)
 
 			Expect(err.Error()).To(Equal("invalid vip network configuration: only one vip should be defined per instance"))
 		})
@@ -116,7 +120,7 @@ var _ = Describe("NetworkConfigBuilder", func() {
 					"ip":      "",
 					"cloud_properties": {}
 				}
-			}`), openstackConfig, cloudProperties)
+			}`), openstackConfig, cloudProperties, logger)
 
 			Expect(err.Error()).To(Equal("invalid dynamic network configuration: only one dynamic should be defined per instance"))
 		})
@@ -133,7 +137,7 @@ var _ = Describe("NetworkConfigBuilder", func() {
 					"ip":      "",
 					"cloud_properties": {"net_id": "same_net_id"}
 				}
-			}`), openstackConfig, cloudProperties)
+			}`), openstackConfig, cloudProperties, logger)
 
 			Expect(err.Error()).To(Equal("invalid network configuration: network with id same_net_id is defined multiple times"))
 		})
@@ -149,7 +153,7 @@ var _ = Describe("NetworkConfigBuilder", func() {
 		})
 
 		It("returns an empty network if no network is provided", func() {
-			networkingConfig, err := createNetworkConfig(&securityGroupsResolver, []byte(`{}`), openstackConfig, cloudProperties)
+			networkingConfig, err := createNetworkConfig(&securityGroupsResolver, []byte(`{}`), openstackConfig, cloudProperties, logger)
 			Expect(err).ToNot(HaveOccurred())
 			defaultNetwork := networkingConfig.DefaultNetwork
 
@@ -210,7 +214,7 @@ var _ = Describe("NetworkConfigBuilder", func() {
 				},
 				properties.CreateVM{
 					SecurityGroups: []string{"cloud_config_security_group_1", "cloud_config_security_group_2"},
-				})
+				}, logger)
 			securityGroups := networkingConfig.SecurityGroups
 
 			securityGroupsParam := securityGroupsResolver.ResolveArgsForCall(0)
@@ -233,6 +237,7 @@ var _ = Describe("NetworkConfigBuilder", func() {
 					DefaultSecurityGroups: []string{"default_security_group_1", "default_security_group_2"},
 				},
 				properties.CreateVM{},
+				logger,
 			)
 			securityGroups := networkingConfig.SecurityGroups
 
@@ -256,6 +261,7 @@ var _ = Describe("NetworkConfigBuilder", func() {
 					DefaultSecurityGroups: []string{"default_security_group_1", "default_security_group_2"},
 				},
 				properties.CreateVM{},
+				logger,
 			)
 			securityGroups := networkingConfig.SecurityGroups
 
@@ -291,7 +297,7 @@ var _ = Describe("NetworkConfigBuilder", func() {
 					"ip":      "4.4.4.4",
 					"cloud_properties": {"net_id": "the_net_id_4", "security_groups": ["security_group_4"]}
 				}
-			}`), openstackConfig, cloudProperties)
+			}`), openstackConfig, cloudProperties, logger)
 			securityGroups := sortSecurityGroups(networkingConfig.SecurityGroups)
 
 			securityGroupsParam := securityGroupsResolver.ResolveArgsForCall(0)
@@ -301,12 +307,12 @@ var _ = Describe("NetworkConfigBuilder", func() {
 	})
 })
 
-func createNetworkConfig(securityGroupsResolver network.SecurityGroupsResolver, bytes []byte, openstackConfig config.OpenstackConfig, cloudProperties properties.CreateVM) (properties.NetworkConfig, error) {
+func createNetworkConfig(securityGroupsResolver network.SecurityGroupsResolver, bytes []byte, openstackConfig config.OpenstackConfig, cloudProperties properties.CreateVM, logger utils.Logger) (properties.NetworkConfig, error) {
 	var networks apiv1.Networks
 	err := json.Unmarshal(bytes, &networks)
 	Expect(err).ToNot(HaveOccurred())
 
-	networkConfig, err := network.NewNetworkConfigBuilder(securityGroupsResolver, networks, openstackConfig, cloudProperties).Build()
+	networkConfig, err := network.NewNetworkConfigBuilder(securityGroupsResolver, networks, openstackConfig, cloudProperties, logger).Build()
 
 	return networkConfig, err
 }

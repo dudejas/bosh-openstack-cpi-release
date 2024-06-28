@@ -95,7 +95,7 @@ func (c networkService) GetNetworkConfiguration(
 ) (properties.NetworkConfig, error) {
 	securityGroupsResolver := NewSecurityGroupsResolver(c.serviceClient, c.networkingFacade, c.logger)
 
-	networkProperties, err := NewNetworkConfigBuilder(securityGroupsResolver, networks, openstackConfig, cloudProps).Build()
+	networkProperties, err := NewNetworkConfigBuilder(securityGroupsResolver, networks, openstackConfig, cloudProps, c.logger).Build()
 	return networkProperties, err
 }
 

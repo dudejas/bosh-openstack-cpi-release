@@ -14,6 +14,7 @@ type networkConfigBuilder struct {
 	networks               apiv1.Networks
 	openstackConfig        config.OpenstackConfig
 	cloudProps             properties.CreateVM
+	logger                 utils.Logger
 }
 
 func NewNetworkConfigBuilder(
@@ -21,12 +22,14 @@ func NewNetworkConfigBuilder(
 	networks apiv1.Networks,
 	openstackConfig config.OpenstackConfig,
 	cloudProps properties.CreateVM,
+	logger utils.Logger,
 ) networkConfigBuilder {
 	return networkConfigBuilder{
 		securityGroupsResolver: securityGroupsResolver,
 		networks:               networks,
 		openstackConfig:        openstackConfig,
 		cloudProps:             cloudProps,
+		logger:                 logger,
 	}
 }
 
@@ -88,6 +91,7 @@ func (b networkConfigBuilder) securityGroups(networks []properties.Network) ([]s
 		return []string{}, fmt.Errorf("failed to resolve security group: %w", err)
 	}
 
+	b.logger.Info("network-config-builder", "resolved security groups ids: %v", securityGroupIDs)
 	return securityGroupIDs, nil
 }
 
