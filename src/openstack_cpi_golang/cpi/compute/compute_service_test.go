@@ -522,7 +522,8 @@ var _ = Describe("ComputeService", func() {
 		})
 
 		It("still succeeds if no server is found", func() {
-			computeFacade.GetServerReturnsOnCall(0, nil, errors.New("Resource not found"))
+			testError := gophercloud.ErrDefault404{gophercloud.ErrUnexpectedResponseCode{Actual: 404}}
+			computeFacade.GetServerReturnsOnCall(0, nil, testError)
 
 			err := computeService.DeleteServer(
 				"123-456",
@@ -548,7 +549,8 @@ var _ = Describe("ComputeService", func() {
 		})
 
 		It("does not remove pool memberships if no server tags are found", func() {
-			computeFacade.GetServerMetadataReturns(nil, errors.New("Resource not found"))
+			testError := gophercloud.ErrDefault404{gophercloud.ErrUnexpectedResponseCode{Actual: 404}}
+			computeFacade.GetServerMetadataReturns(nil, testError)
 
 			err := computeService.DeleteServer(
 				"123-456",
@@ -619,7 +621,8 @@ var _ = Describe("ComputeService", func() {
 		})
 
 		It("still succeeds if server is not found while deletion", func() {
-			computeFacade.GetServerReturnsOnCall(1, nil, errors.New("Resource not found"))
+			testError := gophercloud.ErrDefault404{gophercloud.ErrUnexpectedResponseCode{Actual: 404}}
+			computeFacade.GetServerReturnsOnCall(1, nil, testError)
 
 			err := computeService.DeleteServer(
 				"123-456",

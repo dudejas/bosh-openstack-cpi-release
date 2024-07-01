@@ -2,6 +2,7 @@ package compute
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
@@ -143,12 +144,13 @@ func (c computeService) DeleteServer(
 	serverID string,
 	config config.OpenstackConfig,
 ) error {
+	var errDefault404 gophercloud.ErrDefault404
 	serviceClient := c.serviceClient
 	serviceClient.RetryFunc = utils.RetryOnError(c.logger)
 
 	_, err := c.computeFacade.GetServer(serviceClient, serverID)
 	if err != nil {
-		if strings.Contains(err.Error(), "Resource not found") {
+		if errors.As(err, &errDefault404) {
 			c.logger.Info("compute_service", fmt.Sprintf("SKIPPING: Server deletion with id '%s' is not found", serverID))
 			return nil
 		}
@@ -157,7 +159,7 @@ func (c computeService) DeleteServer(
 
 	serverMetadata, err := c.computeFacade.GetServerMetadata(serviceClient, serverID)
 	if err != nil {
-		if strings.Contains(err.Error(), "Resource not found") {
+		if errors.As(err, &errDefault404) {
 			c.logger.Info("compute_service", fmt.Sprintf("SKIPPING: Metadata retrieval for server with id '%s' is not found", serverID))
 			serverMetadata = map[string]string{}
 		} else {
@@ -176,7 +178,7 @@ func (c computeService) DeleteServer(
 				parts := strings.Split(value, "/")
 				err = loadbalancerService.DeletePoolMember(parts[0], parts[1])
 				if err != nil {
-					if strings.Contains(err.Error(), "Resource not found") {
+					if errors.As(err, &errDefault404) {
 						c.logger.Info("compute_service", fmt.Sprintf("SKIPPING: pool member deletion with id '%s' in pool '%s' is not found", parts[1], parts[0]))
 						continue
 					} else {
@@ -189,7 +191,7 @@ func (c computeService) DeleteServer(
 	}
 
 	err = c.computeFacade.DeleteServer(serviceClient, serverID)
-	if err != nil && !strings.Contains(err.Error(), "Resource not found") {
+	if err != nil && !errors.As(err, &errDefault404) {
 		return fmt.Errorf("failed to delete server: %w", err)
 	}
 
@@ -367,6 +369,7 @@ func (c computeService) waitForServerToBecomeActive(serverID string, timeout tim
 }
 
 func (c computeService) waitForServerToBecomeDeleted(serverID string, timeout time.Duration) error {
+	var errDefault404 gophercloud.ErrDefault404
 	timeoutTimer := time.NewTimer(timeout)
 	serviceClient := c.serviceClient
 	serviceClient.RetryFunc = utils.RetryOnError(c.logger)
@@ -378,7 +381,7 @@ func (c computeService) waitForServerToBecomeDeleted(serverID string, timeout ti
 		default:
 			server, err := c.computeFacade.GetServer(serviceClient, serverID)
 			if err != nil {
-				if strings.Contains(err.Error(), "Resource not found") {
+				if errors.As(err, &errDefault404) {
 					return nil
 				}
 				return fmt.Errorf("failed to retrieve server information: %w", err)

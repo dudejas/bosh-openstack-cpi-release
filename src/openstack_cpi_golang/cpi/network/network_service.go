@@ -1,6 +1,7 @@
 package network
 
 import (
+	"errors"
 	"fmt"
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
@@ -11,7 +12,6 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
 	"net"
-	"strings"
 )
 
 //counterfeiter:generate . NetworkService
@@ -228,13 +228,14 @@ func (c networkService) GetPorts(instanceId string, defaultNetwork properties.Ne
 }
 
 func (c networkService) DeletePorts(ports []ports.Port) error {
+	var errDefault404 gophercloud.ErrDefault404
 	serviceClient := c.serviceClient
 	serviceClient.RetryFunc = utils.RetryOnError(c.logger)
 
 	for _, port := range ports {
 		err := c.networkingFacade.DeletePort(serviceClient, port.ID)
 		if err != nil {
-			if strings.Contains(err.Error(), "Resource not found") {
+			if errors.As(err, &errDefault404) {
 				c.logger.Info("network_service", fmt.Sprintf("SKIPPING: Port deletion with id '%s' is not found", port.ID))
 				return nil
 			}
