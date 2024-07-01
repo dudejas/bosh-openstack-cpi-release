@@ -282,7 +282,6 @@ func (c computeService) getServerCreateOpts(
 		Name:             vmName,
 		ImageRef:         stemcellCID.AsString(),
 		Networks:         c.getServerNetworks(networkConfig, port),
-		SecurityGroups:   networkConfig.SecurityGroups,
 		AvailabilityZone: availabilityZone,
 		FlavorRef:        flavor.ID,
 		UserData:         userDataJson,

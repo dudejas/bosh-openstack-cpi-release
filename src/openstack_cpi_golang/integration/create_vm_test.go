@@ -107,6 +107,25 @@ var _ = Describe("Create VM", func() {
 			}`)
 		})
 
+		Mux.HandleFunc("/v2.0/security-groups/bosh_acceptance_tests", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Add("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+		})
+
+		Mux.HandleFunc("/v2.0/security-groups", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Add("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+
+			fmt.Fprintf(w, `{
+				"security_groups": [
+					{
+						"id": "191e4194-1b33-4886-8b2e-4a4e5de3f9ff",
+						"name": "bosh_acceptance_tests"
+					}
+				]
+			}`)
+		})
+
 		Mux.HandleFunc("/v2.1/flavors/detail", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
@@ -201,7 +220,8 @@ var _ = Describe("Create VM", func() {
 							"availability_zone": "z1",
 							"net_id": "fbe64fb7-b47c-4fd1-b158-9411d5c3ebf3",
 							"security_groups": [
-								"0c8a5d1a-8922-4d65-a0b2-dd78ab869e04"
+								"0c8a5d1a-8922-4d65-a0b2-dd78ab869e04",
+								"bosh_acceptance_tests"
 							]
 						},
 						"default": [
@@ -222,7 +242,7 @@ var _ = Describe("Create VM", func() {
 
 		stdOutWriter.Close()
 		actual := <-outChannel
-		Expect(actual).To(ContainSubstring(`"result":["f5dc173b-6804-445a-a6d8-c705dad5b5eb",{"bosh":{"type":"manual","ip":"10.0.11.16","netmask":"255.255.255.0","gateway":"10.0.11.1","dns":null,"default":["dns","gateway"],"routes":null,"cloud_properties":{"net_id":"fbe64fb7-b47c-4fd1-b158-9411d5c3ebf3","security_groups":["0c8a5d1a-8922-4d65-a0b2-dd78ab869e04"]}}}],"error":null`))
+		Expect(actual).To(ContainSubstring(`"result":["f5dc173b-6804-445a-a6d8-c705dad5b5eb",{"bosh":{"type":"manual","ip":"10.0.11.16","netmask":"255.255.255.0","gateway":"10.0.11.1","dns":null,"default":["dns","gateway"],"routes":null,"cloud_properties":{"net_id":"fbe64fb7-b47c-4fd1-b158-9411d5c3ebf3","security_groups":["0c8a5d1a-8922-4d65-a0b2-dd78ab869e04","bosh_acceptance_tests"]}}}],"error":null`))
 	})
 
 	It("fails if a wrong flavorName is given", func() {

@@ -145,19 +145,19 @@ func (c networkService) GetSubnetID(networkID string, ip string) (string, error)
 func (c networkService) CreatePort(networkConfig properties.NetworkConfig, cloudProperties properties.CreateVM) (*ports.Port, error) {
 	defaultNetwork := networkConfig.DefaultNetwork
 
-	createOpts, err := c.getPortCreationNetworkOpts(defaultNetwork, cloudProperties)
+	createOpts, err := c.getPortCreationNetworkOpts(networkConfig, cloudProperties)
 	if err != nil {
 		return nil, fmt.Errorf("failed create network opts: %w", err)
 	}
 
-	c.logger.Info("network-service", fmt.Sprintf("Creating port with opts '%+v'", createOpts))
+	c.logger.Info("network-service", fmt.Sprintf("creating port with opts '%+v', using security groups %v", createOpts, networkConfig.SecurityGroups))
 
 	createdPort, err := c.networkingFacade.CreatePort(c.serviceClient, createOpts)
 	if err != nil {
 		c.logger.Warn("network-service",
-			fmt.Sprintf("port creation on network '%s' for ip '%s' "+
-				"failed with: %v, checking conflicting ports now.",
+			fmt.Sprintf("failed to create port on network '%s' for ip '%s': %v",
 				defaultNetwork.CloudProps.NetID, defaultNetwork.IP, err))
+		c.logger.Warn("network-service", "checking for conflicting ports now")
 
 		listOpts := ports.ListOpts{
 			NetworkID: defaultNetwork.CloudProps.NetID,
@@ -188,10 +188,13 @@ func (c networkService) CreatePort(networkConfig properties.NetworkConfig, cloud
 
 		createdPort, err = c.networkingFacade.CreatePort(c.serviceClient, createOpts)
 		if err != nil {
-			return nil, fmt.Errorf("port creation on network '%s' for ip '%s' "+
-				"failed with: %w, on second attempt",
+			return nil, fmt.Errorf("failed to recreate port on network '%s' for ip '%s' %w",
 				defaultNetwork.CloudProps.NetID, defaultNetwork.IP, err)
 		}
+
+		c.logger.Info("network-service",
+			fmt.Sprintf("recreated port with id '%s' on network '%s' for ip '%s'",
+				createdPort.ID, defaultNetwork.CloudProps.NetID, defaultNetwork.IP))
 	}
 
 	return createdPort, nil
@@ -243,7 +246,8 @@ func (c networkService) DeletePorts(ports []ports.Port) error {
 	return nil
 }
 
-func (c networkService) getPortCreationNetworkOpts(defaultNetwork properties.Network, cloudProperties properties.CreateVM) (ports.CreateOpts, error) {
+func (c networkService) getPortCreationNetworkOpts(networkConfig properties.NetworkConfig, cloudProperties properties.CreateVM) (ports.CreateOpts, error) {
+	defaultNetwork := networkConfig.DefaultNetwork
 
 	subnetID, err := c.GetSubnetID(defaultNetwork.CloudProps.NetID, defaultNetwork.IP)
 	if err != nil {
@@ -255,6 +259,7 @@ func (c networkService) getPortCreationNetworkOpts(defaultNetwork properties.Net
 		FixedIPs: []ports.IP{
 			{SubnetID: subnetID, IPAddress: defaultNetwork.IP},
 		},
+		SecurityGroups: &networkConfig.SecurityGroups,
 	}
 
 	if cloudProperties.AllowedAddressPairs != "" {

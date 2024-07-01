@@ -236,7 +236,6 @@ var _ = Describe("ComputeService", func() {
 				createMap, err := opts.ToServerCreateMap()
 				Expect(err).ToNot(HaveOccurred())
 				server := createMap["server"].(map[string]interface{})
-				serverSecurityGroups := server["security_groups"].([]map[string]interface{})
 				serverNetworks := server["networks"].([]map[string]interface{})
 				blockDevice := server["block_device_mapping_v2"].([]map[string]interface{})
 
@@ -244,8 +243,6 @@ var _ = Describe("ComputeService", func() {
 				Expect(server["imageRef"]).To(Equal("the_stemcell_id"))
 				Expect(serverNetworks[0]["uuid"]).To(Equal("the_net_id"))
 				Expect(serverNetworks[0]["port"]).To(Equal("the_port_id"))
-				Expect(serverSecurityGroups[0]["name"]).To(Equal("group_1"))
-				Expect(serverSecurityGroups[1]["name"]).To(Equal("group_2"))
 				Expect(server["availability_zone"]).To(Equal("z1"))
 				Expect(server["flavorRef"]).To(Equal("the_flavor_id"))
 				Expect(server["key_name"]).To(Equal("the_os_keypair_name"))

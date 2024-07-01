@@ -43,8 +43,14 @@ var _ = Describe("NetworkService", func() {
 		}, nil)
 
 		networkConfig = properties.NetworkConfig{
-			DefaultNetwork: properties.Network{IP: "1.1.1.1", CloudProps: properties.NetworkCloudProps{NetID: "the_net_id_1"}},
+			DefaultNetwork: properties.Network{
+				IP: "1.1.1.1",
+				CloudProps: properties.NetworkCloudProps{
+					NetID: "the_net_id_1",
+				},
+			},
 			VIPNetwork:     &properties.Network{IP: "3.3.3.3"},
+			SecurityGroups: []string{"sec-id1", "sec-id2"},
 		}
 	})
 
@@ -297,6 +303,10 @@ var _ = Describe("NetworkService", func() {
 			Expect(createOpts.NetworkID).To(ContainSubstring("the_net_id_1"))
 			Expect(createOpts.FixedIPs.([]ports.IP)[0].SubnetID).To(Equal("the-subnet-id-1"))
 			Expect(createOpts.FixedIPs.([]ports.IP)[0].IPAddress).To(Equal("1.1.1.1"))
+
+			securityGroups := *createOpts.SecurityGroups
+			Expect(securityGroups[0]).To(Equal("sec-id1"))
+			Expect(securityGroups[1]).To(Equal("sec-id2"))
 			Expect(createOpts.AllowedAddressPairs).To(BeNil())
 
 		})
@@ -321,8 +331,7 @@ var _ = Describe("NetworkService", func() {
 			tag, msg, _ := logger.WarnArgsForCall(0)
 
 			Expect(tag).To(Equal("network-service"))
-			Expect(msg).To(ContainSubstring("port creation on network 'the_net_id_1' for ip '1.1.1.1' failed with: boom, " +
-				"checking conflicting ports now."))
+			Expect(msg).To(ContainSubstring("failed to create port on network 'the_net_id_1' for ip '1.1.1.1': boom"))
 		})
 
 		It("lists potentially conflicting ports", func() {
@@ -424,8 +433,7 @@ var _ = Describe("NetworkService", func() {
 			_, err := network.NewNetworkService(&serviceClient, &networkingFacade, &logger).
 				CreatePort(networkConfig, properties.CreateVM{})
 
-			Expect(err.Error()).To(Equal("port creation on network 'the_net_id_1' for ip '1.1.1.1' " +
-				"failed with: boom, on second attempt"))
+			Expect(err.Error()).To(Equal("failed to recreate port on network 'the_net_id_1' for ip '1.1.1.1' boom"))
 		})
 
 		It("returns the created port", func() {
