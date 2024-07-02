@@ -76,7 +76,7 @@ var _ = Describe("ComputeService", func() {
 				port,
 				agentID,
 				env,
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+				createCpiConfig(10),
 			)
 
 			Expect(err).ToNot(HaveOccurred())
@@ -86,6 +86,8 @@ var _ = Describe("ComputeService", func() {
 		It("return error if flavors resolution fails", func() {
 			flavorResolver.ResolveFlavorForInstanceTypeReturns(flavors.Flavor{}, errors.New("boom"))
 
+			createCpiConfig(10)
+
 			_, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
@@ -93,7 +95,7 @@ var _ = Describe("ComputeService", func() {
 				port,
 				agentID,
 				env,
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+				createCpiConfig(10),
 			)
 
 			Expect(err.Error()).To(ContainSubstring("failed to resolve flavor of instance type 'the_instance_type': boom"))
@@ -113,7 +115,7 @@ var _ = Describe("ComputeService", func() {
 				port,
 				agentID,
 				env,
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+				createCpiConfig(10),
 			)
 
 			_, keyPairName, _ := computeFacade.GetOSKeyPairArgsForCall(0)
@@ -123,6 +125,10 @@ var _ = Describe("ComputeService", func() {
 		It("resolves the key pair via openstack config name", func() {
 			computeFacade.GetOSKeyPairReturns(&keypairs.KeyPair{Name: "the_key_name"}, nil)
 
+			cpiConfig := config.CpiConfig{}
+			openstackConfig := config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "key_name_from_config"}
+			cpiConfig.Cloud.Properties.Openstack = openstackConfig
+
 			computeService.CreateServer(
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
@@ -130,7 +136,7 @@ var _ = Describe("ComputeService", func() {
 				port,
 				agentID,
 				env,
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "key_name_from_config"},
+				cpiConfig,
 			)
 
 			_, keyPairName, _ := computeFacade.GetOSKeyPairArgsForCall(0)
@@ -140,6 +146,10 @@ var _ = Describe("ComputeService", func() {
 		It("returns an error if key pair name IS NOT PROVIDED", func() {
 			computeFacade.GetOSKeyPairReturns(nil, errors.New("boom"))
 
+			cpiConfig := config.CpiConfig{}
+			openstackConfig := config.OpenstackConfig{StateTimeOut: 10}
+			cpiConfig.Cloud.Properties.Openstack = openstackConfig
+
 			_, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
@@ -147,7 +157,7 @@ var _ = Describe("ComputeService", func() {
 				port,
 				agentID,
 				env,
-				config.OpenstackConfig{StateTimeOut: 10},
+				cpiConfig,
 			)
 
 			Expect(err.Error()).To(Equal("failed to resolve keypair: key pair name undefined"))
@@ -163,7 +173,7 @@ var _ = Describe("ComputeService", func() {
 				port,
 				agentID,
 				env,
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+				createCpiConfig(10),
 			)
 
 			Expect(err.Error()).To(Equal("failed to resolve keypair: failed to retrieve 'the_key_name': boom"))
@@ -179,7 +189,7 @@ var _ = Describe("ComputeService", func() {
 				port,
 				agentID,
 				env,
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "key_name_from_config"},
+				createCpiConfig(10),
 			)
 
 			Expect(err.Error()).To(ContainSubstring("failed to configure volumes: boom"))
@@ -226,7 +236,7 @@ var _ = Describe("ComputeService", func() {
 					port,
 					agentID,
 					env,
-					config.OpenstackConfig{DefaultKeyName: "the_key_name", UseDHCP: true},
+					createCpiConfig(10),
 				)
 				Expect(err).ToNot(HaveOccurred())
 
@@ -269,7 +279,7 @@ var _ = Describe("ComputeService", func() {
 					port,
 					agentID,
 					env,
-					config.OpenstackConfig{DefaultKeyName: "the_key_name", UseDHCP: true},
+					createCpiConfig(10),
 				)
 				Expect(err).ToNot(HaveOccurred())
 
@@ -318,7 +328,7 @@ var _ = Describe("ComputeService", func() {
 				port,
 				agentID,
 				env,
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+				createCpiConfig(10),
 			)
 
 			_, opts := computeFacade.CreateServerArgsForCall(0)
@@ -348,7 +358,7 @@ var _ = Describe("ComputeService", func() {
 				port,
 				agentID,
 				env,
-				config.OpenstackConfig{StateTimeOut: 0, DefaultKeyName: "the_key_name"},
+				createCpiConfig(0),
 			)
 
 			_, opts := computeFacade.CreateServerArgsForCall(0)
@@ -374,7 +384,7 @@ var _ = Describe("ComputeService", func() {
 				port,
 				agentID,
 				env,
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+				createCpiConfig(10),
 			)
 
 			Expect(err.Error()).To(Equal("failed to create server in availability zone 'z1': boom"))
@@ -392,7 +402,7 @@ var _ = Describe("ComputeService", func() {
 				port,
 				agentID,
 				env,
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+				createCpiConfig(10),
 			)
 
 			Expect(err).ToNot(HaveOccurred())
@@ -410,7 +420,7 @@ var _ = Describe("ComputeService", func() {
 				port,
 				agentID,
 				env,
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+				createCpiConfig(10),
 			)
 
 			Expect(err.Error()).To(Equal("failed while waiting on the server creation in availability zone 'z1': failed to retrieve server information: boom"))
@@ -427,7 +437,7 @@ var _ = Describe("ComputeService", func() {
 				port,
 				agentID,
 				env,
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+				createCpiConfig(10),
 			)
 
 			Expect(err.Error()).To(Equal("failed while waiting on the server creation in availability zone 'z1': server became ERROR state while waiting to become ACTIVE"))
@@ -444,7 +454,7 @@ var _ = Describe("ComputeService", func() {
 				port,
 				agentID,
 				env,
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+				createCpiConfig(10),
 			)
 
 			Expect(err.Error()).To(Equal("failed while waiting on the server creation in availability zone 'z1': server became DELETED state while waiting to become ACTIVE"))
@@ -461,7 +471,7 @@ var _ = Describe("ComputeService", func() {
 				port,
 				agentID,
 				env,
-				config.OpenstackConfig{StateTimeOut: 0, DefaultKeyName: "the_key_name"},
+				createCpiConfig(0),
 			)
 
 			Expect(err.Error()).To(Equal("failed while waiting on the server creation in availability zone 'z1': timeout while waiting for server to become active"))
@@ -476,7 +486,7 @@ var _ = Describe("ComputeService", func() {
 				port,
 				agentID,
 				env,
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+				createCpiConfig(10),
 			)
 
 			Expect(err).ToNot(HaveOccurred())
@@ -715,3 +725,10 @@ var _ = Describe("ComputeService", func() {
 		})
 	})
 })
+
+func createCpiConfig(stateTimeOut int) config.CpiConfig {
+	cpiConfig := config.CpiConfig{}
+	openstackConfig := config.OpenstackConfig{StateTimeOut: stateTimeOut, DefaultKeyName: "the_key_name", UseDHCP: true}
+	cpiConfig.Cloud.Properties.Openstack = openstackConfig
+	return cpiConfig
+}

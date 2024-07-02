@@ -14,6 +14,7 @@ import (
 )
 
 type Factory struct {
+	cpiConfig       config.CpiConfig
 	openstackConfig config.OpenstackConfig
 	logger          utils.Logger
 }
@@ -45,47 +46,51 @@ type CPI struct {
 }
 
 func NewFactory(
-	openstackConfig config.OpenstackConfig,
+	cpiConfig config.CpiConfig,
 	logger utils.Logger,
 ) Factory {
-	return Factory{openstackConfig, logger}
+	return Factory{
+		cpiConfig:       cpiConfig,
+		openstackConfig: cpiConfig.Cloud.Properties.Openstack,
+		logger:          logger,
+	}
 }
 
-func (cpiFactory Factory) New(ctx apiv1.CallContext) (apiv1.CPI, error) {
+func (f Factory) New(ctx apiv1.CallContext) (apiv1.CPI, error) {
 	openstackService := openstack.NewOpenstackService(openstack.NewOpenstackFacade(), utils.NewEnvVar())
-	openstackConfig := cpiFactory.openstackConfig
 
 	return CPI{
 		methods.NewInfoMethod(),
 
 		methods.NewCreateStemcellMethod(
-			image.NewImageServiceBuilder(openstackService, openstackConfig, cpiFactory.logger),
-			image.NewHeavyStemcellCreator(openstackConfig),
-			image.NewLightStemcellCreator(openstackConfig),
+
+			image.NewImageServiceBuilder(openstackService, f.openstackConfig, f.logger),
+			image.NewHeavyStemcellCreator(f.openstackConfig),
+			image.NewLightStemcellCreator(f.openstackConfig),
 			root_image.NewRootImage(),
-			cpiFactory.openstackConfig,
-			cpiFactory.logger,
+			f.openstackConfig,
+			f.logger,
 		),
 
 		methods.NewDeleteStemcellMethod(
-			image.NewImageServiceBuilder(openstackService, openstackConfig, cpiFactory.logger),
-			cpiFactory.logger,
+			image.NewImageServiceBuilder(openstackService, f.openstackConfig, f.logger),
+			f.logger,
 		),
 
 		methods.NewCreateVMMethod(
-			image.NewImageServiceBuilder(openstackService, openstackConfig, cpiFactory.logger),
-			network.NewNetworkServiceBuilder(openstackService, openstackConfig, cpiFactory.logger),
-			compute.NewComputeServiceBuilder(openstackService, openstackConfig, cpiFactory.logger),
-			loadbalancer.NewLoadbalancerServiceBuilder(openstackService, openstackConfig, cpiFactory.logger),
-			cpiFactory.openstackConfig,
-			cpiFactory.logger,
+			image.NewImageServiceBuilder(openstackService, f.openstackConfig, f.logger),
+			network.NewNetworkServiceBuilder(openstackService, f.openstackConfig, f.logger),
+			compute.NewComputeServiceBuilder(openstackService, f.openstackConfig, f.logger),
+			loadbalancer.NewLoadbalancerServiceBuilder(openstackService, f.openstackConfig, f.logger),
+			f.cpiConfig,
+			f.logger,
 		),
 
 		methods.NewDeleteVMMethod(
-			network.NewNetworkServiceBuilder(openstackService, openstackConfig, cpiFactory.logger),
-			compute.NewComputeServiceBuilder(openstackService, openstackConfig, cpiFactory.logger),
-			cpiFactory.openstackConfig,
-			cpiFactory.logger,
+			network.NewNetworkServiceBuilder(openstackService, f.openstackConfig, f.logger),
+			compute.NewComputeServiceBuilder(openstackService, f.openstackConfig, f.logger),
+			f.openstackConfig,
+			f.logger,
 		),
 
 		methods.NewCalculateVMCloudPropertiesMethod(),

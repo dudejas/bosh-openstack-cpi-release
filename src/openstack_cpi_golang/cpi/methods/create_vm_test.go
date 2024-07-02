@@ -32,7 +32,7 @@ var _ = Describe("CreateVMMethod", func() {
 	var logger utilsfakes.FakeLogger
 	var networks apiv1.Networks
 	var jsonStr string
-	var openstackConfig config.OpenstackConfig
+	var cpiConfig config.CpiConfig
 	var env apiv1.VMEnv
 
 	Context("CreateVMV2", func() {
@@ -56,7 +56,8 @@ var _ = Describe("CreateVMMethod", func() {
 			computeService.CreateServerReturns(&servers.Server{ID: "123-456"}, nil)
 			networkService.ConfigureVIPNetworkReturns(nil)
 
-			openstackConfig = config.OpenstackConfig{IgnoreServerAvailabilityZone: true}
+			cpiConfig = config.CpiConfig{}
+			cpiConfig.Cloud.Properties.Openstack = config.OpenstackConfig{IgnoreServerAvailabilityZone: true}
 
 			networkConfig := properties.NetworkConfig{
 				DefaultNetwork: properties.Network{
@@ -94,7 +95,7 @@ var _ = Describe("CreateVMMethod", func() {
 				&networkServiceBuilder,
 				&computeServiceBuilder,
 				&loadbalancerServiceBuilder,
-				openstackConfig,
+				cpiConfig,
 				&logger,
 			).CreateVMV2(
 				apiv1.NewAgentID("the_agent-id"),
@@ -116,7 +117,7 @@ var _ = Describe("CreateVMMethod", func() {
 				&networkServiceBuilder,
 				&computeServiceBuilder,
 				&loadbalancerServiceBuilder,
-				openstackConfig,
+				cpiConfig,
 				&logger,
 			).CreateVMV2(
 				apiv1.NewAgentID("the_agent-id"),
@@ -138,7 +139,7 @@ var _ = Describe("CreateVMMethod", func() {
 				&networkServiceBuilder,
 				&computeServiceBuilder,
 				&loadbalancerServiceBuilder,
-				openstackConfig,
+				cpiConfig,
 				&logger,
 			).CreateVMV2(
 				apiv1.NewAgentID("the_agent-id"),
@@ -160,7 +161,7 @@ var _ = Describe("CreateVMMethod", func() {
 				&networkServiceBuilder,
 				&computeServiceBuilder,
 				&loadbalancerServiceBuilder,
-				openstackConfig,
+				cpiConfig,
 				&logger,
 			).CreateVMV2(
 				apiv1.NewAgentID("the_agent-id"),
@@ -182,7 +183,7 @@ var _ = Describe("CreateVMMethod", func() {
 				&networkServiceBuilder,
 				&computeServiceBuilder,
 				&loadbalancerServiceBuilder,
-				openstackConfig,
+				cpiConfig,
 				&logger,
 			).CreateVMV2(
 				apiv1.NewAgentID("the_agent-id"),
@@ -204,7 +205,7 @@ var _ = Describe("CreateVMMethod", func() {
 				&networkServiceBuilder,
 				&computeServiceBuilder,
 				&loadbalancerServiceBuilder,
-				openstackConfig,
+				cpiConfig,
 				&logger,
 			).CreateVMV2(
 				apiv1.NewAgentID("the_agent-id"),
@@ -226,7 +227,7 @@ var _ = Describe("CreateVMMethod", func() {
 				&networkServiceBuilder,
 				&computeServiceBuilder,
 				&loadbalancerServiceBuilder,
-				openstackConfig,
+				cpiConfig,
 				&logger,
 			).CreateVMV2(
 				apiv1.NewAgentID("the_agent-id"),
@@ -248,7 +249,7 @@ var _ = Describe("CreateVMMethod", func() {
 				&networkServiceBuilder,
 				&computeServiceBuilder,
 				&loadbalancerServiceBuilder,
-				openstackConfig,
+				cpiConfig,
 				&logger,
 			).CreateVMV2(
 				apiv1.NewAgentID("the_agent-id"),
@@ -272,7 +273,7 @@ var _ = Describe("CreateVMMethod", func() {
 				&networkServiceBuilder,
 				&computeServiceBuilder,
 				&loadbalancerServiceBuilder,
-				openstackConfig,
+				cpiConfig,
 				&logger,
 			).CreateVMV2(
 				apiv1.NewAgentID("the_agent-id"),
@@ -296,7 +297,7 @@ var _ = Describe("CreateVMMethod", func() {
 				&networkServiceBuilder,
 				&computeServiceBuilder,
 				&loadbalancerServiceBuilder,
-				openstackConfig,
+				cpiConfig,
 				&logger,
 			).CreateVMV2(
 				apiv1.NewAgentID("the_agent-id"),
@@ -319,7 +320,7 @@ var _ = Describe("CreateVMMethod", func() {
 				&networkServiceBuilder,
 				&computeServiceBuilder,
 				&loadbalancerServiceBuilder,
-				openstackConfig,
+				cpiConfig,
 				&logger,
 			).CreateVMV2(
 				apiv1.NewAgentID("the_agent-id"),
@@ -341,7 +342,7 @@ var _ = Describe("CreateVMMethod", func() {
 				&networkServiceBuilder,
 				&computeServiceBuilder,
 				&loadbalancerServiceBuilder,
-				openstackConfig,
+				cpiConfig,
 				&logger,
 			).CreateVMV2(
 				apiv1.NewAgentID("the_agent-id"),
@@ -361,7 +362,7 @@ var _ = Describe("CreateVMMethod", func() {
 				&networkServiceBuilder,
 				&computeServiceBuilder,
 				&loadbalancerServiceBuilder,
-				openstackConfig,
+				cpiConfig,
 				&logger,
 			).CreateVMV2(
 				apiv1.NewAgentID("the_agent-id"),
@@ -387,7 +388,7 @@ var _ = Describe("CreateVMMethod", func() {
 				&networkServiceBuilder,
 				&computeServiceBuilder,
 				&loadbalancerServiceBuilder,
-				openstackConfig,
+				cpiConfig,
 				&logger,
 			).CreateVMV2(
 				apiv1.NewAgentID("the_agent-id"),
@@ -426,7 +427,7 @@ var _ = Describe("CreateVMMethod", func() {
 				&networkServiceBuilder,
 				&computeServiceBuilder,
 				&loadbalancerServiceBuilder,
-				openstackConfig,
+				cpiConfig,
 				&logger,
 			).CreateVMV2(
 				apiv1.NewAgentID("the_agent-id"),
@@ -447,7 +448,7 @@ var _ = Describe("CreateVMMethod", func() {
 				&networkServiceBuilder,
 				&computeServiceBuilder,
 				&loadbalancerServiceBuilder,
-				openstackConfig,
+				cpiConfig,
 				&logger,
 			).CreateVMV2(
 				apiv1.NewAgentID("the_agent-id"),
@@ -470,7 +471,7 @@ var _ = Describe("CreateVMMethod", func() {
 				&networkServiceBuilder,
 				&computeServiceBuilder,
 				&loadbalancerServiceBuilder,
-				openstackConfig,
+				cpiConfig,
 				&logger,
 			).CreateVMV2(
 				apiv1.NewAgentID("the_agent-id"),
@@ -494,7 +495,7 @@ var _ = Describe("CreateVMMethod", func() {
 					&networkServiceBuilder,
 					&computeServiceBuilder,
 					&loadbalancerServiceBuilder,
-					openstackConfig,
+					cpiConfig,
 					&logger,
 				).CreateVMV2(
 					apiv1.NewAgentID("the_agent-id"),
@@ -517,7 +518,7 @@ var _ = Describe("CreateVMMethod", func() {
 					&networkServiceBuilder,
 					&computeServiceBuilder,
 					&loadbalancerServiceBuilder,
-					openstackConfig,
+					cpiConfig,
 					&logger,
 				).CreateVMV2(
 					apiv1.NewAgentID("the_agent-id"),
@@ -543,7 +544,7 @@ var _ = Describe("CreateVMMethod", func() {
 					&networkServiceBuilder,
 					&computeServiceBuilder,
 					&loadbalancerServiceBuilder,
-					openstackConfig,
+					cpiConfig,
 					&logger,
 				).CreateVMV2(
 					apiv1.NewAgentID("the_agent-id"),
@@ -565,7 +566,7 @@ var _ = Describe("CreateVMMethod", func() {
 					&networkServiceBuilder,
 					&computeServiceBuilder,
 					&loadbalancerServiceBuilder,
-					openstackConfig,
+					cpiConfig,
 					&logger,
 				).CreateVMV2(
 					apiv1.NewAgentID("the_agent-id"),
@@ -585,7 +586,7 @@ var _ = Describe("CreateVMMethod", func() {
 					&networkServiceBuilder,
 					&computeServiceBuilder,
 					&loadbalancerServiceBuilder,
-					openstackConfig,
+					cpiConfig,
 					&logger,
 				).CreateVMV2(
 					apiv1.NewAgentID("the_agent-id"),
@@ -619,7 +620,7 @@ var _ = Describe("CreateVMMethod", func() {
 					&networkServiceBuilder,
 					&computeServiceBuilder,
 					&loadbalancerServiceBuilder,
-					openstackConfig,
+					cpiConfig,
 					&logger,
 				).CreateVMV2(
 					apiv1.NewAgentID("the_agent-id"),
@@ -653,7 +654,7 @@ var _ = Describe("CreateVMMethod", func() {
 					&networkServiceBuilder,
 					&computeServiceBuilder,
 					&loadbalancerServiceBuilder,
-					openstackConfig,
+					cpiConfig,
 					&logger,
 				).CreateVMV2(
 					apiv1.NewAgentID("the_agent-id"),
@@ -686,7 +687,7 @@ var _ = Describe("CreateVMMethod", func() {
 				&networkServiceBuilder,
 				&computeServiceBuilder,
 				&loadbalancerServiceBuilder,
-				openstackConfig,
+				cpiConfig,
 				&logger,
 			).CreateVMV2(
 				apiv1.NewAgentID("the_agent-id"),
@@ -708,7 +709,7 @@ var _ = Describe("CreateVMMethod", func() {
 				&networkServiceBuilder,
 				&computeServiceBuilder,
 				&loadbalancerServiceBuilder,
-				openstackConfig,
+				cpiConfig,
 				&logger,
 			).CreateVMV2(
 				apiv1.NewAgentID("the_agent-id"),

@@ -10,7 +10,7 @@ import (
 func Execute(cpiConfig config.CpiConfig, cpiLogger utils.Logger) error {
 
 	cli := rpc.NewFactory(cpiLogger.TargetLogger()).
-		NewCLI(NewFactory(cpiConfig.Cloud.Properties.Openstack, cpiLogger))
+		NewCLI(NewFactory(cpiConfig, cpiLogger))
 
 	err := cli.ServeOnce()
 	if err != nil {

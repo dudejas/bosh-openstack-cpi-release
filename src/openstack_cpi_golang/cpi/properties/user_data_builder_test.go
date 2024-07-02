@@ -3,6 +3,7 @@ package properties_test
 import (
 	"encoding/json"
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -33,6 +34,17 @@ var _ = Describe("userDataBuilder", func() {
 			userData := properties.NewUserDataBuilder().WithNetworks(userDataNetwork).Build()
 
 			Expect(userData.Networks).To(Equal(userDataNetwork))
+		})
+	})
+
+	var _ = Context("WithConfig", func() {
+		It("sets vm data", func() {
+			cpiConfig := config.CpiConfig{}
+			cpiConfig.Cloud.Properties.Agent.MBus = "the-mbus"
+
+			userData := properties.NewUserDataBuilder().WithConfig(cpiConfig).Build()
+
+			Expect(userData.MBus).To(Equal("the-mbus"))
 		})
 	})
 

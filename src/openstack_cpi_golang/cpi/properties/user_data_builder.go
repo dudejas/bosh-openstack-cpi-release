@@ -3,6 +3,7 @@ package properties
 import (
 	"encoding/json"
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 )
 
@@ -15,6 +16,7 @@ type userDataBuilder struct {
 	ephemeralDiskSize int
 	env               json.RawMessage
 	disks             Disks
+	mbus              string
 }
 
 func NewUserDataBuilder() userDataBuilder {
@@ -23,6 +25,12 @@ func NewUserDataBuilder() userDataBuilder {
 
 func (u userDataBuilder) WithServer(server Server) userDataBuilder {
 	u.server = server
+
+	return u
+}
+
+func (u userDataBuilder) WithConfig(config config.CpiConfig) userDataBuilder {
+	u.mbus = config.Cloud.Properties.Agent.MBus
 
 	return u
 }
@@ -77,5 +85,6 @@ func (u userDataBuilder) Build() UserData {
 		Disks:    u.disks,
 		AgentID:  u.agentID,
 		Env:      u.env,
+		MBus:     u.mbus,
 	}
 }

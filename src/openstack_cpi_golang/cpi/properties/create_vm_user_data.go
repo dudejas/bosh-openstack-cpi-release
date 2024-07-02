@@ -10,6 +10,7 @@ type UserData struct {
 	Disks    Disks                      `json:"disks"`
 	AgentID  string                     `json:"agent_id"`
 	Env      json.RawMessage            `json:"env"`
+	MBus     string                     `json:"mbus"`
 }
 
 type Server struct {

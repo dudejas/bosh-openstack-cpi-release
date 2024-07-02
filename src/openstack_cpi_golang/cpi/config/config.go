@@ -13,6 +13,7 @@ type CpiConfig struct {
 	Cloud struct {
 		Properties struct {
 			Openstack OpenstackConfig `json:"openstack"`
+			Agent     Agent           `json:"agent"`
 		} `json:"properties"`
 	} `json:"cloud"`
 }
@@ -46,6 +47,10 @@ type OpenstackConfig struct {
 			APIVersion int `json:"api_version"`
 		} `json:"stemcell"`
 	} `json:"vm"`
+}
+
+type Agent struct {
+	MBus string `json:"mbus"`
 }
 
 func (cpiConfig CpiConfig) Validate() error {

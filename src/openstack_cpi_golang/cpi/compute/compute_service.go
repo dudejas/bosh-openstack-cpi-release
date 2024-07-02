@@ -31,7 +31,7 @@ type ComputeService interface {
 		port *ports.Port,
 		agentID apiv1.AgentID,
 		env apiv1.VMEnv,
-		config config.OpenstackConfig,
+		config config.CpiConfig,
 	) (*servers.Server, error)
 
 	DeleteServer(
@@ -82,26 +82,28 @@ func (c computeService) CreateServer(
 	port *ports.Port,
 	agentID apiv1.AgentID,
 	env apiv1.VMEnv,
-	config config.OpenstackConfig,
+	cpiConfig config.CpiConfig,
 ) (*servers.Server, error) {
+	openstackConfig := cpiConfig.Cloud.Properties.Openstack
+
 	flavor, err := c.flavorResolver.ResolveFlavorForInstanceType(cloudProps.InstanceType)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve flavor of instance type '%s': %w", cloudProps.InstanceType, err)
 	}
 
-	keyname, err := c.getKeyPairName(cloudProps, config)
+	keyname, err := c.getKeyPairName(cloudProps, openstackConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve keypair: %w", err)
 	}
 
-	blockDevices, err := c.volumeConfigurator.ConfigureVolumes(stemcellCID.AsString(), config, cloudProps, flavor)
+	blockDevices, err := c.volumeConfigurator.ConfigureVolumes(stemcellCID.AsString(), openstackConfig, cloudProps, flavor)
 	if err != nil {
 		return nil, fmt.Errorf("failed to configure volumes: %w", err)
 	}
 
 	vmName := c.getVMName()
 
-	userData, err := c.createServerUserData(networkConfig, config, vmName, flavor, agentID, env)
+	userData, err := c.createServerUserData(networkConfig, cpiConfig, vmName, flavor, agentID, env)
 	if err != nil {
 		fmt.Errorf("failed to create user data: %w", err)
 	}
@@ -127,7 +129,7 @@ func (c computeService) CreateServer(
 			continue
 		}
 
-		server, err = c.waitForServerToBecomeActive(server.ID, time.Duration(config.StateTimeOut)*time.Second)
+		server, err = c.waitForServerToBecomeActive(server.ID, time.Duration(openstackConfig.StateTimeOut)*time.Second)
 		if err != nil {
 			if availabilityZone == availabilityZones[len(availabilityZones)-1] {
 				return nil, fmt.Errorf("failed while waiting on the server creation in availability zone '%s': %w", availabilityZone, err)
@@ -227,7 +229,7 @@ func (c computeService) SetMetadata(server servers.Server, tags properties.Serve
 
 func (c computeService) createServerUserData(
 	networkConfig properties.NetworkConfig,
-	config config.OpenstackConfig,
+	config config.CpiConfig,
 	vmName string,
 	flavor flavors.Flavor,
 	agentID apiv1.AgentID,
@@ -235,6 +237,7 @@ func (c computeService) createServerUserData(
 ) (properties.UserData, error) {
 	userDataNetwork := map[string]properties.UserdataNetwork{}
 	for _, network := range networkConfig.AllNetworks() {
+
 		userdataNetwork := properties.UserdataNetwork{
 			Default:    network.Default,
 			DNS:        network.DNS,
@@ -246,7 +249,7 @@ func (c computeService) createServerUserData(
 		}
 
 		if network.Type != "vip" {
-			userdataNetwork.UseDHCP = &config.UseDHCP
+			userdataNetwork.UseDHCP = &config.Cloud.Properties.Openstack.UseDHCP
 		}
 
 		userDataNetwork[network.Key] = userdataNetwork
@@ -265,6 +268,7 @@ func (c computeService) createServerUserData(
 		WithEphemeralDiskSize(flavor.Disk).
 		WithAgentID(agentID).
 		WithEnvironment(environment).
+		WithConfig(config).
 		Build(), nil
 }
 

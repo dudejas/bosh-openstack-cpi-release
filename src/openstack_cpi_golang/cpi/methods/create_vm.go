@@ -20,7 +20,7 @@ type CreateVMMethod struct {
 	networkServiceBuilder      network.NetworkServiceBuilder
 	computeServiceBuilder      compute.ComputeServiceBuilder
 	loadbalancerServiceBuilder loadbalancer.LoadbalancerServiceBuilder
-	config                     config.OpenstackConfig
+	cpiConfig                  config.CpiConfig
 	logger                     utils.Logger
 }
 
@@ -29,7 +29,7 @@ func NewCreateVMMethod(
 	networkServiceBuilder network.NetworkServiceBuilder,
 	computeServiceBuilder compute.ComputeServiceBuilder,
 	loadbalancerServiceBuilder loadbalancer.LoadbalancerServiceBuilder,
-	config config.OpenstackConfig,
+	cpiConfig config.CpiConfig,
 	logger utils.Logger,
 ) CreateVMMethod {
 	return CreateVMMethod{
@@ -37,7 +37,7 @@ func NewCreateVMMethod(
 		networkServiceBuilder:      networkServiceBuilder,
 		computeServiceBuilder:      computeServiceBuilder,
 		loadbalancerServiceBuilder: loadbalancerServiceBuilder,
-		config:                     config,
+		cpiConfig:                  cpiConfig,
 		logger:                     logger,
 	}
 }
@@ -56,7 +56,7 @@ func (m CreateVMMethod) CreateVMV2(
 	cloudProps := properties.CreateVM{}
 	props.As(&cloudProps)
 
-	err := cloudProps.Validate(m.config)
+	err := cloudProps.Validate(m.cpiConfig.Cloud.Properties.Openstack)
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to validate cloud properties: %w", err)
 	}
@@ -86,7 +86,7 @@ func (m CreateVMMethod) CreateVMV2(
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to resolve stemcell: %w", err)
 	}
 
-	networkConfig, err := networkService.GetNetworkConfiguration(networks, m.config, cloudProps)
+	networkConfig, err := networkService.GetNetworkConfiguration(networks, m.cpiConfig.Cloud.Properties.Openstack, cloudProps)
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to create network config: %w", err)
 	}
@@ -99,7 +99,7 @@ func (m CreateVMMethod) CreateVMV2(
 		}
 	}
 
-	server, err := computeService.CreateServer(stemcellCID, cloudProps, networkConfig, port, agentID, env, m.config)
+	server, err := computeService.CreateServer(stemcellCID, cloudProps, networkConfig, port, agentID, env, m.cpiConfig)
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to create server: %w", err)
 	}
@@ -150,7 +150,7 @@ func (m CreateVMMethod) configureLoadbalancerPools(
 			return []pools.Member{}, fmt.Errorf("failed to get subnet: %w", err)
 		}
 
-		poolMember, err := loadbalancerService.CreatePoolMember(poolID, ip, pool, subnetID, m.config.StateTimeOut)
+		poolMember, err := loadbalancerService.CreatePoolMember(poolID, ip, pool, subnetID, m.cpiConfig.Cloud.Properties.Openstack.StateTimeOut)
 		if err != nil {
 			return []pools.Member{}, fmt.Errorf("failed to create pool membership of IP '%s' in pool '%s': %w", ip, pool.Name, err)
 		}
