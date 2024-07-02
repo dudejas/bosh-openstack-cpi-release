@@ -33,7 +33,6 @@ var _ = Describe("ComputeService", func() {
 	var defaultCloudConfig properties.CreateVM
 	var loadbalancerServiceBuilder loadbalancerfakes.FakeLoadbalancerServiceBuilder
 	var loadbalancerService loadbalancerfakes.FakeLoadbalancerService
-	var port *ports.Port
 	var agentID apiv1.AgentID
 	var env apiv1.VMEnv
 
@@ -58,7 +57,6 @@ var _ = Describe("ComputeService", func() {
 		computeFacade.GetOSKeyPairReturns(&keypairs.KeyPair{Name: "the_os_keypair_name"}, nil)
 		defaultCloudConfig = properties.CreateVM{InstanceType: "the_instance_type", RootDisk: properties.Disk{Size: 1}}
 		availabilityZoneProvider.GetAvailabilityZonesReturns([]string{"z1"})
-		port = &ports.Port{ID: "the_port_id"}
 		agentID = apiv1.NewAgentID("agent-id")
 		env = apiv1.VMEnv{}
 	})
@@ -73,7 +71,6 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
-				port,
 				agentID,
 				env,
 				createCpiConfig(10),
@@ -92,7 +89,6 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
-				port,
 				agentID,
 				env,
 				createCpiConfig(10),
@@ -112,7 +108,6 @@ var _ = Describe("ComputeService", func() {
 					RootDisk:     properties.Disk{Size: 0},
 				},
 				networkConfig,
-				port,
 				agentID,
 				env,
 				createCpiConfig(10),
@@ -133,7 +128,6 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
-				port,
 				agentID,
 				env,
 				cpiConfig,
@@ -154,7 +148,6 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
-				port,
 				agentID,
 				env,
 				cpiConfig,
@@ -170,7 +163,6 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
-				port,
 				agentID,
 				env,
 				createCpiConfig(10),
@@ -186,7 +178,6 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				properties.CreateVM{InstanceType: "the_instance_type", RootDisk: properties.Disk{Size: 0}},
 				networkConfig,
-				port,
 				agentID,
 				env,
 				createCpiConfig(10),
@@ -212,7 +203,8 @@ var _ = Describe("ComputeService", func() {
 
 				networkConfig = properties.NetworkConfig{
 					ManualNetworks: []properties.Network{
-						{Key: "bosh", Type: "manual", IP: "1.2.3.4", CloudProps: properties.NetworkCloudProps{NetID: "the_net_id"}},
+						{Key: "bosh", Type: "manual", IP: "1.2.3.4", CloudProps: properties.NetworkCloudProps{NetID: "the_net_id"},
+							Port: ports.Port{ID: "the_port_id"}},
 					},
 					VIPNetwork: &properties.Network{
 						Key: "bosh-vip", Type: "vip", IP: "5.6.7.8", CloudProps: properties.NetworkCloudProps{NetID: "the_net_id"},
@@ -233,7 +225,6 @@ var _ = Describe("ComputeService", func() {
 						BootFromVolume:   &bootFromVolume,
 					},
 					networkConfig,
-					port,
 					agentID,
 					env,
 					createCpiConfig(10),
@@ -276,7 +267,6 @@ var _ = Describe("ComputeService", func() {
 						BootFromVolume:   &bootFromVolume,
 					},
 					networkConfig,
-					port,
 					agentID,
 					env,
 					createCpiConfig(10),
@@ -325,7 +315,6 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
-				port,
 				agentID,
 				env,
 				createCpiConfig(10),
@@ -355,7 +344,6 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
-				port,
 				agentID,
 				env,
 				createCpiConfig(0),
@@ -381,7 +369,6 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
-				port,
 				agentID,
 				env,
 				createCpiConfig(10),
@@ -399,7 +386,6 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
-				port,
 				agentID,
 				env,
 				createCpiConfig(10),
@@ -417,7 +403,6 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
-				port,
 				agentID,
 				env,
 				createCpiConfig(10),
@@ -434,7 +419,6 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
-				port,
 				agentID,
 				env,
 				createCpiConfig(10),
@@ -451,7 +435,6 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
-				port,
 				agentID,
 				env,
 				createCpiConfig(10),
@@ -468,7 +451,6 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
-				port,
 				agentID,
 				env,
 				createCpiConfig(0),
@@ -483,7 +465,6 @@ var _ = Describe("ComputeService", func() {
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
-				port,
 				agentID,
 				env,
 				createCpiConfig(10),

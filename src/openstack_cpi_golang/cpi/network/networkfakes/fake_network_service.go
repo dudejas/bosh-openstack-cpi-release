@@ -24,18 +24,19 @@ type FakeNetworkService struct {
 	configureVIPNetworkReturnsOnCall map[int]struct {
 		result1 error
 	}
-	CreatePortStub        func(properties.NetworkConfig, properties.CreateVM) (*ports.Port, error)
+	CreatePortStub        func(properties.Network, []string, properties.CreateVM) (ports.Port, error)
 	createPortMutex       sync.RWMutex
 	createPortArgsForCall []struct {
-		arg1 properties.NetworkConfig
-		arg2 properties.CreateVM
+		arg1 properties.Network
+		arg2 []string
+		arg3 properties.CreateVM
 	}
 	createPortReturns struct {
-		result1 *ports.Port
+		result1 ports.Port
 		result2 error
 	}
 	createPortReturnsOnCall map[int]struct {
-		result1 *ports.Port
+		result1 ports.Port
 		result2 error
 	}
 	DeletePortsStub        func([]ports.Port) error
@@ -159,19 +160,25 @@ func (fake *FakeNetworkService) ConfigureVIPNetworkReturnsOnCall(i int, result1 
 	}{result1}
 }
 
-func (fake *FakeNetworkService) CreatePort(arg1 properties.NetworkConfig, arg2 properties.CreateVM) (*ports.Port, error) {
+func (fake *FakeNetworkService) CreatePort(arg1 properties.Network, arg2 []string, arg3 properties.CreateVM) (ports.Port, error) {
+	var arg2Copy []string
+	if arg2 != nil {
+		arg2Copy = make([]string, len(arg2))
+		copy(arg2Copy, arg2)
+	}
 	fake.createPortMutex.Lock()
 	ret, specificReturn := fake.createPortReturnsOnCall[len(fake.createPortArgsForCall)]
 	fake.createPortArgsForCall = append(fake.createPortArgsForCall, struct {
-		arg1 properties.NetworkConfig
-		arg2 properties.CreateVM
-	}{arg1, arg2})
+		arg1 properties.Network
+		arg2 []string
+		arg3 properties.CreateVM
+	}{arg1, arg2Copy, arg3})
 	stub := fake.CreatePortStub
 	fakeReturns := fake.createPortReturns
-	fake.recordInvocation("CreatePort", []interface{}{arg1, arg2})
+	fake.recordInvocation("CreatePort", []interface{}{arg1, arg2Copy, arg3})
 	fake.createPortMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -185,41 +192,41 @@ func (fake *FakeNetworkService) CreatePortCallCount() int {
 	return len(fake.createPortArgsForCall)
 }
 
-func (fake *FakeNetworkService) CreatePortCalls(stub func(properties.NetworkConfig, properties.CreateVM) (*ports.Port, error)) {
+func (fake *FakeNetworkService) CreatePortCalls(stub func(properties.Network, []string, properties.CreateVM) (ports.Port, error)) {
 	fake.createPortMutex.Lock()
 	defer fake.createPortMutex.Unlock()
 	fake.CreatePortStub = stub
 }
 
-func (fake *FakeNetworkService) CreatePortArgsForCall(i int) (properties.NetworkConfig, properties.CreateVM) {
+func (fake *FakeNetworkService) CreatePortArgsForCall(i int) (properties.Network, []string, properties.CreateVM) {
 	fake.createPortMutex.RLock()
 	defer fake.createPortMutex.RUnlock()
 	argsForCall := fake.createPortArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
-func (fake *FakeNetworkService) CreatePortReturns(result1 *ports.Port, result2 error) {
+func (fake *FakeNetworkService) CreatePortReturns(result1 ports.Port, result2 error) {
 	fake.createPortMutex.Lock()
 	defer fake.createPortMutex.Unlock()
 	fake.CreatePortStub = nil
 	fake.createPortReturns = struct {
-		result1 *ports.Port
+		result1 ports.Port
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeNetworkService) CreatePortReturnsOnCall(i int, result1 *ports.Port, result2 error) {
+func (fake *FakeNetworkService) CreatePortReturnsOnCall(i int, result1 ports.Port, result2 error) {
 	fake.createPortMutex.Lock()
 	defer fake.createPortMutex.Unlock()
 	fake.CreatePortStub = nil
 	if fake.createPortReturnsOnCall == nil {
 		fake.createPortReturnsOnCall = make(map[int]struct {
-			result1 *ports.Port
+			result1 ports.Port
 			result2 error
 		})
 	}
 	fake.createPortReturnsOnCall[i] = struct {
-		result1 *ports.Port
+		result1 ports.Port
 		result2 error
 	}{result1, result2}
 }

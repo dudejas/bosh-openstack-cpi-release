@@ -9,20 +9,18 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 )
 
 type FakeComputeService struct {
-	CreateServerStub        func(apiv1.StemcellCID, properties.CreateVM, properties.NetworkConfig, *ports.Port, apiv1.AgentID, apiv1.VMEnv, config.CpiConfig) (*servers.Server, error)
+	CreateServerStub        func(apiv1.StemcellCID, properties.CreateVM, properties.NetworkConfig, apiv1.AgentID, apiv1.VMEnv, config.CpiConfig) (*servers.Server, error)
 	createServerMutex       sync.RWMutex
 	createServerArgsForCall []struct {
 		arg1 apiv1.StemcellCID
 		arg2 properties.CreateVM
 		arg3 properties.NetworkConfig
-		arg4 *ports.Port
-		arg5 apiv1.AgentID
-		arg6 apiv1.VMEnv
-		arg7 config.CpiConfig
+		arg4 apiv1.AgentID
+		arg5 apiv1.VMEnv
+		arg6 config.CpiConfig
 	}
 	createServerReturns struct {
 		result1 *servers.Server
@@ -60,24 +58,23 @@ type FakeComputeService struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeComputeService) CreateServer(arg1 apiv1.StemcellCID, arg2 properties.CreateVM, arg3 properties.NetworkConfig, arg4 *ports.Port, arg5 apiv1.AgentID, arg6 apiv1.VMEnv, arg7 config.CpiConfig) (*servers.Server, error) {
+func (fake *FakeComputeService) CreateServer(arg1 apiv1.StemcellCID, arg2 properties.CreateVM, arg3 properties.NetworkConfig, arg4 apiv1.AgentID, arg5 apiv1.VMEnv, arg6 config.CpiConfig) (*servers.Server, error) {
 	fake.createServerMutex.Lock()
 	ret, specificReturn := fake.createServerReturnsOnCall[len(fake.createServerArgsForCall)]
 	fake.createServerArgsForCall = append(fake.createServerArgsForCall, struct {
 		arg1 apiv1.StemcellCID
 		arg2 properties.CreateVM
 		arg3 properties.NetworkConfig
-		arg4 *ports.Port
-		arg5 apiv1.AgentID
-		arg6 apiv1.VMEnv
-		arg7 config.CpiConfig
-	}{arg1, arg2, arg3, arg4, arg5, arg6, arg7})
+		arg4 apiv1.AgentID
+		arg5 apiv1.VMEnv
+		arg6 config.CpiConfig
+	}{arg1, arg2, arg3, arg4, arg5, arg6})
 	stub := fake.CreateServerStub
 	fakeReturns := fake.createServerReturns
-	fake.recordInvocation("CreateServer", []interface{}{arg1, arg2, arg3, arg4, arg5, arg6, arg7})
+	fake.recordInvocation("CreateServer", []interface{}{arg1, arg2, arg3, arg4, arg5, arg6})
 	fake.createServerMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+		return stub(arg1, arg2, arg3, arg4, arg5, arg6)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -91,17 +88,17 @@ func (fake *FakeComputeService) CreateServerCallCount() int {
 	return len(fake.createServerArgsForCall)
 }
 
-func (fake *FakeComputeService) CreateServerCalls(stub func(apiv1.StemcellCID, properties.CreateVM, properties.NetworkConfig, *ports.Port, apiv1.AgentID, apiv1.VMEnv, config.CpiConfig) (*servers.Server, error)) {
+func (fake *FakeComputeService) CreateServerCalls(stub func(apiv1.StemcellCID, properties.CreateVM, properties.NetworkConfig, apiv1.AgentID, apiv1.VMEnv, config.CpiConfig) (*servers.Server, error)) {
 	fake.createServerMutex.Lock()
 	defer fake.createServerMutex.Unlock()
 	fake.CreateServerStub = stub
 }
 
-func (fake *FakeComputeService) CreateServerArgsForCall(i int) (apiv1.StemcellCID, properties.CreateVM, properties.NetworkConfig, *ports.Port, apiv1.AgentID, apiv1.VMEnv, config.CpiConfig) {
+func (fake *FakeComputeService) CreateServerArgsForCall(i int) (apiv1.StemcellCID, properties.CreateVM, properties.NetworkConfig, apiv1.AgentID, apiv1.VMEnv, config.CpiConfig) {
 	fake.createServerMutex.RLock()
 	defer fake.createServerMutex.RUnlock()
 	argsForCall := fake.createServerArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5, argsForCall.arg6, argsForCall.arg7
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5, argsForCall.arg6
 }
 
 func (fake *FakeComputeService) CreateServerReturns(result1 *servers.Server, result2 error) {

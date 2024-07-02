@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 )
 
 type NetworkConfig struct {
@@ -19,6 +20,7 @@ type NetworksMap map[string]Network
 
 type Network struct {
 	Key        string
+	Port       ports.Port
 	Default    []string          `json:"default"`
 	DNS        []string          `json:"dns"`
 	IP         string            `json:"ip,omitempty"`
@@ -26,6 +28,12 @@ type Network struct {
 	Netmask    string            `json:"netmask,omitempty"`
 	Type       string            `json:"type"`
 	CloudProps NetworkCloudProps `json:"cloud_properties"`
+	Mac        string            `json:"mac,omitempty"`
+}
+
+func (n *Network) ConfigurePort(port ports.Port) {
+	n.Port = port
+	n.Mac = port.MACAddress
 }
 
 type NetworkCloudProps struct {

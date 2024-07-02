@@ -15,7 +15,6 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 	"strings"
 	"time"
 )
@@ -28,7 +27,6 @@ type ComputeService interface {
 		stemcellCID apiv1.StemcellCID,
 		cloudProps properties.CreateVM,
 		networkConfig properties.NetworkConfig,
-		port *ports.Port,
 		agentID apiv1.AgentID,
 		env apiv1.VMEnv,
 		config config.CpiConfig,
@@ -79,7 +77,6 @@ func (c computeService) CreateServer(
 	stemcellCID apiv1.StemcellCID,
 	cloudProps properties.CreateVM,
 	networkConfig properties.NetworkConfig,
-	port *ports.Port,
 	agentID apiv1.AgentID,
 	env apiv1.VMEnv,
 	cpiConfig config.CpiConfig,
@@ -116,7 +113,7 @@ func (c computeService) CreateServer(
 	var server *servers.Server
 	availabilityZones := c.availabilityZoneProvider.GetAvailabilityZones(cloudProps)
 	for _, availabilityZone := range availabilityZones {
-		createOpts := c.getServerCreateOpts(vmName, availabilityZone, stemcellCID, networkConfig, flavor, keyname, blockDevices, userDataJson, port)
+		createOpts := c.getServerCreateOpts(vmName, availabilityZone, stemcellCID, networkConfig, flavor, keyname, blockDevices, userDataJson)
 
 		server, err = c.computeFacade.CreateServer(c.serviceClient, createOpts)
 		if err != nil {
@@ -246,6 +243,7 @@ func (c computeService) createServerUserData(
 			Netmask:    network.Netmask,
 			Type:       network.Type,
 			CloudProps: network.CloudProps,
+			Mac:        network.Mac,
 		}
 
 		if network.Type != "vip" {
@@ -280,14 +278,13 @@ func (c computeService) getServerCreateOpts(
 	flavor flavors.Flavor, keyname string,
 	blockDevices []bootfromvolume.BlockDevice,
 	userDataJson []byte,
-	port *ports.Port,
 ) servers.CreateOptsBuilder {
 
 	var createOpts servers.CreateOptsBuilder
 	createOpts = servers.CreateOpts{
 		Name:             vmName,
 		ImageRef:         stemcellCID.AsString(),
-		Networks:         c.getServerNetworks(networkConfig, port),
+		Networks:         c.getServerNetworks(networkConfig),
 		AvailabilityZone: availabilityZone,
 		FlavorRef:        flavor.ID,
 		UserData:         userDataJson,
@@ -328,10 +325,10 @@ func (c computeService) getKeyPairName(cloudProps properties.CreateVM, openstack
 	return keypair.Name, nil
 }
 
-func (c computeService) getServerNetworks(networkConfig properties.NetworkConfig, port *ports.Port) []servers.Network {
+func (c computeService) getServerNetworks(networkConfig properties.NetworkConfig) []servers.Network {
 	var serverNetworks []servers.Network
 	for _, network := range networkConfig.ManualNetworks {
-		serverNetworks = append(serverNetworks, servers.Network{UUID: network.CloudProps.NetID, Port: port.ID})
+		serverNetworks = append(serverNetworks, servers.Network{UUID: network.CloudProps.NetID, Port: network.Port.ID})
 	}
 
 	dynamicNetwork := networkConfig.DynamicNetwork

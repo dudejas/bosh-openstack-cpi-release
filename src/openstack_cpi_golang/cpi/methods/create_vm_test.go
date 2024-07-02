@@ -34,6 +34,8 @@ var _ = Describe("CreateVMMethod", func() {
 	var jsonStr string
 	var cpiConfig config.CpiConfig
 	var env apiv1.VMEnv
+	var networkConfig properties.NetworkConfig
+	var port ports.Port
 
 	Context("CreateVMV2", func() {
 
@@ -59,7 +61,7 @@ var _ = Describe("CreateVMMethod", func() {
 			cpiConfig = config.CpiConfig{}
 			cpiConfig.Cloud.Properties.Openstack = config.OpenstackConfig{IgnoreServerAvailabilityZone: true}
 
-			networkConfig := properties.NetworkConfig{
+			networkConfig = properties.NetworkConfig{
 				DefaultNetwork: properties.Network{
 					Type:       "manual",
 					IP:         "1.1.1.1",
@@ -69,11 +71,17 @@ var _ = Describe("CreateVMMethod", func() {
 					Key:        "key-1",
 					Type:       "manual",
 					IP:         "1.1.1.1",
-					CloudProps: properties.NetworkCloudProps{NetID: "the-net-id"},
+					CloudProps: properties.NetworkCloudProps{NetID: "the-net-id-1"},
+				}, {
+					Key:        "key-2",
+					Type:       "manual",
+					IP:         "2.2.2.2",
+					CloudProps: properties.NetworkCloudProps{NetID: "the-net-id-2"},
 				}},
 			}
 			networkService.GetNetworkConfigurationReturns(networkConfig, nil)
-			networkService.CreatePortReturns(&ports.Port{ID: "the-port-id"}, nil)
+			port = ports.Port{ID: "the-port-id"}
+			networkService.CreatePortReturns(port, nil)
 
 			networks = apiv1.Networks{}
 
@@ -313,7 +321,7 @@ var _ = Describe("CreateVMMethod", func() {
 			Expect(networks).To(Equal(apiv1.Networks{}))
 		})
 
-		It("creates a port for manual default networks", func() {
+		It("creates a port per manual network", func() {
 
 			methods.NewCreateVMMethod(
 				&imageServiceBuilder,
@@ -331,11 +339,11 @@ var _ = Describe("CreateVMMethod", func() {
 				env,
 			)
 
-			Expect(networkService.CreatePortCallCount()).To(Equal(1))
+			Expect(networkService.CreatePortCallCount()).To(Equal(2))
 		})
 
 		It("returns an error if port creation fails", func() {
-			networkService.CreatePortReturns(nil, errors.New("boom"))
+			networkService.CreatePortReturns(ports.Port{}, errors.New("boom"))
 
 			_, _, err := methods.NewCreateVMMethod(
 				&imageServiceBuilder,
@@ -356,6 +364,28 @@ var _ = Describe("CreateVMMethod", func() {
 			Expect(err.Error()).To(Equal("failed to create port: boom"))
 		})
 
+		It("configures the created ports in the network config", func() {
+			methods.NewCreateVMMethod(
+				&imageServiceBuilder,
+				&networkServiceBuilder,
+				&computeServiceBuilder,
+				&loadbalancerServiceBuilder,
+				cpiConfig,
+				&logger,
+			).CreateVMV2(
+				apiv1.NewAgentID("the_agent-id"),
+				apiv1.NewStemcellCID("stemcell-id"),
+				apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
+				networks,
+				[]apiv1.DiskCID{},
+				env,
+			)
+
+			manualNetworks := networkConfig.ManualNetworks
+			Expect(manualNetworks[0].Port).To(Equal(port))
+			Expect(manualNetworks[1].Port).To(Equal(port))
+		})
+
 		It("creates a server", func() {
 			methods.NewCreateVMMethod(
 				&imageServiceBuilder,
@@ -373,9 +403,8 @@ var _ = Describe("CreateVMMethod", func() {
 				env,
 			)
 
-			stemcellCID, _, _, port, agentID, environment, _ := computeService.CreateServerArgsForCall(0)
+			stemcellCID, _, _, agentID, environment, _ := computeService.CreateServerArgsForCall(0)
 			Expect(stemcellCID.AsString()).To(Equal("stemcell-id"))
-			Expect(port.ID).To(Equal("the-port-id"))
 			Expect(agentID.AsString()).To(Equal("the_agent-id"))
 			Expect(environment).To(Equal(env))
 		})
@@ -724,7 +753,7 @@ var _ = Describe("CreateVMMethod", func() {
 			Expect(stemcellCID.AsString()).To(Equal("123-456"))
 			cloudProps := properties.NetworkCloudProps{}
 			networkSpec["key-1"].CloudProps().As(&cloudProps)
-			Expect(cloudProps.NetID).To(Equal("the-net-id"))
+			Expect(cloudProps.NetID).To(Equal("the-net-id-1"))
 
 		})
 	})

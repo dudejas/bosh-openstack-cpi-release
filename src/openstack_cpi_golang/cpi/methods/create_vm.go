@@ -11,7 +11,6 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/pools"
-	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 	"strconv"
 )
 
@@ -91,15 +90,17 @@ func (m CreateVMMethod) CreateVMV2(
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to create network config: %w", err)
 	}
 
-	var port *ports.Port
-	if networkConfig.DefaultNetwork.Type == "manual" {
-		port, err = networkService.CreatePort(networkConfig, cloudProps)
+	manualNetworks := networkConfig.ManualNetworks
+	for i := 0; i < len(manualNetworks); i++ {
+		manualNetwork := &manualNetworks[i]
+		port, err := networkService.CreatePort(*manualNetwork, networkConfig.SecurityGroups, cloudProps)
 		if err != nil {
 			return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to create port: %w", err)
 		}
+		manualNetwork.ConfigurePort(port)
 	}
 
-	server, err := computeService.CreateServer(stemcellCID, cloudProps, networkConfig, port, agentID, env, m.cpiConfig)
+	server, err := computeService.CreateServer(stemcellCID, cloudProps, networkConfig, agentID, env, m.cpiConfig)
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to create server: %w", err)
 	}
