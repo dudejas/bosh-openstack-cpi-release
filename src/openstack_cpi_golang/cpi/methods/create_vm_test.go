@@ -1,7 +1,6 @@
 package methods_test
 
 import (
-	"encoding/json"
 	"errors"
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/compute/computefakes"
@@ -433,44 +432,6 @@ var _ = Describe("CreateVMMethod", func() {
 			Expect(networks).To(Equal(apiv1.Networks{}))
 		})
 
-		It("updates the network configuration", func() {
-			networkConfig := properties.NetworkConfig{
-				DefaultNetwork: properties.Network{
-					Type: "dynamic",
-				},
-			}
-			networkService.GetNetworkConfigurationReturns(networkConfig, nil)
-
-			var server servers.Server
-			json.Unmarshal([]byte(`{
-				"id": "123-456",
-				"addresses": {
-					"default": [{"version": 4, "addr": "192.168.1.1"}]
-				}
-			}`), &server)
-
-			computeService.CreateServerReturns(&server, nil)
-
-			methods.NewCreateVMMethod(
-				&imageServiceBuilder,
-				&networkServiceBuilder,
-				&computeServiceBuilder,
-				&loadbalancerServiceBuilder,
-				cpiConfig,
-				&logger,
-			).CreateVMV2(
-				apiv1.NewAgentID("the_agent-id"),
-				apiv1.NewStemcellCID("stemcell-id"),
-				apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
-				networks,
-				[]apiv1.DiskCID{},
-				env,
-			)
-
-			_, config := networkService.ConfigureVIPNetworkArgsForCall(0)
-			Expect(config.DefaultNetwork.IP).To(Equal("192.168.1.1"))
-		})
-
 		It("configures the VIP network of the created server", func() {
 			methods.NewCreateVMMethod(
 				&imageServiceBuilder,
@@ -751,10 +712,7 @@ var _ = Describe("CreateVMMethod", func() {
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stemcellCID.AsString()).To(Equal("123-456"))
-			cloudProps := properties.NetworkCloudProps{}
-			networkSpec["key-1"].CloudProps().As(&cloudProps)
-			Expect(cloudProps.NetID).To(Equal("the-net-id-1"))
-
+			Expect(networkSpec).To(Equal(networks))
 		})
 	})
 })

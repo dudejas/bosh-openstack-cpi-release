@@ -105,8 +105,6 @@ func (m CreateVMMethod) CreateVMV2(
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to create server: %w", err)
 	}
 
-	networkConfig.UpdateWithServerData(*server)
-
 	err = networkService.ConfigureVIPNetwork(server.ID, networkConfig)
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to configure network for server '%s': %w", server.ID, err)
@@ -119,12 +117,7 @@ func (m CreateVMMethod) CreateVMV2(
 
 	computeService.SetMetadata(*server, m.getServerTags(poolMembers))
 
-	networkSpec, err := networkConfig.AsNetworkSpec()
-	if err != nil {
-		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to get network spec: %w", err)
-	}
-
-	return apiv1.NewVMCID(server.ID), networkSpec, nil
+	return apiv1.NewVMCID(server.ID), networks, nil
 }
 
 func (m CreateVMMethod) configureLoadbalancerPools(
