@@ -238,6 +238,7 @@ var _ = Describe("ComputeService", func() {
 				Expect(err).ToNot(HaveOccurred())
 				server := createMap["server"].(map[string]interface{})
 				serverNetworks := server["networks"].([]map[string]interface{})
+				serverSecurityGroups := server["security_groups"].([]map[string]interface{})
 				blockDevice := server["block_device_mapping_v2"].([]map[string]interface{})
 
 				Expect(server["name"]).To(ContainSubstring("vm-"))
@@ -249,6 +250,8 @@ var _ = Describe("ComputeService", func() {
 				Expect(server["key_name"]).To(Equal("the_os_keypair_name"))
 				Expect(blockDevice[0]["uuid"]).To(Equal("the-stemcell-id"))
 				Expect(blockDevice[0]["volume_size"]).To(Equal(999.0))
+				Expect(serverSecurityGroups[0]["name"]).To(Equal("group_1"))
+				Expect(serverSecurityGroups[1]["name"]).To(Equal("group_2"))
 			})
 
 			It("creates user data", func() {

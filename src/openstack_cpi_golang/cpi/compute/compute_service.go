@@ -288,6 +288,10 @@ func (c computeService) getServerCreateOpts(
 		AvailabilityZone: availabilityZone,
 		FlavorRef:        flavor.ID,
 		UserData:         userDataJson,
+
+		//Security groups are set for dynamic networks here.
+		//For manual networks, security groups are set on the port.
+		SecurityGroups: networkConfig.SecurityGroups,
 	}
 
 	createOpts = keypairs.CreateOptsExt{
