@@ -29,12 +29,12 @@ type ComputeService interface {
 		networkConfig properties.NetworkConfig,
 		agentID apiv1.AgentID,
 		env apiv1.VMEnv,
-		config config.CpiConfig,
+		cpiConfig config.CpiConfig,
 	) (*servers.Server, error)
 
 	DeleteServer(
 		vmcid string,
-		config config.OpenstackConfig,
+		cpiConfig config.CpiConfig,
 	) error
 
 	SetMetadata(
@@ -44,7 +44,7 @@ type ComputeService interface {
 }
 
 type computeService struct {
-	serviceClient              *gophercloud.ServiceClient
+	serviceClients             utils.ServiceClients
 	computeFacade              ComputeFacade
 	flavorResolver             FlavorResolver
 	volumeConfigurator         VolumeConfigurator
@@ -54,7 +54,7 @@ type computeService struct {
 }
 
 func NewComputeService(
-	serviceClient *gophercloud.ServiceClient,
+	serviceClients utils.ServiceClients,
 	computeFacade ComputeFacade,
 	flavorResolver FlavorResolver,
 	volumeConfigurator VolumeConfigurator,
@@ -63,7 +63,7 @@ func NewComputeService(
 	logger utils.Logger,
 ) computeService {
 	return computeService{
-		serviceClient:              serviceClient,
+		serviceClients:             serviceClients,
 		computeFacade:              computeFacade,
 		flavorResolver:             flavorResolver,
 		volumeConfigurator:         volumeConfigurator,
@@ -115,7 +115,7 @@ func (c computeService) CreateServer(
 	for _, availabilityZone := range availabilityZones {
 		createOpts := c.getServerCreateOpts(vmName, availabilityZone, stemcellCID, networkConfig, flavor, keyname, blockDevices, userDataJson)
 
-		server, err = c.computeFacade.CreateServer(c.serviceClient, createOpts)
+		server, err = c.computeFacade.CreateServer(c.serviceClients.ServiceClient, createOpts)
 		if err != nil {
 			if availabilityZone == availabilityZones[len(availabilityZones)-1] {
 				return nil, fmt.Errorf("failed to create server in availability zone '%s': %w", availabilityZone, err)
@@ -141,13 +141,11 @@ func (c computeService) CreateServer(
 
 func (c computeService) DeleteServer(
 	serverID string,
-	config config.OpenstackConfig,
+	cpiConfig config.CpiConfig,
 ) error {
 	var errDefault404 gophercloud.ErrDefault404
-	serviceClient := c.serviceClient
-	serviceClient.RetryFunc = utils.RetryOnError(c.logger)
 
-	_, err := c.computeFacade.GetServer(serviceClient, serverID)
+	_, err := c.computeFacade.GetServer(c.serviceClients.RetryableServiceClient, serverID)
 	if err != nil {
 		if errors.As(err, &errDefault404) {
 			c.logger.Info("compute_service", fmt.Sprintf("SKIPPING: Server deletion with id '%s' is not found", serverID))
@@ -156,7 +154,7 @@ func (c computeService) DeleteServer(
 		return fmt.Errorf("failed to retrieve server information: %w", err)
 	}
 
-	serverMetadata, err := c.computeFacade.GetServerMetadata(serviceClient, serverID)
+	serverMetadata, err := c.computeFacade.GetServerMetadata(c.serviceClients.RetryableServiceClient, serverID)
 	if err != nil {
 		if errors.As(err, &errDefault404) {
 			c.logger.Info("compute_service", fmt.Sprintf("SKIPPING: Metadata retrieval for server with id '%s' is not found", serverID))
@@ -189,12 +187,13 @@ func (c computeService) DeleteServer(
 		}
 	}
 
-	err = c.computeFacade.DeleteServer(serviceClient, serverID)
+	err = c.computeFacade.DeleteServer(c.serviceClients.RetryableServiceClient, serverID)
 	if err != nil && !errors.As(err, &errDefault404) {
 		return fmt.Errorf("failed to delete server: %w", err)
 	}
 
-	err = c.waitForServerToBecomeDeleted(serverID, time.Duration(config.StateTimeOut)*time.Second)
+	timeout := time.Duration(cpiConfig.Cloud.Properties.Openstack.StateTimeOut) * time.Second
+	err = c.waitForServerToBecomeDeleted(serverID, timeout)
 	if err != nil {
 		return fmt.Errorf("failed while waiting on the server deletion: %w", err)
 	}
@@ -215,7 +214,7 @@ func (c computeService) SetMetadata(server servers.Server, tags properties.Serve
 			metadatumOpts[k] = v
 		}
 
-		_, err := c.computeFacade.SetServerMetadata(c.serviceClient, server.ID, metadatumOpts)
+		_, err := c.computeFacade.SetServerMetadata(c.serviceClients.ServiceClient, server.ID, metadatumOpts)
 		if err != nil {
 			return fmt.Errorf("failed to set metadata: %w", err)
 		}
@@ -226,7 +225,7 @@ func (c computeService) SetMetadata(server servers.Server, tags properties.Serve
 
 func (c computeService) createServerUserData(
 	networkConfig properties.NetworkConfig,
-	config config.CpiConfig,
+	cpiConfig config.CpiConfig,
 	vmName string,
 	flavor flavors.Flavor,
 	agentID apiv1.AgentID,
@@ -247,7 +246,7 @@ func (c computeService) createServerUserData(
 		}
 
 		if network.Type != "vip" {
-			userdataNetwork.UseDHCP = &config.Cloud.Properties.Openstack.UseDHCP
+			userdataNetwork.UseDHCP = &cpiConfig.Cloud.Properties.Openstack.UseDHCP
 		}
 
 		userDataNetwork[network.Key] = userdataNetwork
@@ -266,7 +265,7 @@ func (c computeService) createServerUserData(
 		WithEphemeralDiskSize(flavor.Disk).
 		WithAgentID(agentID).
 		WithEnvironment(environment).
-		WithConfig(config).
+		WithConfig(cpiConfig).
 		Build(), nil
 }
 
@@ -321,7 +320,7 @@ func (c computeService) getKeyPairName(cloudProps properties.CreateVM, openstack
 		return "", fmt.Errorf("key pair name undefined")
 	}
 
-	keypair, err := c.computeFacade.GetOSKeyPair(c.serviceClient, keyPairName, keypairs.GetOpts{})
+	keypair, err := c.computeFacade.GetOSKeyPair(c.serviceClients.RetryableServiceClient, keyPairName, keypairs.GetOpts{})
 	if err != nil {
 		return "", fmt.Errorf("failed to retrieve '%s': %w", keyPairName, err)
 	}
@@ -354,7 +353,7 @@ func (c computeService) waitForServerToBecomeActive(serverID string, timeout tim
 		case <-timeoutTimer.C:
 			return nil, fmt.Errorf("timeout while waiting for server to become active")
 		default:
-			server, err := c.computeFacade.GetServer(c.serviceClient, serverID)
+			server, err := c.computeFacade.GetServer(c.serviceClients.RetryableServiceClient, serverID)
 			if err != nil {
 				return nil, fmt.Errorf("failed to retrieve server information: %w", err)
 			}
@@ -376,15 +375,13 @@ func (c computeService) waitForServerToBecomeActive(serverID string, timeout tim
 func (c computeService) waitForServerToBecomeDeleted(serverID string, timeout time.Duration) error {
 	var errDefault404 gophercloud.ErrDefault404
 	timeoutTimer := time.NewTimer(timeout)
-	serviceClient := c.serviceClient
-	serviceClient.RetryFunc = utils.RetryOnError(c.logger)
 
 	for {
 		select {
 		case <-timeoutTimer.C:
 			return fmt.Errorf("timeout while waiting for server to become deleted")
 		default:
-			server, err := c.computeFacade.GetServer(serviceClient, serverID)
+			server, err := c.computeFacade.GetServer(c.serviceClients.RetryableServiceClient, serverID)
 			if err != nil {
 				if errors.As(err, &errDefault404) {
 					return nil

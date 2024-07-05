@@ -5,16 +5,16 @@ import (
 	"sync"
 
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/loadbalancer"
-	"github.com/gophercloud/gophercloud"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/pools"
 	"github.com/gophercloud/gophercloud/pagination"
 )
 
 type FakeLoadbalancerFacade struct {
-	CreatePoolMemberStub        func(*gophercloud.ServiceClient, string, pools.CreateMemberOpts) (*pools.Member, error)
+	CreatePoolMemberStub        func(utils.ServiceClient, string, pools.CreateMemberOpts) (*pools.Member, error)
 	createPoolMemberMutex       sync.RWMutex
 	createPoolMemberArgsForCall []struct {
-		arg1 *gophercloud.ServiceClient
+		arg1 utils.ServiceClient
 		arg2 string
 		arg3 pools.CreateMemberOpts
 	}
@@ -26,10 +26,10 @@ type FakeLoadbalancerFacade struct {
 		result1 *pools.Member
 		result2 error
 	}
-	DeletePoolMemberStub        func(*gophercloud.ServiceClient, string, string) error
+	DeletePoolMemberStub        func(utils.RetryableServiceClient, string, string) error
 	deletePoolMemberMutex       sync.RWMutex
 	deletePoolMemberArgsForCall []struct {
-		arg1 *gophercloud.ServiceClient
+		arg1 utils.RetryableServiceClient
 		arg2 string
 		arg3 string
 	}
@@ -52,10 +52,10 @@ type FakeLoadbalancerFacade struct {
 		result1 []pools.Pool
 		result2 error
 	}
-	GetPoolMemberStub        func(*gophercloud.ServiceClient, string, string) (*pools.Member, error)
+	GetPoolMemberStub        func(utils.RetryableServiceClient, string, string) (*pools.Member, error)
 	getPoolMemberMutex       sync.RWMutex
 	getPoolMemberArgsForCall []struct {
-		arg1 *gophercloud.ServiceClient
+		arg1 utils.RetryableServiceClient
 		arg2 string
 		arg3 string
 	}
@@ -67,10 +67,10 @@ type FakeLoadbalancerFacade struct {
 		result1 *pools.Member
 		result2 error
 	}
-	ListPoolsStub        func(*gophercloud.ServiceClient, pools.ListOpts) (pagination.Page, error)
+	ListPoolsStub        func(utils.RetryableServiceClient, pools.ListOpts) (pagination.Page, error)
 	listPoolsMutex       sync.RWMutex
 	listPoolsArgsForCall []struct {
-		arg1 *gophercloud.ServiceClient
+		arg1 utils.RetryableServiceClient
 		arg2 pools.ListOpts
 	}
 	listPoolsReturns struct {
@@ -85,11 +85,11 @@ type FakeLoadbalancerFacade struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeLoadbalancerFacade) CreatePoolMember(arg1 *gophercloud.ServiceClient, arg2 string, arg3 pools.CreateMemberOpts) (*pools.Member, error) {
+func (fake *FakeLoadbalancerFacade) CreatePoolMember(arg1 utils.ServiceClient, arg2 string, arg3 pools.CreateMemberOpts) (*pools.Member, error) {
 	fake.createPoolMemberMutex.Lock()
 	ret, specificReturn := fake.createPoolMemberReturnsOnCall[len(fake.createPoolMemberArgsForCall)]
 	fake.createPoolMemberArgsForCall = append(fake.createPoolMemberArgsForCall, struct {
-		arg1 *gophercloud.ServiceClient
+		arg1 utils.ServiceClient
 		arg2 string
 		arg3 pools.CreateMemberOpts
 	}{arg1, arg2, arg3})
@@ -112,13 +112,13 @@ func (fake *FakeLoadbalancerFacade) CreatePoolMemberCallCount() int {
 	return len(fake.createPoolMemberArgsForCall)
 }
 
-func (fake *FakeLoadbalancerFacade) CreatePoolMemberCalls(stub func(*gophercloud.ServiceClient, string, pools.CreateMemberOpts) (*pools.Member, error)) {
+func (fake *FakeLoadbalancerFacade) CreatePoolMemberCalls(stub func(utils.ServiceClient, string, pools.CreateMemberOpts) (*pools.Member, error)) {
 	fake.createPoolMemberMutex.Lock()
 	defer fake.createPoolMemberMutex.Unlock()
 	fake.CreatePoolMemberStub = stub
 }
 
-func (fake *FakeLoadbalancerFacade) CreatePoolMemberArgsForCall(i int) (*gophercloud.ServiceClient, string, pools.CreateMemberOpts) {
+func (fake *FakeLoadbalancerFacade) CreatePoolMemberArgsForCall(i int) (utils.ServiceClient, string, pools.CreateMemberOpts) {
 	fake.createPoolMemberMutex.RLock()
 	defer fake.createPoolMemberMutex.RUnlock()
 	argsForCall := fake.createPoolMemberArgsForCall[i]
@@ -151,11 +151,11 @@ func (fake *FakeLoadbalancerFacade) CreatePoolMemberReturnsOnCall(i int, result1
 	}{result1, result2}
 }
 
-func (fake *FakeLoadbalancerFacade) DeletePoolMember(arg1 *gophercloud.ServiceClient, arg2 string, arg3 string) error {
+func (fake *FakeLoadbalancerFacade) DeletePoolMember(arg1 utils.RetryableServiceClient, arg2 string, arg3 string) error {
 	fake.deletePoolMemberMutex.Lock()
 	ret, specificReturn := fake.deletePoolMemberReturnsOnCall[len(fake.deletePoolMemberArgsForCall)]
 	fake.deletePoolMemberArgsForCall = append(fake.deletePoolMemberArgsForCall, struct {
-		arg1 *gophercloud.ServiceClient
+		arg1 utils.RetryableServiceClient
 		arg2 string
 		arg3 string
 	}{arg1, arg2, arg3})
@@ -178,13 +178,13 @@ func (fake *FakeLoadbalancerFacade) DeletePoolMemberCallCount() int {
 	return len(fake.deletePoolMemberArgsForCall)
 }
 
-func (fake *FakeLoadbalancerFacade) DeletePoolMemberCalls(stub func(*gophercloud.ServiceClient, string, string) error) {
+func (fake *FakeLoadbalancerFacade) DeletePoolMemberCalls(stub func(utils.RetryableServiceClient, string, string) error) {
 	fake.deletePoolMemberMutex.Lock()
 	defer fake.deletePoolMemberMutex.Unlock()
 	fake.DeletePoolMemberStub = stub
 }
 
-func (fake *FakeLoadbalancerFacade) DeletePoolMemberArgsForCall(i int) (*gophercloud.ServiceClient, string, string) {
+func (fake *FakeLoadbalancerFacade) DeletePoolMemberArgsForCall(i int) (utils.RetryableServiceClient, string, string) {
 	fake.deletePoolMemberMutex.RLock()
 	defer fake.deletePoolMemberMutex.RUnlock()
 	argsForCall := fake.deletePoolMemberArgsForCall[i]
@@ -278,11 +278,11 @@ func (fake *FakeLoadbalancerFacade) ExtractPoolsReturnsOnCall(i int, result1 []p
 	}{result1, result2}
 }
 
-func (fake *FakeLoadbalancerFacade) GetPoolMember(arg1 *gophercloud.ServiceClient, arg2 string, arg3 string) (*pools.Member, error) {
+func (fake *FakeLoadbalancerFacade) GetPoolMember(arg1 utils.RetryableServiceClient, arg2 string, arg3 string) (*pools.Member, error) {
 	fake.getPoolMemberMutex.Lock()
 	ret, specificReturn := fake.getPoolMemberReturnsOnCall[len(fake.getPoolMemberArgsForCall)]
 	fake.getPoolMemberArgsForCall = append(fake.getPoolMemberArgsForCall, struct {
-		arg1 *gophercloud.ServiceClient
+		arg1 utils.RetryableServiceClient
 		arg2 string
 		arg3 string
 	}{arg1, arg2, arg3})
@@ -305,13 +305,13 @@ func (fake *FakeLoadbalancerFacade) GetPoolMemberCallCount() int {
 	return len(fake.getPoolMemberArgsForCall)
 }
 
-func (fake *FakeLoadbalancerFacade) GetPoolMemberCalls(stub func(*gophercloud.ServiceClient, string, string) (*pools.Member, error)) {
+func (fake *FakeLoadbalancerFacade) GetPoolMemberCalls(stub func(utils.RetryableServiceClient, string, string) (*pools.Member, error)) {
 	fake.getPoolMemberMutex.Lock()
 	defer fake.getPoolMemberMutex.Unlock()
 	fake.GetPoolMemberStub = stub
 }
 
-func (fake *FakeLoadbalancerFacade) GetPoolMemberArgsForCall(i int) (*gophercloud.ServiceClient, string, string) {
+func (fake *FakeLoadbalancerFacade) GetPoolMemberArgsForCall(i int) (utils.RetryableServiceClient, string, string) {
 	fake.getPoolMemberMutex.RLock()
 	defer fake.getPoolMemberMutex.RUnlock()
 	argsForCall := fake.getPoolMemberArgsForCall[i]
@@ -344,11 +344,11 @@ func (fake *FakeLoadbalancerFacade) GetPoolMemberReturnsOnCall(i int, result1 *p
 	}{result1, result2}
 }
 
-func (fake *FakeLoadbalancerFacade) ListPools(arg1 *gophercloud.ServiceClient, arg2 pools.ListOpts) (pagination.Page, error) {
+func (fake *FakeLoadbalancerFacade) ListPools(arg1 utils.RetryableServiceClient, arg2 pools.ListOpts) (pagination.Page, error) {
 	fake.listPoolsMutex.Lock()
 	ret, specificReturn := fake.listPoolsReturnsOnCall[len(fake.listPoolsArgsForCall)]
 	fake.listPoolsArgsForCall = append(fake.listPoolsArgsForCall, struct {
-		arg1 *gophercloud.ServiceClient
+		arg1 utils.RetryableServiceClient
 		arg2 pools.ListOpts
 	}{arg1, arg2})
 	stub := fake.ListPoolsStub
@@ -370,13 +370,13 @@ func (fake *FakeLoadbalancerFacade) ListPoolsCallCount() int {
 	return len(fake.listPoolsArgsForCall)
 }
 
-func (fake *FakeLoadbalancerFacade) ListPoolsCalls(stub func(*gophercloud.ServiceClient, pools.ListOpts) (pagination.Page, error)) {
+func (fake *FakeLoadbalancerFacade) ListPoolsCalls(stub func(utils.RetryableServiceClient, pools.ListOpts) (pagination.Page, error)) {
 	fake.listPoolsMutex.Lock()
 	defer fake.listPoolsMutex.Unlock()
 	fake.ListPoolsStub = stub
 }
 
-func (fake *FakeLoadbalancerFacade) ListPoolsArgsForCall(i int) (*gophercloud.ServiceClient, pools.ListOpts) {
+func (fake *FakeLoadbalancerFacade) ListPoolsArgsForCall(i int) (utils.RetryableServiceClient, pools.ListOpts) {
 	fake.listPoolsMutex.RLock()
 	defer fake.listPoolsMutex.RUnlock()
 	argsForCall := fake.listPoolsArgsForCall[i]

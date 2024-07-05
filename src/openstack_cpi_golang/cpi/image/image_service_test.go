@@ -3,6 +3,7 @@ package image_test
 import (
 	"errors"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/image/imagefakes"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"io"
 	"net/http"
 	"strings"
@@ -19,13 +20,17 @@ import (
 
 var _ = Describe("ImageService", func() {
 	var serviceClient gophercloud.ServiceClient
+	var retryableServiceClient gophercloud.ServiceClient
+	var serviceClients utils.ServiceClients
 	var imagesFacade imagefakes.FakeImageFacade
 	var httpClient imagefakes.FakeHttpClient
 	var logger utilsfakes.FakeLogger
 
 	BeforeEach(func() {
-		providerClient := gophercloud.ProviderClient{TokenID: "the_token"}
+		providerClient := gophercloud.ProviderClient{}
 		serviceClient = gophercloud.ServiceClient{ProviderClient: &providerClient}
+		retryableServiceClient = gophercloud.ServiceClient{}
+		serviceClients = utils.ServiceClients{ServiceClient: &serviceClient, RetryableServiceClient: &retryableServiceClient}
 		imagesFacade = imagefakes.FakeImageFacade{}
 		logger = utilsfakes.FakeLogger{}
 	})
@@ -36,9 +41,9 @@ var _ = Describe("ImageService", func() {
 		})
 
 		It("returns the id of the created image entity in OpenStack", func() {
-			imagesFacade.CreateReturns(&images.Image{ID: "123-456"}, nil)
+			imagesFacade.CreateImageReturns(&images.Image{ID: "123-456"}, nil)
 
-			imageID, err := image.NewImageService(&serviceClient, &imagesFacade, &httpClient, &logger).
+			imageID, err := image.NewImageService(serviceClients, &imagesFacade, &httpClient, &logger).
 				CreateImage(properties.CreateStemcell{}, config.OpenstackConfig{})
 
 			Expect(err).ToNot(HaveOccurred())
@@ -46,7 +51,7 @@ var _ = Describe("ImageService", func() {
 		})
 
 		It("create an image entity in OpenStack", func() {
-			imagesFacade.CreateReturns(&images.Image{ID: "123-456"}, nil)
+			imagesFacade.CreateImageReturns(&images.Image{ID: "123-456"}, nil)
 
 			cloudProps := properties.CreateStemcell{
 				Name:            "the_stemcell_name",
@@ -60,7 +65,7 @@ var _ = Describe("ImageService", func() {
 				StemcellPubliclyVisible: true,
 			}
 
-			image.NewImageService(&serviceClient, &imagesFacade, &httpClient, &logger).
+			image.NewImageService(serviceClients, &imagesFacade, &httpClient, &logger).
 				CreateImage(cloudProps, openstackConfig)
 
 			public := images.ImageVisibilityPublic
@@ -76,15 +81,15 @@ var _ = Describe("ImageService", func() {
 				},
 			}
 
-			serviceClient, opts := imagesFacade.CreateArgsForCall(0)
+			serviceClient, opts := imagesFacade.CreateImageArgsForCall(0)
 			Expect(serviceClient).To(Equal(serviceClient))
 			Expect(opts).To(Equal(createOpts))
 		})
 
 		It("returns an error if image entity creation in OpenStack fails", func() {
-			imagesFacade.CreateReturns(&images.Image{ID: "123-456"}, errors.New("boom"))
+			imagesFacade.CreateImageReturns(&images.Image{ID: "123-456"}, errors.New("boom"))
 
-			imageID, err := image.NewImageService(&serviceClient, &imagesFacade, &httpClient, &logger).
+			imageID, err := image.NewImageService(serviceClients, &imagesFacade, &httpClient, &logger).
 				CreateImage(properties.CreateStemcell{}, config.OpenstackConfig{})
 
 			Expect(err.Error()).To(Equal("failed to create image: boom"))
@@ -98,20 +103,20 @@ var _ = Describe("ImageService", func() {
 		})
 
 		It("returns the id of an existing image entity in OpenStack", func() {
-			imagesFacade.GetReturns(&images.Image{ID: "123-456", Status: "active"}, nil)
+			imagesFacade.GetImageReturns(&images.Image{ID: "123-456", Status: "active"}, nil)
 
-			image.NewImageService(&serviceClient, &imagesFacade, &httpClient, &logger).
+			image.NewImageService(serviceClients, &imagesFacade, &httpClient, &logger).
 				GetImage("123-456")
 
-			serviceClient, imageID := imagesFacade.GetArgsForCall(0)
+			serviceClient, imageID := imagesFacade.GetImageArgsForCall(0)
 			Expect(serviceClient).To(Equal(serviceClient))
 			Expect(imageID).To(Equal("123-456"))
 		})
 
 		It("get an existing image entity in OpenStack", func() {
-			imagesFacade.GetReturns(&images.Image{ID: "123-456", Status: "active"}, nil)
+			imagesFacade.GetImageReturns(&images.Image{ID: "123-456", Status: "active"}, nil)
 
-			imageID, err := image.NewImageService(&serviceClient, &imagesFacade, &httpClient, &logger).
+			imageID, err := image.NewImageService(serviceClients, &imagesFacade, &httpClient, &logger).
 				GetImage("123-456")
 
 			Expect(err).ToNot(HaveOccurred())
@@ -119,9 +124,9 @@ var _ = Describe("ImageService", func() {
 		})
 
 		It("returns an error if the image entity cannot be found in OpenStack", func() {
-			imagesFacade.GetReturns(&images.Image{ID: "123-456", Status: "active"}, errors.New("boom"))
+			imagesFacade.GetImageReturns(&images.Image{ID: "123-456", Status: "active"}, errors.New("boom"))
 
-			imageID, err := image.NewImageService(&serviceClient, &imagesFacade, &httpClient, &logger).
+			imageID, err := image.NewImageService(serviceClients, &imagesFacade, &httpClient, &logger).
 				GetImage("123-456")
 
 			Expect(err.Error()).To(Equal("could not find the image '123-456' in OpenStack: boom"))
@@ -129,9 +134,9 @@ var _ = Describe("ImageService", func() {
 		})
 
 		It("returns an error if the image entity is not active in OpenStack", func() {
-			imagesFacade.GetReturns(&images.Image{ID: "123-456", Status: "not-active"}, nil)
+			imagesFacade.GetImageReturns(&images.Image{ID: "123-456", Status: "not-active"}, nil)
 
-			imageID, err := image.NewImageService(&serviceClient, &imagesFacade, &httpClient, &logger).
+			imageID, err := image.NewImageService(serviceClients, &imagesFacade, &httpClient, &logger).
 				GetImage("123-456")
 
 			Expect(err.Error()).To(Equal("image '123-456' is not in active state, it is in state: not-active"))
@@ -146,13 +151,13 @@ var _ = Describe("ImageService", func() {
 		})
 
 		It("succeeds without error", func() {
-			serviceClient.TokenID = "token"
+			serviceClient.ProviderClient.TokenID = "token"
 			header := http.Header{}
 			request := http.Request{Header: header}
 			httpClient.NewRequestReturns(&request, nil)
 			httpClient.DoReturns(&http.Response{StatusCode: 204}, nil)
 
-			err := image.NewImageService(&serviceClient, &imagesFacade, &httpClient, &logger).
+			err := image.NewImageService(serviceClients, &imagesFacade, &httpClient, &logger).
 				UploadImage("123-456", "testdata/root.img")
 
 			Expect(err).To(BeNil())
@@ -164,7 +169,7 @@ var _ = Describe("ImageService", func() {
 			httpClient.NewRequestReturns(&request, nil)
 			httpClient.DoReturns(&http.Response{StatusCode: 204}, nil)
 
-			image.NewImageService(&serviceClient, &imagesFacade, &httpClient, &logger).
+			image.NewImageService(serviceClients, &imagesFacade, &httpClient, &logger).
 				UploadImage("123-456", "testdata/root.img")
 
 			Expect(httpClient.DoCallCount()).To(Equal(1))
@@ -173,7 +178,7 @@ var _ = Describe("ImageService", func() {
 		It("returns an error if the PUT request cannot be created", func() {
 			httpClient.NewRequestReturns(nil, errors.New("boom"))
 
-			err := image.NewImageService(&serviceClient, &imagesFacade, &httpClient, &logger).
+			err := image.NewImageService(serviceClients, &imagesFacade, &httpClient, &logger).
 				UploadImage("123-456", "testdata/root.img")
 
 			Expect(err.Error()).To(Equal("failed to create request: boom"))
@@ -184,7 +189,7 @@ var _ = Describe("ImageService", func() {
 			httpClient.NewRequestReturns(&request, nil)
 			httpClient.DoReturns(&http.Response{StatusCode: 204}, errors.New("boom"))
 
-			err := image.NewImageService(&serviceClient, &imagesFacade, &httpClient, &logger).
+			err := image.NewImageService(serviceClients, &imagesFacade, &httpClient, &logger).
 				UploadImage("123-456", "testdata/root.img")
 
 			Expect(err.Error()).To(Equal("failed to upload stemcell image to /v2/images/123-456/file, err: boom"))
@@ -196,7 +201,7 @@ var _ = Describe("ImageService", func() {
 			httpClient.NewRequestReturns(&request, nil)
 			httpClient.DoReturns(response, nil)
 
-			err := image.NewImageService(&serviceClient, &imagesFacade, &httpClient, &logger).
+			err := image.NewImageService(serviceClients, &imagesFacade, &httpClient, &logger).
 				UploadImage("123-456", "testdata/root.img")
 
 			Expect(err.Error()).To(Equal("failed to upload stemcell image to /v2/images/123-456/file, response-status: 'not found', response-body:'content'\n"))
@@ -209,30 +214,30 @@ var _ = Describe("ImageService", func() {
 		})
 
 		It("deletes an existing image in OpenStack", func() {
-			imagesFacade.DeleteReturns(nil)
+			imagesFacade.DeleteImageReturns(nil)
 
-			image.NewImageService(&serviceClient, &imagesFacade, &httpClient, &logger).
+			image.NewImageService(serviceClients, &imagesFacade, &httpClient, &logger).
 				DeleteImage("123-456")
 
-			serviceClient, imageID := imagesFacade.DeleteArgsForCall(0)
+			serviceClient, imageID := imagesFacade.DeleteImageArgsForCall(0)
 			Expect(serviceClient).To(Equal(serviceClient))
 			Expect(imageID).To(Equal("123-456"))
 		})
 
 		It("delete an existing image entity in OpenStack without errors", func() {
-			imagesFacade.DeleteReturns(nil)
+			imagesFacade.DeleteImageReturns(nil)
 
-			err := image.NewImageService(&serviceClient, &imagesFacade, &httpClient, &logger).
+			err := image.NewImageService(serviceClients, &imagesFacade, &httpClient, &logger).
 				DeleteImage("123-456")
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(imagesFacade.DeleteCallCount()).To(Equal(1))
+			Expect(imagesFacade.DeleteImageCallCount()).To(Equal(1))
 		})
 
 		It("returns an error if the image entity cannot be found in OpenStack", func() {
-			imagesFacade.DeleteReturns(errors.New("boom"))
+			imagesFacade.DeleteImageReturns(errors.New("boom"))
 
-			err := image.NewImageService(&serviceClient, &imagesFacade, &httpClient, &logger).
+			err := image.NewImageService(serviceClients, &imagesFacade, &httpClient, &logger).
 				DeleteImage("123-456")
 
 			Expect(err.Error()).To(Equal("could not delete the image 123-456, due to the following: boom"))

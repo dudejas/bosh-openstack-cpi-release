@@ -20,16 +20,21 @@ var _ = Describe("NetworkServiceBuilder", func() {
 	BeforeEach(func() {
 		openstackService = openstackfakes.FakeOpenstackService{}
 		logger = utilsfakes.FakeLogger{}
+		cpiConfig := config.CpiConfig{}
+		cpiConfig.Cloud.Properties.RetryConfig = config.RetryConfigMap{}
+
 		networkServiceBuilder = network.NewNetworkServiceBuilder(
 			&openstackService,
-			config.OpenstackConfig{},
+			cpiConfig,
 			&logger,
 		)
 	})
 
 	Context("CreateNetworkService", func() {
 		It("returns a network service", func() {
-			openstackService.NetworkServiceV2Returns(&gophercloud.ServiceClient{}, nil)
+			providerClient := gophercloud.ProviderClient{TokenID: "the_token"}
+			serviceClient := gophercloud.ServiceClient{ProviderClient: &providerClient}
+			openstackService.NetworkServiceV2Returns(&serviceClient, nil)
 
 			computeService, err := networkServiceBuilder.Build()
 

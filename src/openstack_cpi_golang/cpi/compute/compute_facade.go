@@ -1,7 +1,7 @@
 package compute
 
 import (
-	"github.com/gophercloud/gophercloud"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
@@ -10,21 +10,21 @@ import (
 
 //counterfeiter:generate . ComputeFacade
 type ComputeFacade interface {
-	CreateServer(client *gophercloud.ServiceClient, opts servers.CreateOptsBuilder) (*servers.Server, error)
+	CreateServer(client utils.ServiceClient, opts servers.CreateOptsBuilder) (*servers.Server, error)
 
-	DeleteServer(client *gophercloud.ServiceClient, serverID string) error
+	DeleteServer(client utils.RetryableServiceClient, serverID string) error
 
-	GetServer(client *gophercloud.ServiceClient, serverID string) (*servers.Server, error)
+	GetServer(client utils.RetryableServiceClient, serverID string) (*servers.Server, error)
 
-	ListFlavors(client *gophercloud.ServiceClient, opts flavors.ListOpts) (pagination.Page, error)
+	ListFlavors(client utils.RetryableServiceClient, opts flavors.ListOpts) (pagination.Page, error)
 
 	ExtractFlavors(page pagination.Page) ([]flavors.Flavor, error)
 
-	GetOSKeyPair(client *gophercloud.ServiceClient, keyPairName string, ops keypairs.GetOpts) (*keypairs.KeyPair, error)
+	GetOSKeyPair(client utils.RetryableServiceClient, keyPairName string, ops keypairs.GetOpts) (*keypairs.KeyPair, error)
 
-	GetServerMetadata(client *gophercloud.ServiceClient, serverID string) (map[string]string, error)
+	GetServerMetadata(client utils.RetryableServiceClient, serverID string) (map[string]string, error)
 
-	SetServerMetadata(client *gophercloud.ServiceClient, serverID string, opts servers.MetadatumOpts) (map[string]string, error)
+	SetServerMetadata(client utils.ServiceClient, serverID string, opts servers.MetadatumOpts) (map[string]string, error)
 }
 
 type computeFacade struct {
@@ -34,19 +34,19 @@ func NewComputeFacade() computeFacade {
 	return computeFacade{}
 }
 
-func (c computeFacade) CreateServer(client *gophercloud.ServiceClient, opts servers.CreateOptsBuilder) (*servers.Server, error) {
+func (c computeFacade) CreateServer(client utils.ServiceClient, opts servers.CreateOptsBuilder) (*servers.Server, error) {
 	return servers.Create(client, opts).Extract()
 }
 
-func (c computeFacade) DeleteServer(client *gophercloud.ServiceClient, serverID string) error {
+func (c computeFacade) DeleteServer(client utils.RetryableServiceClient, serverID string) error {
 	return servers.Delete(client, serverID).ExtractErr()
 }
 
-func (c computeFacade) GetServer(client *gophercloud.ServiceClient, serverID string) (*servers.Server, error) {
+func (c computeFacade) GetServer(client utils.RetryableServiceClient, serverID string) (*servers.Server, error) {
 	return servers.Get(client, serverID).Extract()
 }
 
-func (c computeFacade) ListFlavors(client *gophercloud.ServiceClient, opts flavors.ListOpts) (pagination.Page, error) {
+func (c computeFacade) ListFlavors(client utils.RetryableServiceClient, opts flavors.ListOpts) (pagination.Page, error) {
 	return flavors.ListDetail(client, opts).AllPages()
 }
 
@@ -54,14 +54,14 @@ func (c computeFacade) ExtractFlavors(page pagination.Page) ([]flavors.Flavor, e
 	return flavors.ExtractFlavors(page)
 }
 
-func (c computeFacade) GetOSKeyPair(client *gophercloud.ServiceClient, keyPairName string, opts keypairs.GetOpts) (*keypairs.KeyPair, error) {
+func (c computeFacade) GetOSKeyPair(client utils.RetryableServiceClient, keyPairName string, opts keypairs.GetOpts) (*keypairs.KeyPair, error) {
 	return keypairs.Get(client, keyPairName, opts).Extract()
 }
 
-func (c computeFacade) GetServerMetadata(client *gophercloud.ServiceClient, serverID string) (map[string]string, error) {
+func (c computeFacade) GetServerMetadata(client utils.RetryableServiceClient, serverID string) (map[string]string, error) {
 	return servers.Metadata(client, serverID).Extract()
 }
 
-func (c computeFacade) SetServerMetadata(client *gophercloud.ServiceClient, serverID string, opts servers.MetadatumOpts) (map[string]string, error) {
+func (c computeFacade) SetServerMetadata(client utils.ServiceClient, serverID string, opts servers.MetadatumOpts) (map[string]string, error) {
 	return servers.CreateMetadatum(client, serverID, opts).Extract()
 }

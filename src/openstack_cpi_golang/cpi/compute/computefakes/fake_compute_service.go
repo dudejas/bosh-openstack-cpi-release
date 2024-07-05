@@ -30,11 +30,11 @@ type FakeComputeService struct {
 		result1 *servers.Server
 		result2 error
 	}
-	DeleteServerStub        func(string, config.OpenstackConfig) error
+	DeleteServerStub        func(string, config.CpiConfig) error
 	deleteServerMutex       sync.RWMutex
 	deleteServerArgsForCall []struct {
 		arg1 string
-		arg2 config.OpenstackConfig
+		arg2 config.CpiConfig
 	}
 	deleteServerReturns struct {
 		result1 error
@@ -127,12 +127,12 @@ func (fake *FakeComputeService) CreateServerReturnsOnCall(i int, result1 *server
 	}{result1, result2}
 }
 
-func (fake *FakeComputeService) DeleteServer(arg1 string, arg2 config.OpenstackConfig) error {
+func (fake *FakeComputeService) DeleteServer(arg1 string, arg2 config.CpiConfig) error {
 	fake.deleteServerMutex.Lock()
 	ret, specificReturn := fake.deleteServerReturnsOnCall[len(fake.deleteServerArgsForCall)]
 	fake.deleteServerArgsForCall = append(fake.deleteServerArgsForCall, struct {
 		arg1 string
-		arg2 config.OpenstackConfig
+		arg2 config.CpiConfig
 	}{arg1, arg2})
 	stub := fake.DeleteServerStub
 	fakeReturns := fake.deleteServerReturns
@@ -153,13 +153,13 @@ func (fake *FakeComputeService) DeleteServerCallCount() int {
 	return len(fake.deleteServerArgsForCall)
 }
 
-func (fake *FakeComputeService) DeleteServerCalls(stub func(string, config.OpenstackConfig) error) {
+func (fake *FakeComputeService) DeleteServerCalls(stub func(string, config.CpiConfig) error) {
 	fake.deleteServerMutex.Lock()
 	defer fake.deleteServerMutex.Unlock()
 	fake.DeleteServerStub = stub
 }
 
-func (fake *FakeComputeService) DeleteServerArgsForCall(i int) (string, config.OpenstackConfig) {
+func (fake *FakeComputeService) DeleteServerArgsForCall(i int) (string, config.CpiConfig) {
 	fake.deleteServerMutex.RLock()
 	defer fake.deleteServerMutex.RUnlock()
 	argsForCall := fake.deleteServerArgsForCall[i]

@@ -40,7 +40,7 @@ var _ = Describe("DeleteVMMethod", func() {
 			methods.NewDeleteVMMethod(
 				&networkServiceBuilder,
 				&computeServiceBuilder,
-				config.OpenstackConfig{},
+				config.CpiConfig{},
 				&logger,
 			).DeleteVM(
 				apiv1.NewVMCID("vm-id"),
@@ -55,7 +55,7 @@ var _ = Describe("DeleteVMMethod", func() {
 			err := methods.NewDeleteVMMethod(
 				&networkServiceBuilder,
 				&computeServiceBuilder,
-				config.OpenstackConfig{},
+				config.CpiConfig{},
 				&logger,
 			).DeleteVM(
 				apiv1.NewVMCID("vm-id"),
@@ -68,7 +68,7 @@ var _ = Describe("DeleteVMMethod", func() {
 			methods.NewDeleteVMMethod(
 				&networkServiceBuilder,
 				&computeServiceBuilder,
-				config.OpenstackConfig{},
+				config.CpiConfig{},
 				&logger,
 			).DeleteVM(
 				apiv1.NewVMCID("vm-id"),
@@ -83,7 +83,7 @@ var _ = Describe("DeleteVMMethod", func() {
 			err := methods.NewDeleteVMMethod(
 				&networkServiceBuilder,
 				&computeServiceBuilder,
-				config.OpenstackConfig{},
+				config.CpiConfig{},
 				&logger,
 			).DeleteVM(
 				apiv1.NewVMCID("vm-id"),
@@ -96,7 +96,7 @@ var _ = Describe("DeleteVMMethod", func() {
 			err := methods.NewDeleteVMMethod(
 				&networkServiceBuilder,
 				&computeServiceBuilder,
-				config.OpenstackConfig{},
+				config.CpiConfig{},
 				&logger,
 			).DeleteVM(
 				apiv1.NewVMCID("vm-id"),
@@ -113,7 +113,7 @@ var _ = Describe("DeleteVMMethod", func() {
 			err := methods.NewDeleteVMMethod(
 				&networkServiceBuilder,
 				&computeServiceBuilder,
-				config.OpenstackConfig{},
+				config.CpiConfig{},
 				&logger,
 			).DeleteVM(
 				apiv1.NewVMCID("vm-id"),
@@ -127,7 +127,7 @@ var _ = Describe("DeleteVMMethod", func() {
 			err := methods.NewDeleteVMMethod(
 				&networkServiceBuilder,
 				&computeServiceBuilder,
-				config.OpenstackConfig{},
+				config.CpiConfig{},
 				&logger,
 			).DeleteVM(
 				apiv1.NewVMCID("vm-id"),
@@ -144,7 +144,7 @@ var _ = Describe("DeleteVMMethod", func() {
 			err := methods.NewDeleteVMMethod(
 				&networkServiceBuilder,
 				&computeServiceBuilder,
-				config.OpenstackConfig{},
+				config.CpiConfig{},
 				&logger,
 			).DeleteVM(
 				apiv1.NewVMCID("vm-id"),
@@ -157,7 +157,7 @@ var _ = Describe("DeleteVMMethod", func() {
 			err := methods.NewDeleteVMMethod(
 				&networkServiceBuilder,
 				&computeServiceBuilder,
-				config.OpenstackConfig{},
+				config.CpiConfig{},
 				&logger,
 			).DeleteVM(
 				apiv1.NewVMCID("vm-id"),
@@ -175,7 +175,7 @@ var _ = Describe("DeleteVMMethod", func() {
 			err := methods.NewDeleteVMMethod(
 				&networkServiceBuilder,
 				&computeServiceBuilder,
-				config.OpenstackConfig{},
+				config.CpiConfig{},
 				&logger,
 			).DeleteVM(
 				apiv1.NewVMCID("vm-id"),

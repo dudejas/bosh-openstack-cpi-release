@@ -9,6 +9,7 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/image/root_image/root_imagefakes"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/methods"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils/utilsfakes"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -46,7 +47,7 @@ var _ = Describe("CreateStemcellMethod", func() {
 		})
 
 		It("returns a stemcell ID", func() {
-			imageServiceBuilder.BuildReturns(image.NewImageService(nil, nil, nil, nil), nil)
+			imageServiceBuilder.BuildReturns(image.NewImageService(utils.ServiceClients{}, nil, nil, nil), nil)
 			heavyStemcellCreator.CreateReturns("123-456", nil)
 			props := &MockStemcellCloudProps{}
 			stemcellCID, err := methods.NewCreateStemcellMethod(
@@ -63,7 +64,7 @@ var _ = Describe("CreateStemcellMethod", func() {
 		})
 
 		It("returns an error if the stemcell creation fails", func() {
-			imageServiceBuilder.BuildReturns(image.NewImageService(nil, nil, nil, nil), nil)
+			imageServiceBuilder.BuildReturns(image.NewImageService(utils.ServiceClients{}, nil, nil, nil), nil)
 			heavyStemcellCreator.CreateReturns("", errors.New("boom"))
 			props := &MockStemcellCloudProps{}
 			stemcellCID, err := methods.NewCreateStemcellMethod(
@@ -96,7 +97,7 @@ var _ = Describe("CreateStemcellMethod", func() {
 		})
 
 		It("uses the light stemcell creation if cloud properties are containing an imageID", func() {
-			theImageService := image.NewImageService(nil, nil, nil, nil)
+			theImageService := image.NewImageService(utils.ServiceClients{}, nil, nil, nil)
 			imageServiceBuilder.BuildReturns(theImageService, nil)
 			lightStemcellCreator.CreateReturns("123-456", nil)
 
@@ -118,7 +119,7 @@ var _ = Describe("CreateStemcellMethod", func() {
 		})
 
 		It("uses the heavy stemcell creation if cloud properties are NOT containing an imageID", func() {
-			theImageService := image.NewImageService(nil, nil, nil, nil)
+			theImageService := image.NewImageService(utils.ServiceClients{}, nil, nil, nil)
 			imageServiceBuilder.BuildReturns(theImageService, nil)
 			heavyStemcellCreator.CreateReturns("123-456", nil)
 			rootImageProvider.GetReturns("rootImagePath", nil)
@@ -142,7 +143,7 @@ var _ = Describe("CreateStemcellMethod", func() {
 		})
 
 		It("returns an error if root.img cannot be retrieved", func() {
-			theImageService := image.NewImageService(nil, nil, nil, nil)
+			theImageService := image.NewImageService(utils.ServiceClients{}, nil, nil, nil)
 			imageServiceBuilder.BuildReturns(theImageService, nil)
 			rootImageProvider.GetReturns("", errors.New("boom"))
 
@@ -162,7 +163,7 @@ var _ = Describe("CreateStemcellMethod", func() {
 		})
 
 		It("extracts the rootImage to a temp dir path", func() {
-			theImageService := image.NewImageService(nil, nil, nil, nil)
+			theImageService := image.NewImageService(utils.ServiceClients{}, nil, nil, nil)
 			imageServiceBuilder.BuildReturns(theImageService, nil)
 			rootImageProvider.GetReturns("", errors.New("boom"))
 

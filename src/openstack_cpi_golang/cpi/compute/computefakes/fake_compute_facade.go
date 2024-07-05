@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/compute"
-	"github.com/gophercloud/gophercloud"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
@@ -13,10 +13,10 @@ import (
 )
 
 type FakeComputeFacade struct {
-	CreateServerStub        func(*gophercloud.ServiceClient, servers.CreateOptsBuilder) (*servers.Server, error)
+	CreateServerStub        func(utils.ServiceClient, servers.CreateOptsBuilder) (*servers.Server, error)
 	createServerMutex       sync.RWMutex
 	createServerArgsForCall []struct {
-		arg1 *gophercloud.ServiceClient
+		arg1 utils.ServiceClient
 		arg2 servers.CreateOptsBuilder
 	}
 	createServerReturns struct {
@@ -27,10 +27,10 @@ type FakeComputeFacade struct {
 		result1 *servers.Server
 		result2 error
 	}
-	DeleteServerStub        func(*gophercloud.ServiceClient, string) error
+	DeleteServerStub        func(utils.RetryableServiceClient, string) error
 	deleteServerMutex       sync.RWMutex
 	deleteServerArgsForCall []struct {
-		arg1 *gophercloud.ServiceClient
+		arg1 utils.RetryableServiceClient
 		arg2 string
 	}
 	deleteServerReturns struct {
@@ -52,10 +52,10 @@ type FakeComputeFacade struct {
 		result1 []flavors.Flavor
 		result2 error
 	}
-	GetOSKeyPairStub        func(*gophercloud.ServiceClient, string, keypairs.GetOpts) (*keypairs.KeyPair, error)
+	GetOSKeyPairStub        func(utils.RetryableServiceClient, string, keypairs.GetOpts) (*keypairs.KeyPair, error)
 	getOSKeyPairMutex       sync.RWMutex
 	getOSKeyPairArgsForCall []struct {
-		arg1 *gophercloud.ServiceClient
+		arg1 utils.RetryableServiceClient
 		arg2 string
 		arg3 keypairs.GetOpts
 	}
@@ -67,10 +67,10 @@ type FakeComputeFacade struct {
 		result1 *keypairs.KeyPair
 		result2 error
 	}
-	GetServerStub        func(*gophercloud.ServiceClient, string) (*servers.Server, error)
+	GetServerStub        func(utils.RetryableServiceClient, string) (*servers.Server, error)
 	getServerMutex       sync.RWMutex
 	getServerArgsForCall []struct {
-		arg1 *gophercloud.ServiceClient
+		arg1 utils.RetryableServiceClient
 		arg2 string
 	}
 	getServerReturns struct {
@@ -81,10 +81,10 @@ type FakeComputeFacade struct {
 		result1 *servers.Server
 		result2 error
 	}
-	GetServerMetadataStub        func(*gophercloud.ServiceClient, string) (map[string]string, error)
+	GetServerMetadataStub        func(utils.RetryableServiceClient, string) (map[string]string, error)
 	getServerMetadataMutex       sync.RWMutex
 	getServerMetadataArgsForCall []struct {
-		arg1 *gophercloud.ServiceClient
+		arg1 utils.RetryableServiceClient
 		arg2 string
 	}
 	getServerMetadataReturns struct {
@@ -95,10 +95,10 @@ type FakeComputeFacade struct {
 		result1 map[string]string
 		result2 error
 	}
-	ListFlavorsStub        func(*gophercloud.ServiceClient, flavors.ListOpts) (pagination.Page, error)
+	ListFlavorsStub        func(utils.RetryableServiceClient, flavors.ListOpts) (pagination.Page, error)
 	listFlavorsMutex       sync.RWMutex
 	listFlavorsArgsForCall []struct {
-		arg1 *gophercloud.ServiceClient
+		arg1 utils.RetryableServiceClient
 		arg2 flavors.ListOpts
 	}
 	listFlavorsReturns struct {
@@ -109,10 +109,10 @@ type FakeComputeFacade struct {
 		result1 pagination.Page
 		result2 error
 	}
-	SetServerMetadataStub        func(*gophercloud.ServiceClient, string, servers.MetadatumOpts) (map[string]string, error)
+	SetServerMetadataStub        func(utils.ServiceClient, string, servers.MetadatumOpts) (map[string]string, error)
 	setServerMetadataMutex       sync.RWMutex
 	setServerMetadataArgsForCall []struct {
-		arg1 *gophercloud.ServiceClient
+		arg1 utils.ServiceClient
 		arg2 string
 		arg3 servers.MetadatumOpts
 	}
@@ -128,11 +128,11 @@ type FakeComputeFacade struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeComputeFacade) CreateServer(arg1 *gophercloud.ServiceClient, arg2 servers.CreateOptsBuilder) (*servers.Server, error) {
+func (fake *FakeComputeFacade) CreateServer(arg1 utils.ServiceClient, arg2 servers.CreateOptsBuilder) (*servers.Server, error) {
 	fake.createServerMutex.Lock()
 	ret, specificReturn := fake.createServerReturnsOnCall[len(fake.createServerArgsForCall)]
 	fake.createServerArgsForCall = append(fake.createServerArgsForCall, struct {
-		arg1 *gophercloud.ServiceClient
+		arg1 utils.ServiceClient
 		arg2 servers.CreateOptsBuilder
 	}{arg1, arg2})
 	stub := fake.CreateServerStub
@@ -154,13 +154,13 @@ func (fake *FakeComputeFacade) CreateServerCallCount() int {
 	return len(fake.createServerArgsForCall)
 }
 
-func (fake *FakeComputeFacade) CreateServerCalls(stub func(*gophercloud.ServiceClient, servers.CreateOptsBuilder) (*servers.Server, error)) {
+func (fake *FakeComputeFacade) CreateServerCalls(stub func(utils.ServiceClient, servers.CreateOptsBuilder) (*servers.Server, error)) {
 	fake.createServerMutex.Lock()
 	defer fake.createServerMutex.Unlock()
 	fake.CreateServerStub = stub
 }
 
-func (fake *FakeComputeFacade) CreateServerArgsForCall(i int) (*gophercloud.ServiceClient, servers.CreateOptsBuilder) {
+func (fake *FakeComputeFacade) CreateServerArgsForCall(i int) (utils.ServiceClient, servers.CreateOptsBuilder) {
 	fake.createServerMutex.RLock()
 	defer fake.createServerMutex.RUnlock()
 	argsForCall := fake.createServerArgsForCall[i]
@@ -193,11 +193,11 @@ func (fake *FakeComputeFacade) CreateServerReturnsOnCall(i int, result1 *servers
 	}{result1, result2}
 }
 
-func (fake *FakeComputeFacade) DeleteServer(arg1 *gophercloud.ServiceClient, arg2 string) error {
+func (fake *FakeComputeFacade) DeleteServer(arg1 utils.RetryableServiceClient, arg2 string) error {
 	fake.deleteServerMutex.Lock()
 	ret, specificReturn := fake.deleteServerReturnsOnCall[len(fake.deleteServerArgsForCall)]
 	fake.deleteServerArgsForCall = append(fake.deleteServerArgsForCall, struct {
-		arg1 *gophercloud.ServiceClient
+		arg1 utils.RetryableServiceClient
 		arg2 string
 	}{arg1, arg2})
 	stub := fake.DeleteServerStub
@@ -219,13 +219,13 @@ func (fake *FakeComputeFacade) DeleteServerCallCount() int {
 	return len(fake.deleteServerArgsForCall)
 }
 
-func (fake *FakeComputeFacade) DeleteServerCalls(stub func(*gophercloud.ServiceClient, string) error) {
+func (fake *FakeComputeFacade) DeleteServerCalls(stub func(utils.RetryableServiceClient, string) error) {
 	fake.deleteServerMutex.Lock()
 	defer fake.deleteServerMutex.Unlock()
 	fake.DeleteServerStub = stub
 }
 
-func (fake *FakeComputeFacade) DeleteServerArgsForCall(i int) (*gophercloud.ServiceClient, string) {
+func (fake *FakeComputeFacade) DeleteServerArgsForCall(i int) (utils.RetryableServiceClient, string) {
 	fake.deleteServerMutex.RLock()
 	defer fake.deleteServerMutex.RUnlock()
 	argsForCall := fake.deleteServerArgsForCall[i]
@@ -319,11 +319,11 @@ func (fake *FakeComputeFacade) ExtractFlavorsReturnsOnCall(i int, result1 []flav
 	}{result1, result2}
 }
 
-func (fake *FakeComputeFacade) GetOSKeyPair(arg1 *gophercloud.ServiceClient, arg2 string, arg3 keypairs.GetOpts) (*keypairs.KeyPair, error) {
+func (fake *FakeComputeFacade) GetOSKeyPair(arg1 utils.RetryableServiceClient, arg2 string, arg3 keypairs.GetOpts) (*keypairs.KeyPair, error) {
 	fake.getOSKeyPairMutex.Lock()
 	ret, specificReturn := fake.getOSKeyPairReturnsOnCall[len(fake.getOSKeyPairArgsForCall)]
 	fake.getOSKeyPairArgsForCall = append(fake.getOSKeyPairArgsForCall, struct {
-		arg1 *gophercloud.ServiceClient
+		arg1 utils.RetryableServiceClient
 		arg2 string
 		arg3 keypairs.GetOpts
 	}{arg1, arg2, arg3})
@@ -346,13 +346,13 @@ func (fake *FakeComputeFacade) GetOSKeyPairCallCount() int {
 	return len(fake.getOSKeyPairArgsForCall)
 }
 
-func (fake *FakeComputeFacade) GetOSKeyPairCalls(stub func(*gophercloud.ServiceClient, string, keypairs.GetOpts) (*keypairs.KeyPair, error)) {
+func (fake *FakeComputeFacade) GetOSKeyPairCalls(stub func(utils.RetryableServiceClient, string, keypairs.GetOpts) (*keypairs.KeyPair, error)) {
 	fake.getOSKeyPairMutex.Lock()
 	defer fake.getOSKeyPairMutex.Unlock()
 	fake.GetOSKeyPairStub = stub
 }
 
-func (fake *FakeComputeFacade) GetOSKeyPairArgsForCall(i int) (*gophercloud.ServiceClient, string, keypairs.GetOpts) {
+func (fake *FakeComputeFacade) GetOSKeyPairArgsForCall(i int) (utils.RetryableServiceClient, string, keypairs.GetOpts) {
 	fake.getOSKeyPairMutex.RLock()
 	defer fake.getOSKeyPairMutex.RUnlock()
 	argsForCall := fake.getOSKeyPairArgsForCall[i]
@@ -385,11 +385,11 @@ func (fake *FakeComputeFacade) GetOSKeyPairReturnsOnCall(i int, result1 *keypair
 	}{result1, result2}
 }
 
-func (fake *FakeComputeFacade) GetServer(arg1 *gophercloud.ServiceClient, arg2 string) (*servers.Server, error) {
+func (fake *FakeComputeFacade) GetServer(arg1 utils.RetryableServiceClient, arg2 string) (*servers.Server, error) {
 	fake.getServerMutex.Lock()
 	ret, specificReturn := fake.getServerReturnsOnCall[len(fake.getServerArgsForCall)]
 	fake.getServerArgsForCall = append(fake.getServerArgsForCall, struct {
-		arg1 *gophercloud.ServiceClient
+		arg1 utils.RetryableServiceClient
 		arg2 string
 	}{arg1, arg2})
 	stub := fake.GetServerStub
@@ -411,13 +411,13 @@ func (fake *FakeComputeFacade) GetServerCallCount() int {
 	return len(fake.getServerArgsForCall)
 }
 
-func (fake *FakeComputeFacade) GetServerCalls(stub func(*gophercloud.ServiceClient, string) (*servers.Server, error)) {
+func (fake *FakeComputeFacade) GetServerCalls(stub func(utils.RetryableServiceClient, string) (*servers.Server, error)) {
 	fake.getServerMutex.Lock()
 	defer fake.getServerMutex.Unlock()
 	fake.GetServerStub = stub
 }
 
-func (fake *FakeComputeFacade) GetServerArgsForCall(i int) (*gophercloud.ServiceClient, string) {
+func (fake *FakeComputeFacade) GetServerArgsForCall(i int) (utils.RetryableServiceClient, string) {
 	fake.getServerMutex.RLock()
 	defer fake.getServerMutex.RUnlock()
 	argsForCall := fake.getServerArgsForCall[i]
@@ -450,11 +450,11 @@ func (fake *FakeComputeFacade) GetServerReturnsOnCall(i int, result1 *servers.Se
 	}{result1, result2}
 }
 
-func (fake *FakeComputeFacade) GetServerMetadata(arg1 *gophercloud.ServiceClient, arg2 string) (map[string]string, error) {
+func (fake *FakeComputeFacade) GetServerMetadata(arg1 utils.RetryableServiceClient, arg2 string) (map[string]string, error) {
 	fake.getServerMetadataMutex.Lock()
 	ret, specificReturn := fake.getServerMetadataReturnsOnCall[len(fake.getServerMetadataArgsForCall)]
 	fake.getServerMetadataArgsForCall = append(fake.getServerMetadataArgsForCall, struct {
-		arg1 *gophercloud.ServiceClient
+		arg1 utils.RetryableServiceClient
 		arg2 string
 	}{arg1, arg2})
 	stub := fake.GetServerMetadataStub
@@ -476,13 +476,13 @@ func (fake *FakeComputeFacade) GetServerMetadataCallCount() int {
 	return len(fake.getServerMetadataArgsForCall)
 }
 
-func (fake *FakeComputeFacade) GetServerMetadataCalls(stub func(*gophercloud.ServiceClient, string) (map[string]string, error)) {
+func (fake *FakeComputeFacade) GetServerMetadataCalls(stub func(utils.RetryableServiceClient, string) (map[string]string, error)) {
 	fake.getServerMetadataMutex.Lock()
 	defer fake.getServerMetadataMutex.Unlock()
 	fake.GetServerMetadataStub = stub
 }
 
-func (fake *FakeComputeFacade) GetServerMetadataArgsForCall(i int) (*gophercloud.ServiceClient, string) {
+func (fake *FakeComputeFacade) GetServerMetadataArgsForCall(i int) (utils.RetryableServiceClient, string) {
 	fake.getServerMetadataMutex.RLock()
 	defer fake.getServerMetadataMutex.RUnlock()
 	argsForCall := fake.getServerMetadataArgsForCall[i]
@@ -515,11 +515,11 @@ func (fake *FakeComputeFacade) GetServerMetadataReturnsOnCall(i int, result1 map
 	}{result1, result2}
 }
 
-func (fake *FakeComputeFacade) ListFlavors(arg1 *gophercloud.ServiceClient, arg2 flavors.ListOpts) (pagination.Page, error) {
+func (fake *FakeComputeFacade) ListFlavors(arg1 utils.RetryableServiceClient, arg2 flavors.ListOpts) (pagination.Page, error) {
 	fake.listFlavorsMutex.Lock()
 	ret, specificReturn := fake.listFlavorsReturnsOnCall[len(fake.listFlavorsArgsForCall)]
 	fake.listFlavorsArgsForCall = append(fake.listFlavorsArgsForCall, struct {
-		arg1 *gophercloud.ServiceClient
+		arg1 utils.RetryableServiceClient
 		arg2 flavors.ListOpts
 	}{arg1, arg2})
 	stub := fake.ListFlavorsStub
@@ -541,13 +541,13 @@ func (fake *FakeComputeFacade) ListFlavorsCallCount() int {
 	return len(fake.listFlavorsArgsForCall)
 }
 
-func (fake *FakeComputeFacade) ListFlavorsCalls(stub func(*gophercloud.ServiceClient, flavors.ListOpts) (pagination.Page, error)) {
+func (fake *FakeComputeFacade) ListFlavorsCalls(stub func(utils.RetryableServiceClient, flavors.ListOpts) (pagination.Page, error)) {
 	fake.listFlavorsMutex.Lock()
 	defer fake.listFlavorsMutex.Unlock()
 	fake.ListFlavorsStub = stub
 }
 
-func (fake *FakeComputeFacade) ListFlavorsArgsForCall(i int) (*gophercloud.ServiceClient, flavors.ListOpts) {
+func (fake *FakeComputeFacade) ListFlavorsArgsForCall(i int) (utils.RetryableServiceClient, flavors.ListOpts) {
 	fake.listFlavorsMutex.RLock()
 	defer fake.listFlavorsMutex.RUnlock()
 	argsForCall := fake.listFlavorsArgsForCall[i]
@@ -580,11 +580,11 @@ func (fake *FakeComputeFacade) ListFlavorsReturnsOnCall(i int, result1 paginatio
 	}{result1, result2}
 }
 
-func (fake *FakeComputeFacade) SetServerMetadata(arg1 *gophercloud.ServiceClient, arg2 string, arg3 servers.MetadatumOpts) (map[string]string, error) {
+func (fake *FakeComputeFacade) SetServerMetadata(arg1 utils.ServiceClient, arg2 string, arg3 servers.MetadatumOpts) (map[string]string, error) {
 	fake.setServerMetadataMutex.Lock()
 	ret, specificReturn := fake.setServerMetadataReturnsOnCall[len(fake.setServerMetadataArgsForCall)]
 	fake.setServerMetadataArgsForCall = append(fake.setServerMetadataArgsForCall, struct {
-		arg1 *gophercloud.ServiceClient
+		arg1 utils.ServiceClient
 		arg2 string
 		arg3 servers.MetadatumOpts
 	}{arg1, arg2, arg3})
@@ -607,13 +607,13 @@ func (fake *FakeComputeFacade) SetServerMetadataCallCount() int {
 	return len(fake.setServerMetadataArgsForCall)
 }
 
-func (fake *FakeComputeFacade) SetServerMetadataCalls(stub func(*gophercloud.ServiceClient, string, servers.MetadatumOpts) (map[string]string, error)) {
+func (fake *FakeComputeFacade) SetServerMetadataCalls(stub func(utils.ServiceClient, string, servers.MetadatumOpts) (map[string]string, error)) {
 	fake.setServerMetadataMutex.Lock()
 	defer fake.setServerMetadataMutex.Unlock()
 	fake.SetServerMetadataStub = stub
 }
 
-func (fake *FakeComputeFacade) SetServerMetadataArgsForCall(i int) (*gophercloud.ServiceClient, string, servers.MetadatumOpts) {
+func (fake *FakeComputeFacade) SetServerMetadataArgsForCall(i int) (utils.ServiceClient, string, servers.MetadatumOpts) {
 	fake.setServerMetadataMutex.RLock()
 	defer fake.setServerMetadataMutex.RUnlock()
 	argsForCall := fake.setServerMetadataArgsForCall[i]

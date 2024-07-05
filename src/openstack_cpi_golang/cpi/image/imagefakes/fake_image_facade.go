@@ -5,48 +5,48 @@ import (
 	"sync"
 
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/image"
-	"github.com/gophercloud/gophercloud"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/gophercloud/gophercloud/openstack/imageservice/v2/images"
 )
 
 type FakeImageFacade struct {
-	CreateStub        func(*gophercloud.ServiceClient, images.CreateOptsBuilder) (*images.Image, error)
-	createMutex       sync.RWMutex
-	createArgsForCall []struct {
-		arg1 *gophercloud.ServiceClient
+	CreateImageStub        func(utils.ServiceClient, images.CreateOptsBuilder) (*images.Image, error)
+	createImageMutex       sync.RWMutex
+	createImageArgsForCall []struct {
+		arg1 utils.ServiceClient
 		arg2 images.CreateOptsBuilder
 	}
-	createReturns struct {
+	createImageReturns struct {
 		result1 *images.Image
 		result2 error
 	}
-	createReturnsOnCall map[int]struct {
+	createImageReturnsOnCall map[int]struct {
 		result1 *images.Image
 		result2 error
 	}
-	DeleteStub        func(*gophercloud.ServiceClient, string) error
-	deleteMutex       sync.RWMutex
-	deleteArgsForCall []struct {
-		arg1 *gophercloud.ServiceClient
+	DeleteImageStub        func(utils.RetryableServiceClient, string) error
+	deleteImageMutex       sync.RWMutex
+	deleteImageArgsForCall []struct {
+		arg1 utils.RetryableServiceClient
 		arg2 string
 	}
-	deleteReturns struct {
+	deleteImageReturns struct {
 		result1 error
 	}
-	deleteReturnsOnCall map[int]struct {
+	deleteImageReturnsOnCall map[int]struct {
 		result1 error
 	}
-	GetStub        func(*gophercloud.ServiceClient, string) (*images.Image, error)
-	getMutex       sync.RWMutex
-	getArgsForCall []struct {
-		arg1 *gophercloud.ServiceClient
+	GetImageStub        func(utils.RetryableServiceClient, string) (*images.Image, error)
+	getImageMutex       sync.RWMutex
+	getImageArgsForCall []struct {
+		arg1 utils.RetryableServiceClient
 		arg2 string
 	}
-	getReturns struct {
+	getImageReturns struct {
 		result1 *images.Image
 		result2 error
 	}
-	getReturnsOnCall map[int]struct {
+	getImageReturnsOnCall map[int]struct {
 		result1 *images.Image
 		result2 error
 	}
@@ -54,17 +54,17 @@ type FakeImageFacade struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeImageFacade) Create(arg1 *gophercloud.ServiceClient, arg2 images.CreateOptsBuilder) (*images.Image, error) {
-	fake.createMutex.Lock()
-	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
-	fake.createArgsForCall = append(fake.createArgsForCall, struct {
-		arg1 *gophercloud.ServiceClient
+func (fake *FakeImageFacade) CreateImage(arg1 utils.ServiceClient, arg2 images.CreateOptsBuilder) (*images.Image, error) {
+	fake.createImageMutex.Lock()
+	ret, specificReturn := fake.createImageReturnsOnCall[len(fake.createImageArgsForCall)]
+	fake.createImageArgsForCall = append(fake.createImageArgsForCall, struct {
+		arg1 utils.ServiceClient
 		arg2 images.CreateOptsBuilder
 	}{arg1, arg2})
-	stub := fake.CreateStub
-	fakeReturns := fake.createReturns
-	fake.recordInvocation("Create", []interface{}{arg1, arg2})
-	fake.createMutex.Unlock()
+	stub := fake.CreateImageStub
+	fakeReturns := fake.createImageReturns
+	fake.recordInvocation("CreateImage", []interface{}{arg1, arg2})
+	fake.createImageMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2)
 	}
@@ -74,62 +74,62 @@ func (fake *FakeImageFacade) Create(arg1 *gophercloud.ServiceClient, arg2 images
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *FakeImageFacade) CreateCallCount() int {
-	fake.createMutex.RLock()
-	defer fake.createMutex.RUnlock()
-	return len(fake.createArgsForCall)
+func (fake *FakeImageFacade) CreateImageCallCount() int {
+	fake.createImageMutex.RLock()
+	defer fake.createImageMutex.RUnlock()
+	return len(fake.createImageArgsForCall)
 }
 
-func (fake *FakeImageFacade) CreateCalls(stub func(*gophercloud.ServiceClient, images.CreateOptsBuilder) (*images.Image, error)) {
-	fake.createMutex.Lock()
-	defer fake.createMutex.Unlock()
-	fake.CreateStub = stub
+func (fake *FakeImageFacade) CreateImageCalls(stub func(utils.ServiceClient, images.CreateOptsBuilder) (*images.Image, error)) {
+	fake.createImageMutex.Lock()
+	defer fake.createImageMutex.Unlock()
+	fake.CreateImageStub = stub
 }
 
-func (fake *FakeImageFacade) CreateArgsForCall(i int) (*gophercloud.ServiceClient, images.CreateOptsBuilder) {
-	fake.createMutex.RLock()
-	defer fake.createMutex.RUnlock()
-	argsForCall := fake.createArgsForCall[i]
+func (fake *FakeImageFacade) CreateImageArgsForCall(i int) (utils.ServiceClient, images.CreateOptsBuilder) {
+	fake.createImageMutex.RLock()
+	defer fake.createImageMutex.RUnlock()
+	argsForCall := fake.createImageArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeImageFacade) CreateReturns(result1 *images.Image, result2 error) {
-	fake.createMutex.Lock()
-	defer fake.createMutex.Unlock()
-	fake.CreateStub = nil
-	fake.createReturns = struct {
+func (fake *FakeImageFacade) CreateImageReturns(result1 *images.Image, result2 error) {
+	fake.createImageMutex.Lock()
+	defer fake.createImageMutex.Unlock()
+	fake.CreateImageStub = nil
+	fake.createImageReturns = struct {
 		result1 *images.Image
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeImageFacade) CreateReturnsOnCall(i int, result1 *images.Image, result2 error) {
-	fake.createMutex.Lock()
-	defer fake.createMutex.Unlock()
-	fake.CreateStub = nil
-	if fake.createReturnsOnCall == nil {
-		fake.createReturnsOnCall = make(map[int]struct {
+func (fake *FakeImageFacade) CreateImageReturnsOnCall(i int, result1 *images.Image, result2 error) {
+	fake.createImageMutex.Lock()
+	defer fake.createImageMutex.Unlock()
+	fake.CreateImageStub = nil
+	if fake.createImageReturnsOnCall == nil {
+		fake.createImageReturnsOnCall = make(map[int]struct {
 			result1 *images.Image
 			result2 error
 		})
 	}
-	fake.createReturnsOnCall[i] = struct {
+	fake.createImageReturnsOnCall[i] = struct {
 		result1 *images.Image
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeImageFacade) Delete(arg1 *gophercloud.ServiceClient, arg2 string) error {
-	fake.deleteMutex.Lock()
-	ret, specificReturn := fake.deleteReturnsOnCall[len(fake.deleteArgsForCall)]
-	fake.deleteArgsForCall = append(fake.deleteArgsForCall, struct {
-		arg1 *gophercloud.ServiceClient
+func (fake *FakeImageFacade) DeleteImage(arg1 utils.RetryableServiceClient, arg2 string) error {
+	fake.deleteImageMutex.Lock()
+	ret, specificReturn := fake.deleteImageReturnsOnCall[len(fake.deleteImageArgsForCall)]
+	fake.deleteImageArgsForCall = append(fake.deleteImageArgsForCall, struct {
+		arg1 utils.RetryableServiceClient
 		arg2 string
 	}{arg1, arg2})
-	stub := fake.DeleteStub
-	fakeReturns := fake.deleteReturns
-	fake.recordInvocation("Delete", []interface{}{arg1, arg2})
-	fake.deleteMutex.Unlock()
+	stub := fake.DeleteImageStub
+	fakeReturns := fake.deleteImageReturns
+	fake.recordInvocation("DeleteImage", []interface{}{arg1, arg2})
+	fake.deleteImageMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2)
 	}
@@ -139,59 +139,59 @@ func (fake *FakeImageFacade) Delete(arg1 *gophercloud.ServiceClient, arg2 string
 	return fakeReturns.result1
 }
 
-func (fake *FakeImageFacade) DeleteCallCount() int {
-	fake.deleteMutex.RLock()
-	defer fake.deleteMutex.RUnlock()
-	return len(fake.deleteArgsForCall)
+func (fake *FakeImageFacade) DeleteImageCallCount() int {
+	fake.deleteImageMutex.RLock()
+	defer fake.deleteImageMutex.RUnlock()
+	return len(fake.deleteImageArgsForCall)
 }
 
-func (fake *FakeImageFacade) DeleteCalls(stub func(*gophercloud.ServiceClient, string) error) {
-	fake.deleteMutex.Lock()
-	defer fake.deleteMutex.Unlock()
-	fake.DeleteStub = stub
+func (fake *FakeImageFacade) DeleteImageCalls(stub func(utils.RetryableServiceClient, string) error) {
+	fake.deleteImageMutex.Lock()
+	defer fake.deleteImageMutex.Unlock()
+	fake.DeleteImageStub = stub
 }
 
-func (fake *FakeImageFacade) DeleteArgsForCall(i int) (*gophercloud.ServiceClient, string) {
-	fake.deleteMutex.RLock()
-	defer fake.deleteMutex.RUnlock()
-	argsForCall := fake.deleteArgsForCall[i]
+func (fake *FakeImageFacade) DeleteImageArgsForCall(i int) (utils.RetryableServiceClient, string) {
+	fake.deleteImageMutex.RLock()
+	defer fake.deleteImageMutex.RUnlock()
+	argsForCall := fake.deleteImageArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeImageFacade) DeleteReturns(result1 error) {
-	fake.deleteMutex.Lock()
-	defer fake.deleteMutex.Unlock()
-	fake.DeleteStub = nil
-	fake.deleteReturns = struct {
+func (fake *FakeImageFacade) DeleteImageReturns(result1 error) {
+	fake.deleteImageMutex.Lock()
+	defer fake.deleteImageMutex.Unlock()
+	fake.DeleteImageStub = nil
+	fake.deleteImageReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeImageFacade) DeleteReturnsOnCall(i int, result1 error) {
-	fake.deleteMutex.Lock()
-	defer fake.deleteMutex.Unlock()
-	fake.DeleteStub = nil
-	if fake.deleteReturnsOnCall == nil {
-		fake.deleteReturnsOnCall = make(map[int]struct {
+func (fake *FakeImageFacade) DeleteImageReturnsOnCall(i int, result1 error) {
+	fake.deleteImageMutex.Lock()
+	defer fake.deleteImageMutex.Unlock()
+	fake.DeleteImageStub = nil
+	if fake.deleteImageReturnsOnCall == nil {
+		fake.deleteImageReturnsOnCall = make(map[int]struct {
 			result1 error
 		})
 	}
-	fake.deleteReturnsOnCall[i] = struct {
+	fake.deleteImageReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeImageFacade) Get(arg1 *gophercloud.ServiceClient, arg2 string) (*images.Image, error) {
-	fake.getMutex.Lock()
-	ret, specificReturn := fake.getReturnsOnCall[len(fake.getArgsForCall)]
-	fake.getArgsForCall = append(fake.getArgsForCall, struct {
-		arg1 *gophercloud.ServiceClient
+func (fake *FakeImageFacade) GetImage(arg1 utils.RetryableServiceClient, arg2 string) (*images.Image, error) {
+	fake.getImageMutex.Lock()
+	ret, specificReturn := fake.getImageReturnsOnCall[len(fake.getImageArgsForCall)]
+	fake.getImageArgsForCall = append(fake.getImageArgsForCall, struct {
+		arg1 utils.RetryableServiceClient
 		arg2 string
 	}{arg1, arg2})
-	stub := fake.GetStub
-	fakeReturns := fake.getReturns
-	fake.recordInvocation("Get", []interface{}{arg1, arg2})
-	fake.getMutex.Unlock()
+	stub := fake.GetImageStub
+	fakeReturns := fake.getImageReturns
+	fake.recordInvocation("GetImage", []interface{}{arg1, arg2})
+	fake.getImageMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2)
 	}
@@ -201,46 +201,46 @@ func (fake *FakeImageFacade) Get(arg1 *gophercloud.ServiceClient, arg2 string) (
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *FakeImageFacade) GetCallCount() int {
-	fake.getMutex.RLock()
-	defer fake.getMutex.RUnlock()
-	return len(fake.getArgsForCall)
+func (fake *FakeImageFacade) GetImageCallCount() int {
+	fake.getImageMutex.RLock()
+	defer fake.getImageMutex.RUnlock()
+	return len(fake.getImageArgsForCall)
 }
 
-func (fake *FakeImageFacade) GetCalls(stub func(*gophercloud.ServiceClient, string) (*images.Image, error)) {
-	fake.getMutex.Lock()
-	defer fake.getMutex.Unlock()
-	fake.GetStub = stub
+func (fake *FakeImageFacade) GetImageCalls(stub func(utils.RetryableServiceClient, string) (*images.Image, error)) {
+	fake.getImageMutex.Lock()
+	defer fake.getImageMutex.Unlock()
+	fake.GetImageStub = stub
 }
 
-func (fake *FakeImageFacade) GetArgsForCall(i int) (*gophercloud.ServiceClient, string) {
-	fake.getMutex.RLock()
-	defer fake.getMutex.RUnlock()
-	argsForCall := fake.getArgsForCall[i]
+func (fake *FakeImageFacade) GetImageArgsForCall(i int) (utils.RetryableServiceClient, string) {
+	fake.getImageMutex.RLock()
+	defer fake.getImageMutex.RUnlock()
+	argsForCall := fake.getImageArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeImageFacade) GetReturns(result1 *images.Image, result2 error) {
-	fake.getMutex.Lock()
-	defer fake.getMutex.Unlock()
-	fake.GetStub = nil
-	fake.getReturns = struct {
+func (fake *FakeImageFacade) GetImageReturns(result1 *images.Image, result2 error) {
+	fake.getImageMutex.Lock()
+	defer fake.getImageMutex.Unlock()
+	fake.GetImageStub = nil
+	fake.getImageReturns = struct {
 		result1 *images.Image
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeImageFacade) GetReturnsOnCall(i int, result1 *images.Image, result2 error) {
-	fake.getMutex.Lock()
-	defer fake.getMutex.Unlock()
-	fake.GetStub = nil
-	if fake.getReturnsOnCall == nil {
-		fake.getReturnsOnCall = make(map[int]struct {
+func (fake *FakeImageFacade) GetImageReturnsOnCall(i int, result1 *images.Image, result2 error) {
+	fake.getImageMutex.Lock()
+	defer fake.getImageMutex.Unlock()
+	fake.GetImageStub = nil
+	if fake.getImageReturnsOnCall == nil {
+		fake.getImageReturnsOnCall = make(map[int]struct {
 			result1 *images.Image
 			result2 error
 		})
 	}
-	fake.getReturnsOnCall[i] = struct {
+	fake.getImageReturnsOnCall[i] = struct {
 		result1 *images.Image
 		result2 error
 	}{result1, result2}
@@ -249,12 +249,12 @@ func (fake *FakeImageFacade) GetReturnsOnCall(i int, result1 *images.Image, resu
 func (fake *FakeImageFacade) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.createMutex.RLock()
-	defer fake.createMutex.RUnlock()
-	fake.deleteMutex.RLock()
-	defer fake.deleteMutex.RUnlock()
-	fake.getMutex.RLock()
-	defer fake.getMutex.RUnlock()
+	fake.createImageMutex.RLock()
+	defer fake.createImageMutex.RUnlock()
+	fake.deleteImageMutex.RLock()
+	defer fake.deleteImageMutex.RUnlock()
+	fake.getImageMutex.RLock()
+	defer fake.getImageMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

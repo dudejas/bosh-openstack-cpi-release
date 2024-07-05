@@ -121,6 +121,42 @@ var _ = Describe("OpenstackConfig", func() {
 						}
 					}`),
 			},
+			"some/path/config_without_retry_config.json": &fstest.MapFile{
+				Data: []byte(`{
+						"cloud": {
+							"properties": {
+								"openstack": {
+									"auth_url": "the_auth_url",
+									"application_credential_id": "the_application_credential_id",
+									"application_credential_secret": "the_application_credential_secret"
+								}
+							}
+						}
+					}`),
+			},
+			"some/path/config_with_retry_configs.json": &fstest.MapFile{
+				Data: []byte(`{
+						"cloud": {
+							"properties": {
+								"openstack": {
+									"auth_url": "the_auth_url",
+									"application_credential_id": "the_application_credential_id",
+									"application_credential_secret": "the_application_credential_secret"
+								},
+								"retry_config": {	
+									"default": {
+										"sleep_duration": 5,
+										"max_attempts": 20
+									},
+									"create_server": {
+										"sleep_duration": 10,
+										"max_attempts": 30
+									}
+								}
+							}
+						}
+					}`),
+			},
 		}
 	})
 
@@ -160,52 +196,84 @@ var _ = Describe("OpenstackConfig", func() {
 	})
 
 	Context("Validate", func() {
-		It("returns an error if username and application credential is set", func() {
-			_, err := config.NewConfigFromPath(fileSystem, "some/path/invalid_user_config.json")
+		Context("OpenstackConfig", func() {
+			It("returns an error if username and application credential is set", func() {
+				_, err := config.NewConfigFromPath(fileSystem, "some/path/invalid_user_config.json")
 
-			Expect(err.Error()).To(ContainSubstring("Invalid OpenStack cloud properties: username and api_key or application_credential_id and application_credential_secret is required"))
+				Expect(err.Error()).To(ContainSubstring("Invalid OpenStack cloud properties: username and api_key or application_credential_id and application_credential_secret is required"))
+			})
+
+			It("config drive can be set to disk", func() {
+				cpiConfig, err := config.NewConfigFromPath(fileSystem, "some/path/disk_config_drive.json")
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(cpiConfig.Cloud.Properties.Openstack.ConfigDrive).To(Equal("disk"))
+			})
+
+			It("config drive can be set to cdrom", func() {
+				cpiConfig, err := config.NewConfigFromPath(fileSystem, "some/path/cdrom_config_drive.json")
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(cpiConfig.Cloud.Properties.Openstack.ConfigDrive).To(Equal("cdrom"))
+			})
+
+			It("returns an error if config drive is invalid", func() {
+				_, err := config.NewConfigFromPath(fileSystem, "some/path/invalid_config_drive.json")
+
+				Expect(err.Error()).To(ContainSubstring("Invalid OpenStack cloud properties: config_drive must be either 'cdrom' or 'disk'"))
+			})
+
+			It("returns an error if config is empty", func() {
+				_, err := config.NewConfigFromPath(fileSystem, "some/path/empty_config.json")
+
+				Expect(err.Error()).To(ContainSubstring("Invalid OpenStack cloud properties: username and api_key or application_credential_id and application_credential_secret is required"))
+			})
+
+			It("succeeds with username and api_key", func() {
+				cpiConfig, err := config.NewConfigFromPath(fileSystem, "some/path/username_api_key_config.json")
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(cpiConfig.Cloud.Properties.Openstack.Username).To(Equal("the_username"))
+				Expect(cpiConfig.Cloud.Properties.Openstack.APIKey).To(Equal("the_api_key"))
+			})
+
+			It("succeeds with application credential id and secret", func() {
+				cpiConfig, err := config.NewConfigFromPath(fileSystem, "some/path/application_credential_config.json")
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(cpiConfig.Cloud.Properties.Openstack.ApplicationCredentialID).To(Equal("the_application_credential_id"))
+				Expect(cpiConfig.Cloud.Properties.Openstack.ApplicationCredentialSecret).To(Equal("the_application_credential_secret"))
+			})
 		})
 
-		It("config drive can be set to disk", func() {
-			cpiConfig, err := config.NewConfigFromPath(fileSystem, "some/path/disk_config_drive.json")
+		Context("Properties", func() {
+			It("has a default retry configurations ", func() {
+				cpiConfig, err := config.NewConfigFromPath(fileSystem, "some/path/config_without_retry_config.json")
 
-			Expect(err).ToNot(HaveOccurred())
-			Expect(cpiConfig.Cloud.Properties.Openstack.ConfigDrive).To(Equal("disk"))
-		})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(cpiConfig.Properties().RetryConfig.Default().SleepDuration).To(Equal(3))
+				Expect(cpiConfig.Properties().RetryConfig.Default().MaxAttempts).To(Equal(10))
+			})
 
-		It("config drive can be set to cdrom", func() {
-			cpiConfig, err := config.NewConfigFromPath(fileSystem, "some/path/cdrom_config_drive.json")
+			It("supports overwriting the default retry configurations", func() {
+				cpiConfig, err := config.NewConfigFromPath(fileSystem, "some/path/config_with_retry_configs.json")
 
-			Expect(err).ToNot(HaveOccurred())
-			Expect(cpiConfig.Cloud.Properties.Openstack.ConfigDrive).To(Equal("cdrom"))
-		})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(cpiConfig.Properties().RetryConfig.Default().SleepDuration).To(Equal(5))
+				Expect(cpiConfig.Properties().RetryConfig.Default().MaxAttempts).To(Equal(20))
+				Expect(cpiConfig.Properties().RetryConfig["default"].SleepDuration).To(Equal(5))
+				Expect(cpiConfig.Properties().RetryConfig["default"].MaxAttempts).To(Equal(20))
+				Expect(cpiConfig.Properties().RetryConfig["create_server"].SleepDuration).To(Equal(10))
+				Expect(cpiConfig.Properties().RetryConfig["create_server"].MaxAttempts).To(Equal(30))
+			})
 
-		It("returns an error if config drive is invalid", func() {
-			_, err := config.NewConfigFromPath(fileSystem, "some/path/invalid_config_drive.json")
+			It("supports setting multiple retry configurations", func() {
+				cpiConfig, err := config.NewConfigFromPath(fileSystem, "some/path/application_credential_config.json")
 
-			Expect(err.Error()).To(ContainSubstring("Invalid OpenStack cloud properties: config_drive must be either 'cdrom' or 'disk'"))
-		})
-
-		It("returns an error if config is empty", func() {
-			_, err := config.NewConfigFromPath(fileSystem, "some/path/empty_config.json")
-
-			Expect(err.Error()).To(ContainSubstring("Invalid OpenStack cloud properties: username and api_key or application_credential_id and application_credential_secret is required"))
-		})
-
-		It("succeeds with username and api_key", func() {
-			cpiConfig, err := config.NewConfigFromPath(fileSystem, "some/path/username_api_key_config.json")
-
-			Expect(err).ToNot(HaveOccurred())
-			Expect(cpiConfig.Cloud.Properties.Openstack.Username).To(Equal("the_username"))
-			Expect(cpiConfig.Cloud.Properties.Openstack.APIKey).To(Equal("the_api_key"))
-		})
-
-		It("succeeds with application credential id and secret", func() {
-			cpiConfig, err := config.NewConfigFromPath(fileSystem, "some/path/application_credential_config.json")
-
-			Expect(err).ToNot(HaveOccurred())
-			Expect(cpiConfig.Cloud.Properties.Openstack.ApplicationCredentialID).To(Equal("the_application_credential_id"))
-			Expect(cpiConfig.Cloud.Properties.Openstack.ApplicationCredentialSecret).To(Equal("the_application_credential_secret"))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(cpiConfig.Cloud.Properties.Openstack.ApplicationCredentialID).To(Equal("the_application_credential_id"))
+				Expect(cpiConfig.Cloud.Properties.Openstack.ApplicationCredentialSecret).To(Equal("the_application_credential_secret"))
+			})
 		})
 	})
 

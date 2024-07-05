@@ -64,7 +64,7 @@ func (f Factory) New(ctx apiv1.CallContext) (apiv1.CPI, error) {
 
 		methods.NewCreateStemcellMethod(
 
-			image.NewImageServiceBuilder(openstackService, f.openstackConfig, f.logger),
+			image.NewImageServiceBuilder(openstackService, f.cpiConfig, f.logger),
 			image.NewHeavyStemcellCreator(f.openstackConfig),
 			image.NewLightStemcellCreator(f.openstackConfig),
 			root_image.NewRootImage(),
@@ -73,23 +73,23 @@ func (f Factory) New(ctx apiv1.CallContext) (apiv1.CPI, error) {
 		),
 
 		methods.NewDeleteStemcellMethod(
-			image.NewImageServiceBuilder(openstackService, f.openstackConfig, f.logger),
+			image.NewImageServiceBuilder(openstackService, f.cpiConfig, f.logger),
 			f.logger,
 		),
 
 		methods.NewCreateVMMethod(
-			image.NewImageServiceBuilder(openstackService, f.openstackConfig, f.logger),
-			network.NewNetworkServiceBuilder(openstackService, f.openstackConfig, f.logger),
-			compute.NewComputeServiceBuilder(openstackService, f.openstackConfig, f.logger),
-			loadbalancer.NewLoadbalancerServiceBuilder(openstackService, f.openstackConfig, f.logger),
+			image.NewImageServiceBuilder(openstackService, f.cpiConfig, f.logger),
+			network.NewNetworkServiceBuilder(openstackService, f.cpiConfig, f.logger),
+			compute.NewComputeServiceBuilder(openstackService, f.cpiConfig, f.logger),
+			loadbalancer.NewLoadbalancerServiceBuilder(openstackService, f.cpiConfig, f.logger),
 			f.cpiConfig,
 			f.logger,
 		),
 
 		methods.NewDeleteVMMethod(
-			network.NewNetworkServiceBuilder(openstackService, f.openstackConfig, f.logger),
-			compute.NewComputeServiceBuilder(openstackService, f.openstackConfig, f.logger),
-			f.openstackConfig,
+			network.NewNetworkServiceBuilder(openstackService, f.cpiConfig, f.logger),
+			compute.NewComputeServiceBuilder(openstackService, f.cpiConfig, f.logger),
+			f.cpiConfig,
 			f.logger,
 		),
 

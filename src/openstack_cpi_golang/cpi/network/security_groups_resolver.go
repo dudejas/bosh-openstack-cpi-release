@@ -3,7 +3,6 @@ package network
 import (
 	"fmt"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
-	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 )
 
@@ -13,18 +12,18 @@ type SecurityGroupsResolver interface {
 }
 
 type securityGroupsResolver struct {
-	serviceClient    *gophercloud.ServiceClient
+	serviceClients   utils.ServiceClients
 	networkingFacade NetworkingFacade
 	logger           utils.Logger
 }
 
 func NewSecurityGroupsResolver(
-	serviceClient *gophercloud.ServiceClient,
+	serviceClients utils.ServiceClients,
 	networkingFacade NetworkingFacade,
 	logger utils.Logger,
 ) securityGroupsResolver {
 	return securityGroupsResolver{
-		serviceClient:    serviceClient,
+		serviceClients:   serviceClients,
 		networkingFacade: networkingFacade,
 		logger:           logger,
 	}
@@ -56,7 +55,7 @@ func (s securityGroupsResolver) Resolve(securityGroupIDsAndNames []string) ([]st
 }
 
 func (s securityGroupsResolver) resolveSecurityGroupById(securityGroupID string) (*groups.SecGroup, error) {
-	return s.networkingFacade.GetSecurityGroups(s.serviceClient, securityGroupID)
+	return s.networkingFacade.GetSecurityGroups(s.serviceClients.RetryableServiceClient, securityGroupID)
 }
 
 func (s securityGroupsResolver) resolveSecurityGroupByName(securityGroupName string) (*groups.SecGroup, error) {
@@ -64,7 +63,7 @@ func (s securityGroupsResolver) resolveSecurityGroupByName(securityGroupName str
 		Name: securityGroupName,
 	}
 
-	allPages, err := s.networkingFacade.ListSecurityGroups(s.serviceClient, listOpts)
+	allPages, err := s.networkingFacade.ListSecurityGroups(s.serviceClients.RetryableServiceClient, listOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list security groups: %w", err)
 	}

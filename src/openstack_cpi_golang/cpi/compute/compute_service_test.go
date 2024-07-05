@@ -10,6 +10,7 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/loadbalancer/loadbalancerfakes"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils/utilsfakes"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/bootfromvolume"
@@ -23,6 +24,9 @@ import (
 
 var _ = Describe("ComputeService", func() {
 	var serviceClient gophercloud.ServiceClient
+	var retryableServiceClient gophercloud.ServiceClient
+	var serviceClients utils.ServiceClients
+	var utilsServiceClient utils.ServiceClient
 	var computeFacade computefakes.FakeComputeFacade
 	var flavorResolver computefakes.FakeFlavorResolver
 	var volumeConfigurator computefakes.FakeVolumeConfigurator
@@ -37,8 +41,9 @@ var _ = Describe("ComputeService", func() {
 	var env apiv1.VMEnv
 
 	BeforeEach(func() {
-		providerClient := gophercloud.ProviderClient{TokenID: "the_token"}
-		serviceClient = gophercloud.ServiceClient{ProviderClient: &providerClient}
+		serviceClient = gophercloud.ServiceClient{}
+		retryableServiceClient = gophercloud.ServiceClient{}
+		serviceClients = utils.ServiceClients{ServiceClient: &serviceClient, RetryableServiceClient: &retryableServiceClient}
 		computeFacade = computefakes.FakeComputeFacade{}
 		flavorResolver = computefakes.FakeFlavorResolver{}
 		volumeConfigurator = computefakes.FakeVolumeConfigurator{}
@@ -49,7 +54,7 @@ var _ = Describe("ComputeService", func() {
 
 		loadbalancerServiceBuilder.BuildReturns(&loadbalancerService, nil)
 
-		computeService = compute.NewComputeService(&serviceClient, &computeFacade, &flavorResolver, &volumeConfigurator, &availabilityZoneProvider, &loadbalancerServiceBuilder, &logger)
+		computeService = compute.NewComputeService(serviceClients, &computeFacade, &flavorResolver, &volumeConfigurator, &availabilityZoneProvider, &loadbalancerServiceBuilder, &logger)
 		compute.ComputeServicePollingInterval = 0
 		networkConfig = properties.NetworkConfig{}
 		computeFacade.CreateServerReturns(&servers.Server{ID: "123-456"}, nil)
@@ -62,6 +67,7 @@ var _ = Describe("ComputeService", func() {
 	})
 
 	Context("CreateServer", func() {
+
 		BeforeEach(func() {
 			computeFacade.GetServerReturns(&servers.Server{ID: "123-456", Status: "ACTIVE"}, nil)
 		})
@@ -232,7 +238,7 @@ var _ = Describe("ComputeService", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				sClient, opts := computeFacade.CreateServerArgsForCall(0)
-				Expect(sClient).To(Equal(&serviceClient))
+				Expect(sClient).To(BeAssignableToTypeOf(utilsServiceClient))
 
 				createMap, err := opts.ToServerCreateMap()
 				Expect(err).ToNot(HaveOccurred())
@@ -277,7 +283,7 @@ var _ = Describe("ComputeService", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				sClient, opts := computeFacade.CreateServerArgsForCall(0)
-				Expect(sClient).To(Equal(&serviceClient))
+				Expect(sClient).To(BeAssignableToTypeOf(utilsServiceClient))
 
 				createMap, err := opts.ToServerCreateMap()
 				Expect(err).ToNot(HaveOccurred())
@@ -494,13 +500,12 @@ var _ = Describe("ComputeService", func() {
 		It("deletes a server without raising errors", func() {
 			err := computeService.DeleteServer(
 				"123-456",
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+				createCpiConfig(10),
 			)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(computeFacade.GetServerCallCount()).To(Equal(2))
 			Expect(computeFacade.DeleteServerCallCount()).To(Equal(1))
-			Expect(serviceClient.RetryFunc).ToNot(Equal(nil))
 		})
 
 		It("returns an error if getServer fails", func() {
@@ -508,7 +513,7 @@ var _ = Describe("ComputeService", func() {
 
 			err := computeService.DeleteServer(
 				"123-456",
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+				createCpiConfig(10),
 			)
 
 			Expect(err).To(HaveOccurred())
@@ -521,7 +526,7 @@ var _ = Describe("ComputeService", func() {
 
 			err := computeService.DeleteServer(
 				"123-456",
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+				createCpiConfig(10),
 			)
 
 			Expect(err).ToNot(HaveOccurred())
@@ -530,7 +535,7 @@ var _ = Describe("ComputeService", func() {
 		It("deletes a pool member for tags with prefix 'lbaas_pool_'", func() {
 			err := computeService.DeleteServer(
 				"123-456",
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+				createCpiConfig(10),
 			)
 
 			poolID, memberID := loadbalancerService.DeletePoolMemberArgsForCall(0)
@@ -548,7 +553,7 @@ var _ = Describe("ComputeService", func() {
 
 			err := computeService.DeleteServer(
 				"123-456",
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+				createCpiConfig(10),
 			)
 
 			Expect(err).ToNot(HaveOccurred())
@@ -561,7 +566,7 @@ var _ = Describe("ComputeService", func() {
 
 			err := computeService.DeleteServer(
 				"123-456",
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+				createCpiConfig(10),
 			)
 
 			Expect(err).To(HaveOccurred())
@@ -573,7 +578,7 @@ var _ = Describe("ComputeService", func() {
 
 			err := computeService.DeleteServer(
 				"123-456",
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+				createCpiConfig(10),
 			)
 
 			Expect(err).To(HaveOccurred())
@@ -585,7 +590,7 @@ var _ = Describe("ComputeService", func() {
 
 			err := computeService.DeleteServer(
 				"123-456",
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+				createCpiConfig(10),
 			)
 
 			Expect(err).To(HaveOccurred())
@@ -596,7 +601,7 @@ var _ = Describe("ComputeService", func() {
 			computeFacade.DeleteServerReturns(errors.New("boom"))
 			err := computeService.DeleteServer(
 				"123-456",
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+				createCpiConfig(10),
 			)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal("failed to delete server: boom"))
@@ -607,7 +612,7 @@ var _ = Describe("ComputeService", func() {
 
 			err := computeService.DeleteServer(
 				"123-456",
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+				createCpiConfig(10),
 			)
 
 			Expect(err).ToNot(HaveOccurred())
@@ -620,7 +625,7 @@ var _ = Describe("ComputeService", func() {
 
 			err := computeService.DeleteServer(
 				"123-456",
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+				createCpiConfig(10),
 			)
 
 			Expect(err).ToNot(HaveOccurred())
@@ -628,12 +633,14 @@ var _ = Describe("ComputeService", func() {
 		})
 
 		It("raises an error if it times out while waiting for the server to become DELETED", func() {
-			computeFacade.GetServerReturnsOnCall(1, &servers.Server{ID: "123-456", Status: "ACTIVE"}, nil)
 			computeFacade.GetServerReturns(&servers.Server{ID: "123-456", Status: "ACTIVE"}, nil)
+			computeFacade.GetServerReturnsOnCall(1, &servers.Server{ID: "123-456", Status: "ACTIVE"}, nil)
+
+			cpiConfig := createCpiConfig(0)
 
 			err := computeService.DeleteServer(
 				"123-456",
-				config.OpenstackConfig{StateTimeOut: 0, DefaultKeyName: "the_key_name"},
+				cpiConfig,
 			)
 
 			Expect(err).To(HaveOccurred())
@@ -645,7 +652,7 @@ var _ = Describe("ComputeService", func() {
 
 			err := computeService.DeleteServer(
 				"123-456",
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+				createCpiConfig(10),
 			)
 
 			Expect(err).To(HaveOccurred())
@@ -657,7 +664,7 @@ var _ = Describe("ComputeService", func() {
 
 			err := computeService.DeleteServer(
 				"123-456",
-				config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "the_key_name"},
+				createCpiConfig(10),
 			)
 
 			Expect(err).To(HaveOccurred())
@@ -712,7 +719,7 @@ var _ = Describe("ComputeService", func() {
 
 func createCpiConfig(stateTimeOut int) config.CpiConfig {
 	cpiConfig := config.CpiConfig{}
-	openstackConfig := config.OpenstackConfig{StateTimeOut: stateTimeOut, DefaultKeyName: "the_key_name", UseDHCP: true}
-	cpiConfig.Cloud.Properties.Openstack = openstackConfig
+	cpiConfig.Cloud.Properties.Openstack =
+		config.OpenstackConfig{StateTimeOut: stateTimeOut, DefaultKeyName: "the_key_name", UseDHCP: true}
 	return cpiConfig
 }

@@ -37,18 +37,18 @@ type ImageService interface {
 }
 
 type imageService struct {
-	serviceClient *gophercloud.ServiceClient
-	imagesFacade  ImageFacade
-	httpClient    HttpClient
-	logger        utils.Logger
+	serviceClients utils.ServiceClients
+	imagesFacade   ImageFacade
+	httpClient     HttpClient
+	logger         utils.Logger
 }
 
-func NewImageService(serviceClient *gophercloud.ServiceClient, imagesFacade ImageFacade, httpClient HttpClient, logger utils.Logger) imageService {
+func NewImageService(serviceClients utils.ServiceClients, imagesFacade ImageFacade, httpClient HttpClient, logger utils.Logger) imageService {
 	return imageService{
-		serviceClient: serviceClient,
-		imagesFacade:  imagesFacade,
-		httpClient:    httpClient,
-		logger:        logger,
+		serviceClients: serviceClients,
+		imagesFacade:   imagesFacade,
+		httpClient:     httpClient,
+		logger:         logger,
 	}
 }
 
@@ -61,7 +61,7 @@ func (c imageService) CreateImage(cloudProps properties.CreateStemcell, config c
 		Properties:      c.getProperties(cloudProps),
 	}
 
-	image, err := c.imagesFacade.Create(c.serviceClient, createOpts)
+	image, err := c.imagesFacade.CreateImage(c.serviceClients.ServiceClient, createOpts)
 	if err != nil {
 		return "", fmt.Errorf("failed to create image: %w", err)
 	}
@@ -70,10 +70,8 @@ func (c imageService) CreateImage(cloudProps properties.CreateStemcell, config c
 }
 
 func (c imageService) GetImage(imageID string) (string, error) {
-	serviceClient := c.serviceClient
-	serviceClient.RetryFunc = utils.RetryOnError(c.logger)
 
-	image, err := c.imagesFacade.Get(serviceClient, imageID)
+	image, err := c.imagesFacade.GetImage(c.serviceClients.RetryableServiceClient, imageID)
 	if err != nil {
 		return "", fmt.Errorf("could not find the image '%s' in OpenStack: %w", imageID, err)
 	}
@@ -90,14 +88,14 @@ func (c imageService) UploadImage(imageID string, imageFilePath string) error {
 		return fmt.Errorf("failed to read image file: %w", err)
 	}
 
-	endpoint := gophercloud.NormalizeURL(c.serviceClient.Endpoint)
+	endpoint := gophercloud.NormalizeURL(c.serviceClients.ServiceClient.Endpoint)
 	imageURL := endpoint + "v2/images/" + imageID + "/file"
 
 	req, err := c.httpClient.NewRequest("PUT", imageURL, bytes.NewReader(imageData))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
-	req.Header.Add("X-Auth-Token", c.serviceClient.TokenID)
+	req.Header.Add("X-Auth-Token", c.serviceClients.ServiceClient.TokenID)
 	req.Header.Set("Content-Type", "application/octet-stream")
 
 	resp, err := c.httpClient.Do(req)
@@ -122,10 +120,7 @@ func (c imageService) UploadImage(imageID string, imageFilePath string) error {
 }
 
 func (c imageService) DeleteImage(imageID string) error {
-	serviceClient := c.serviceClient
-	serviceClient.RetryFunc = utils.RetryOnError(c.logger)
-
-	err := c.imagesFacade.Delete(serviceClient, imageID)
+	err := c.imagesFacade.DeleteImage(c.serviceClients.RetryableServiceClient, imageID)
 	if err != nil {
 		return fmt.Errorf("could not delete the image %s, due to the following: %w", imageID, err)
 	}

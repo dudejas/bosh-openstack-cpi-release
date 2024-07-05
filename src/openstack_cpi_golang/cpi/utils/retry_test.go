@@ -2,13 +2,13 @@ package utils_test
 
 import (
 	"errors"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils/utilsfakes"
 	"github.com/gophercloud/gophercloud"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"net"
-	"time"
 )
 
 type MockNetError struct {
@@ -22,19 +22,20 @@ func (m MockNetError) Temporary() bool { return !m.timeout }
 
 var _ = Describe("RetryOnError", func() {
 	var logger utilsfakes.FakeLogger
+	var retryConfig config.RetryConfig
 
 	BeforeEach(func() {
-		utils.DefaultRetrySleepDuration = 0 * time.Second
+		retryConfig = config.RetryConfig{MaxAttempts: 10, SleepDuration: 0}
 		logger = utilsfakes.FakeLogger{}
 	})
 
 	It("returns an error if max retries is reached", func() {
-		err := utils.RetryOnError(&logger)(nil, "", "", nil, errors.New("boom"), 10)
+		err := utils.RetryOnError(retryConfig, &logger)(nil, "", "", nil, errors.New("boom"), 10)
 		Expect(err.Error()).To(Equal("max retry attempts (10) reached, err: boom"))
 	})
 
 	It("logs the current error", func() {
-		utils.RetryOnError(&logger)(nil, "", "", nil, errors.New("boom"), 0)
+		utils.RetryOnError(retryConfig, &logger)(nil, "", "", nil, errors.New("boom"), 0)
 
 		tag, msg, _ := logger.WarnArgsForCall(0)
 		Expect(tag).To(Equal("retry on error"))
@@ -42,7 +43,7 @@ var _ = Describe("RetryOnError", func() {
 	})
 
 	It("raises received errors that should not be retried", func() {
-		err := utils.RetryOnError(&logger)(nil, "", "", nil, errors.New("boom"), 0)
+		err := utils.RetryOnError(retryConfig, &logger)(nil, "", "", nil, errors.New("boom"), 0)
 
 		Expect(err.Error()).To(Equal("boom"))
 	})
@@ -52,7 +53,7 @@ var _ = Describe("RetryOnError", func() {
 			Actual: 500,
 		}
 
-		err := utils.RetryOnError(&logger)(nil, "", "", nil, testError, 0)
+		err := utils.RetryOnError(retryConfig, &logger)(nil, "", "", nil, testError, 0)
 		Expect(err).To(BeNil())
 
 		tag, msg, _ := logger.WarnArgsForCall(1)
@@ -65,7 +66,7 @@ var _ = Describe("RetryOnError", func() {
 			Actual: 503,
 		}
 
-		err := utils.RetryOnError(&logger)(nil, "", "", nil, testError, 0)
+		err := utils.RetryOnError(retryConfig, &logger)(nil, "", "", nil, testError, 0)
 		Expect(err).To(BeNil())
 
 		tag, msg, _ := logger.WarnArgsForCall(1)
@@ -79,7 +80,7 @@ var _ = Describe("RetryOnError", func() {
 			text:    "boom",
 		}
 
-		err := utils.RetryOnError(&logger)(nil, "", "", nil, &netError, 0)
+		err := utils.RetryOnError(retryConfig, &logger)(nil, "", "", nil, &netError, 0)
 		Expect(err).To(BeNil())
 
 		tag, msg, _ := logger.WarnArgsForCall(1)
@@ -91,7 +92,7 @@ var _ = Describe("RetryOnError", func() {
 		opError := net.OpError{
 			Op: "boom",
 		}
-		err := utils.RetryOnError(&logger)(nil, "", "", nil, &opError, 0)
+		err := utils.RetryOnError(retryConfig, &logger)(nil, "", "", nil, &opError, 0)
 		Expect(err).To(BeNil())
 
 		tag, msg, _ := logger.WarnArgsForCall(1)

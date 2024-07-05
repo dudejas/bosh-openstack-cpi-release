@@ -20,16 +20,21 @@ var _ = Describe("ImageServiceBuilder", func() {
 	BeforeEach(func() {
 		openstackService = openstackfakes.FakeOpenstackService{}
 		logger = utilsfakes.FakeLogger{}
+		cpiConfig := config.CpiConfig{}
+		cpiConfig.Cloud.Properties.RetryConfig = config.RetryConfigMap{}
+
 		imageServiceBuilder = image.NewImageServiceBuilder(
 			&openstackService,
-			config.OpenstackConfig{},
+			cpiConfig,
 			&logger,
 		)
 	})
 
 	Context("Build", func() {
 		It("returns an image service", func() {
-			openstackService.ImageServiceV2Returns(&gophercloud.ServiceClient{}, nil)
+			providerClient := gophercloud.ProviderClient{TokenID: "the_token"}
+			serviceClient := gophercloud.ServiceClient{ProviderClient: &providerClient}
+			openstackService.ImageServiceV2Returns(&serviceClient, nil)
 
 			computeService, err := imageServiceBuilder.Build()
 

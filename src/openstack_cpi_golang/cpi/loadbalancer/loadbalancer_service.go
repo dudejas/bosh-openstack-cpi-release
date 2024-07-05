@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
-	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/pools"
 	"time"
 )
@@ -21,18 +20,18 @@ type LoadbalancerService interface {
 }
 
 type loadbalancerService struct {
-	serviceClient      *gophercloud.ServiceClient
+	serviceClients     utils.ServiceClients
 	loadbalancerFacade LoadbalancerFacade
 	logger             utils.Logger
 }
 
 func NewLoadbalancerService(
-	serviceClient *gophercloud.ServiceClient,
+	serviceClients utils.ServiceClients,
 	loadbalancerFacade LoadbalancerFacade,
 	logger utils.Logger,
 ) loadbalancerService {
 	return loadbalancerService{
-		serviceClient:      serviceClient,
+		serviceClients:     serviceClients,
 		loadbalancerFacade: loadbalancerFacade,
 		logger:             logger,
 	}
@@ -43,7 +42,7 @@ func (l loadbalancerService) GetPoolID(poolName string) (string, error) {
 		Name: poolName,
 	}
 
-	page, err := l.loadbalancerFacade.ListPools(l.serviceClient, listOpts)
+	page, err := l.loadbalancerFacade.ListPools(l.serviceClients.RetryableServiceClient, listOpts)
 	if err != nil {
 		return "", fmt.Errorf("failed to list loadbalancer pools: %w", err)
 	}
@@ -75,7 +74,7 @@ func (l loadbalancerService) CreatePoolMember(poolID string, ip string, pool pro
 		createMemberOpts.MonitorPort = pool.MonitoringPort
 	}
 
-	member, err := l.loadbalancerFacade.CreatePoolMember(l.serviceClient, poolID, createMemberOpts)
+	member, err := l.loadbalancerFacade.CreatePoolMember(l.serviceClients.ServiceClient, poolID, createMemberOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create pool member: %w", err)
 	}
@@ -89,9 +88,7 @@ func (l loadbalancerService) CreatePoolMember(poolID string, ip string, pool pro
 }
 
 func (l loadbalancerService) DeletePoolMember(poolID string, memberID string) error {
-	l.serviceClient.RetryFunc = utils.RetryOnError(l.logger)
-
-	err := l.loadbalancerFacade.DeletePoolMember(l.serviceClient, poolID, memberID)
+	err := l.loadbalancerFacade.DeletePoolMember(l.serviceClients.RetryableServiceClient, poolID, memberID)
 	if err != nil {
 		return fmt.Errorf("failed to delete pool member: %w", err)
 	}
@@ -107,7 +104,7 @@ func (l loadbalancerService) waitForPoolMemberToBecomeActive(poolID string, memb
 		case <-timeoutTimer.C:
 			return nil, fmt.Errorf("timeout while waiting for pool member '%s' to become active", memberID)
 		default:
-			member, err := l.loadbalancerFacade.GetPoolMember(l.serviceClient, poolID, memberID)
+			member, err := l.loadbalancerFacade.GetPoolMember(l.serviceClients.RetryableServiceClient, poolID, memberID)
 			if err != nil {
 				return nil, fmt.Errorf("failed to retrieve pool member '%s': %w", memberID, err)
 			}

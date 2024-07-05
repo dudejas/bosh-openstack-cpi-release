@@ -3,6 +3,7 @@ package integration_test
 import (
 	"fmt"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"net/http"
@@ -377,7 +378,14 @@ var _ = Describe("Delete VM", func() {
 			"api_version": 2
 		}`)
 
-		err := cpi.Execute(getDefaultConfig(Endpoint()), logger)
+		cpiConfig := getDefaultConfig(Endpoint())
+		cpiConfig.Cloud.Properties.RetryConfig = config.RetryConfigMap{
+			"default": config.RetryConfig{
+				MaxAttempts:   10,
+				SleepDuration: 0,
+			},
+		}
+		err := cpi.Execute(cpiConfig, logger)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		stdOutWriter.Close()

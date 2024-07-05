@@ -14,26 +14,26 @@ type NetworkServiceBuilder interface {
 
 type networkServiceBuilder struct {
 	openstackService openstack.OpenstackService
-	openstackConfig  config.OpenstackConfig
+	cpiConfig        config.CpiConfig
 	logger           utils.Logger
 }
 
-func NewNetworkServiceBuilder(openstackService openstack.OpenstackService, openstackConfig config.OpenstackConfig, logger utils.Logger) networkServiceBuilder {
+func NewNetworkServiceBuilder(openstackService openstack.OpenstackService, cpiConfig config.CpiConfig, logger utils.Logger) networkServiceBuilder {
 	return networkServiceBuilder{
 		openstackService: openstackService,
-		openstackConfig:  openstackConfig,
+		cpiConfig:        cpiConfig,
 		logger:           logger,
 	}
 }
 
 func (b networkServiceBuilder) Build() (NetworkService, error) {
-	serviceClient, err := b.openstackService.NetworkServiceV2(b.openstackConfig)
+	serviceClient, err := b.openstackService.NetworkServiceV2(b.cpiConfig.OpenStackConfig())
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve network service client: %w", err)
 	}
 
 	return NewNetworkService(
-		serviceClient,
+		utils.NewServiceClients(serviceClient, b.cpiConfig, b.logger),
 		NewNetworkingFacade(),
 		b.logger,
 	), nil

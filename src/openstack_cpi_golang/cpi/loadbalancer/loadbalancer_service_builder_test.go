@@ -20,16 +20,21 @@ var _ = Describe("LoadbalancerServiceBuilder", func() {
 	BeforeEach(func() {
 		openstackService = openstackfakes.FakeOpenstackService{}
 		logger = utilsfakes.FakeLogger{}
+		cpiConfig := config.CpiConfig{}
+		cpiConfig.Cloud.Properties.RetryConfig = config.RetryConfigMap{}
+
 		loadbalancerServiceBuilder = loadbalancer.NewLoadbalancerServiceBuilder(
 			&openstackService,
-			config.OpenstackConfig{},
+			cpiConfig,
 			&logger,
 		)
 	})
 
 	Context("Build", func() {
 		It("returns an loadbalancer service", func() {
-			openstackService.LoadbalancerV2Returns(&gophercloud.ServiceClient{}, nil)
+			providerClient := gophercloud.ProviderClient{TokenID: "the_token"}
+			serviceClient := gophercloud.ServiceClient{ProviderClient: &providerClient}
+			openstackService.LoadbalancerV2Returns(&serviceClient, nil)
 
 			loadbalancerService, err := loadbalancerServiceBuilder.Build()
 

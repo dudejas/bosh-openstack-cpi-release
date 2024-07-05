@@ -11,11 +11,22 @@ import (
 
 type CpiConfig struct {
 	Cloud struct {
-		Properties struct {
-			Openstack OpenstackConfig `json:"openstack"`
-			Agent     Agent           `json:"agent"`
-		} `json:"properties"`
+		Properties Properties `json:"properties"`
 	} `json:"cloud"`
+}
+
+func (c CpiConfig) OpenStackConfig() OpenstackConfig {
+	return c.Cloud.Properties.Openstack
+}
+
+func (c CpiConfig) Properties() Properties {
+	return c.Cloud.Properties
+}
+
+type Properties struct {
+	Openstack   OpenstackConfig `json:"openstack"`
+	Agent       Agent           `json:"agent"`
+	RetryConfig RetryConfigMap  `json:"retry_config,omitempty"`
 }
 
 type OpenstackConfig struct {
@@ -49,14 +60,41 @@ type OpenstackConfig struct {
 	} `json:"vm"`
 }
 
+type RetryConfigMap map[string]RetryConfig
+
+func (r RetryConfigMap) Default() RetryConfig {
+	if config, ok := r["default"]; ok {
+		return config
+	}
+
+	return RetryConfig{
+		MaxAttempts:   10,
+		SleepDuration: 3,
+	}
+}
+
+type RetryConfig struct {
+	MaxAttempts   int `json:"max_attempts"`
+	SleepDuration int `json:"sleep_duration"`
+}
+
 type Agent struct {
 	MBus string `json:"mbus"`
 }
 
 func (cpiConfig CpiConfig) Validate() error {
-	err := cpiConfig.Cloud.Properties.Openstack.Validate()
+	err := cpiConfig.Cloud.Properties.Validate()
 	if err != nil {
-		return fmt.Errorf("failed to validate the configuration: %w", err)
+		return fmt.Errorf("failed to validate the cpi configuration: %w", err)
+	}
+
+	return nil
+}
+
+func (p Properties) Validate() error {
+	err := p.Openstack.Validate()
+	if err != nil {
+		return fmt.Errorf("failed to validate the properties configuration: %w", err)
 	}
 
 	return nil

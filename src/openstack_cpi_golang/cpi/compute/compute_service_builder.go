@@ -15,32 +15,33 @@ type ComputeServiceBuilder interface {
 
 type computeServiceBuilder struct {
 	openstackService openstack.OpenstackService
-	openstackConfig  config.OpenstackConfig
+	cpiConfig        config.CpiConfig
 	logger           utils.Logger
 }
 
-func NewComputeServiceBuilder(openstackService openstack.OpenstackService, openstackConfig config.OpenstackConfig, logger utils.Logger) computeServiceBuilder {
+func NewComputeServiceBuilder(openstackService openstack.OpenstackService, cpiConfig config.CpiConfig, logger utils.Logger) computeServiceBuilder {
 	return computeServiceBuilder{
 		openstackService: openstackService,
-		openstackConfig:  openstackConfig,
+		cpiConfig:        cpiConfig,
 		logger:           logger,
 	}
 }
 
 func (b computeServiceBuilder) Build() (ComputeService, error) {
-	serviceClient, err := b.openstackService.ComputeServiceV2(b.openstackConfig)
+	serviceClient, err := b.openstackService.ComputeServiceV2(b.cpiConfig.OpenStackConfig())
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve compute service client: %w", err)
 	}
 
+	serviceClients := utils.NewServiceClients(serviceClient, b.cpiConfig, b.logger)
 	computeFacade := NewComputeFacade()
 	return NewComputeService(
-		serviceClient,
+		serviceClients,
 		computeFacade,
-		NewFlavorResolver(serviceClient, computeFacade),
+		NewFlavorResolver(serviceClients, computeFacade),
 		NewVolumeConfigurator(),
 		NewAvailabilityZoneProvider(),
-		loadbalancer.NewLoadbalancerServiceBuilder(b.openstackService, b.openstackConfig, b.logger),
+		loadbalancer.NewLoadbalancerServiceBuilder(b.openstackService, b.cpiConfig, b.logger),
 		b.logger,
 	), nil
 }

@@ -14,26 +14,26 @@ type ImageServiceBuilder interface {
 
 type imageServiceBuilder struct {
 	openstackService openstack.OpenstackService
-	openstackConfig  config.OpenstackConfig
+	cpiConfig        config.CpiConfig
 	logger           utils.Logger
 }
 
-func NewImageServiceBuilder(openstackService openstack.OpenstackService, openstackConfig config.OpenstackConfig, logger utils.Logger) imageServiceBuilder {
+func NewImageServiceBuilder(openstackService openstack.OpenstackService, cpiConfig config.CpiConfig, logger utils.Logger) imageServiceBuilder {
 	return imageServiceBuilder{
 		openstackService: openstackService,
-		openstackConfig:  openstackConfig,
+		cpiConfig:        cpiConfig,
 		logger:           logger,
 	}
 }
 
 func (b imageServiceBuilder) Build() (ImageService, error) {
-	serviceClient, err := b.openstackService.ImageServiceV2(b.openstackConfig)
+	serviceClient, err := b.openstackService.ImageServiceV2(b.cpiConfig.OpenStackConfig())
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve image service client: %w", err)
 	}
 
 	return NewImageService(
-		serviceClient,
+		utils.NewServiceClients(serviceClient, b.cpiConfig, b.logger),
 		NewImageFacade(),
 		NewHttpClient(),
 		b.logger,

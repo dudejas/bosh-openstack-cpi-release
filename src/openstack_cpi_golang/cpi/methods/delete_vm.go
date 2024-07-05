@@ -13,14 +13,14 @@ import (
 type DeleteVMMethod struct {
 	networkServiceBuilder network.NetworkServiceBuilder
 	computeServiceBuilder compute.ComputeServiceBuilder
-	config                config.OpenstackConfig
+	config                config.CpiConfig
 	logger                utils.Logger
 }
 
 func NewDeleteVMMethod(
 	networkServiceBuilder network.NetworkServiceBuilder,
 	computeServiceBuilder compute.ComputeServiceBuilder,
-	config config.OpenstackConfig,
+	config config.CpiConfig,
 	logger utils.Logger,
 ) DeleteVMMethod {
 	return DeleteVMMethod{

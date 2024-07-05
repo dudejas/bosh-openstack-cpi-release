@@ -20,16 +20,21 @@ var _ = Describe("ComputeServiceBuilder", func() {
 	BeforeEach(func() {
 		openstackService = openstackfakes.FakeOpenstackService{}
 		logger = utilsfakes.FakeLogger{}
+		cpiConfig := config.CpiConfig{}
+		cpiConfig.Cloud.Properties.RetryConfig = config.RetryConfigMap{}
+
 		computeServiceBuilder = compute.NewComputeServiceBuilder(
 			&openstackService,
-			config.OpenstackConfig{},
+			cpiConfig,
 			&logger,
 		)
 	})
 
 	Context("Build", func() {
 		It("returns a compute service", func() {
-			openstackService.ComputeServiceV2Returns(&gophercloud.ServiceClient{}, nil)
+			providerClient := gophercloud.ProviderClient{TokenID: "the_token"}
+			serviceClient := gophercloud.ServiceClient{ProviderClient: &providerClient}
+			openstackService.ComputeServiceV2Returns(&serviceClient, nil)
 
 			computeService, err := computeServiceBuilder.Build()
 

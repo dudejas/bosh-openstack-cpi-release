@@ -2,7 +2,7 @@ package compute
 
 import (
 	"fmt"
-	"github.com/gophercloud/gophercloud"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 )
 
@@ -12,22 +12,22 @@ type FlavorResolver interface {
 }
 
 type flavorResolver struct {
-	serviceClient *gophercloud.ServiceClient
-	computeFacade ComputeFacade
+	serviceClients utils.ServiceClients
+	computeFacade  ComputeFacade
 }
 
 func NewFlavorResolver(
-	serviceClient *gophercloud.ServiceClient,
+	serviceClients utils.ServiceClients,
 	computeFacade ComputeFacade,
 ) flavorResolver {
 	return flavorResolver{
-		serviceClient: serviceClient,
-		computeFacade: computeFacade,
+		serviceClients: serviceClients,
+		computeFacade:  computeFacade,
 	}
 }
 
 func (f flavorResolver) ResolveFlavorForInstanceType(instanceType string) (flavors.Flavor, error) {
-	flavorPages, err := f.computeFacade.ListFlavors(f.serviceClient, flavors.ListOpts{})
+	flavorPages, err := f.computeFacade.ListFlavors(f.serviceClients.RetryableServiceClient, flavors.ListOpts{})
 	if err != nil {
 		return flavors.Flavor{}, fmt.Errorf("failed to list flavors: %w", err)
 	}

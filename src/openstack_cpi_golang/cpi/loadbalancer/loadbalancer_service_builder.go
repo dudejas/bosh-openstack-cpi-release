@@ -14,26 +14,26 @@ type LoadbalancerServiceBuilder interface {
 
 type loadbalancerServiceBuilder struct {
 	openstackService openstack.OpenstackService
-	openstackConfig  config.OpenstackConfig
+	cpiConfig        config.CpiConfig
 	logger           utils.Logger
 }
 
-func NewLoadbalancerServiceBuilder(openstackService openstack.OpenstackService, openstackConfig config.OpenstackConfig, logger utils.Logger) loadbalancerServiceBuilder {
+func NewLoadbalancerServiceBuilder(openstackService openstack.OpenstackService, cpiConfig config.CpiConfig, logger utils.Logger) loadbalancerServiceBuilder {
 	return loadbalancerServiceBuilder{
 		openstackService: openstackService,
-		openstackConfig:  openstackConfig,
+		cpiConfig:        cpiConfig,
 		logger:           logger,
 	}
 }
 
 func (b loadbalancerServiceBuilder) Build() (LoadbalancerService, error) {
-	serviceClient, err := b.openstackService.LoadbalancerV2(b.openstackConfig)
+	serviceClient, err := b.openstackService.LoadbalancerV2(b.cpiConfig.OpenStackConfig())
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve loadbalancer service client: %w", err)
 	}
 
 	return NewLoadbalancerService(
-		serviceClient,
+		utils.NewServiceClients(serviceClient, b.cpiConfig, b.logger),
 		NewLoadbalancerFacade(),
 		b.logger,
 	), nil

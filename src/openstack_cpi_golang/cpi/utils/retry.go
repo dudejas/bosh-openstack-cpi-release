@@ -4,24 +4,25 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/gophercloud/gophercloud"
 	"net"
 	"time"
 )
 
-const maxRetries = 10
-
-var DefaultRetrySleepDuration = 3 * time.Second
-
-func RetryOnError(logger Logger) func(
+func RetryOnError(retryConfig config.RetryConfig, logger Logger) func(
 	ctx context.Context,
-	method string, url string,
+	method string,
+	url string,
 	options *gophercloud.RequestOpts,
 	inError error,
 	failCount uint,
 ) error {
-	return func(ctx context.Context, method, url string, options *gophercloud.RequestOpts, inError error, failCount uint) error {
-		if failCount >= maxRetries {
+	sleepDuration := time.Duration(retryConfig.SleepDuration) * time.Second
+	maxRetries := retryConfig.MaxAttempts
+
+	return func(ctx context.Context, method string, url string, options *gophercloud.RequestOpts, inError error, failCount uint) error {
+		if failCount >= uint(maxRetries) {
 			return fmt.Errorf("max retry attempts (%d) reached, err: %w", failCount, inError)
 		}
 
@@ -29,7 +30,6 @@ func RetryOnError(logger Logger) func(
 			"retry on error",
 			fmt.Sprintf("attempt failed with error: %v", inError))
 
-		sleepDuration := DefaultRetrySleepDuration
 		var responseCode gophercloud.ErrUnexpectedResponseCode
 		if errors.As(inError, &responseCode) {
 			if responseCode.Actual == 500 || responseCode.Actual == 503 {
