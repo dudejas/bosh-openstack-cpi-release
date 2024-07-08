@@ -9,8 +9,9 @@ import (
 
 func Execute(cpiConfig config.CpiConfig, cpiLogger utils.Logger) error {
 
-	cli := rpc.NewFactory(cpiLogger.TargetLogger()).
-		NewCLI(NewFactory(cpiConfig, cpiLogger))
+	cli := rpc.NewFactory(cpiLogger.TargetLogger()).NewCLI(
+		NewFactory(cpiConfig, cpiLogger),
+	)
 
 	err := cli.ServeOnce()
 	if err != nil {

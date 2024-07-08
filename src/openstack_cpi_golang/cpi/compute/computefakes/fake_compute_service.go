@@ -42,6 +42,19 @@ type FakeComputeService struct {
 	deleteServerReturnsOnCall map[int]struct {
 		result1 error
 	}
+	GetMetadataStub        func(string) (map[string]string, error)
+	getMetadataMutex       sync.RWMutex
+	getMetadataArgsForCall []struct {
+		arg1 string
+	}
+	getMetadataReturns struct {
+		result1 map[string]string
+		result2 error
+	}
+	getMetadataReturnsOnCall map[int]struct {
+		result1 map[string]string
+		result2 error
+	}
 	SetMetadataStub        func(servers.Server, properties.ServerTags) error
 	setMetadataMutex       sync.RWMutex
 	setMetadataArgsForCall []struct {
@@ -189,6 +202,70 @@ func (fake *FakeComputeService) DeleteServerReturnsOnCall(i int, result1 error) 
 	}{result1}
 }
 
+func (fake *FakeComputeService) GetMetadata(arg1 string) (map[string]string, error) {
+	fake.getMetadataMutex.Lock()
+	ret, specificReturn := fake.getMetadataReturnsOnCall[len(fake.getMetadataArgsForCall)]
+	fake.getMetadataArgsForCall = append(fake.getMetadataArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.GetMetadataStub
+	fakeReturns := fake.getMetadataReturns
+	fake.recordInvocation("GetMetadata", []interface{}{arg1})
+	fake.getMetadataMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeComputeService) GetMetadataCallCount() int {
+	fake.getMetadataMutex.RLock()
+	defer fake.getMetadataMutex.RUnlock()
+	return len(fake.getMetadataArgsForCall)
+}
+
+func (fake *FakeComputeService) GetMetadataCalls(stub func(string) (map[string]string, error)) {
+	fake.getMetadataMutex.Lock()
+	defer fake.getMetadataMutex.Unlock()
+	fake.GetMetadataStub = stub
+}
+
+func (fake *FakeComputeService) GetMetadataArgsForCall(i int) string {
+	fake.getMetadataMutex.RLock()
+	defer fake.getMetadataMutex.RUnlock()
+	argsForCall := fake.getMetadataArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeComputeService) GetMetadataReturns(result1 map[string]string, result2 error) {
+	fake.getMetadataMutex.Lock()
+	defer fake.getMetadataMutex.Unlock()
+	fake.GetMetadataStub = nil
+	fake.getMetadataReturns = struct {
+		result1 map[string]string
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeComputeService) GetMetadataReturnsOnCall(i int, result1 map[string]string, result2 error) {
+	fake.getMetadataMutex.Lock()
+	defer fake.getMetadataMutex.Unlock()
+	fake.GetMetadataStub = nil
+	if fake.getMetadataReturnsOnCall == nil {
+		fake.getMetadataReturnsOnCall = make(map[int]struct {
+			result1 map[string]string
+			result2 error
+		})
+	}
+	fake.getMetadataReturnsOnCall[i] = struct {
+		result1 map[string]string
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeComputeService) SetMetadata(arg1 servers.Server, arg2 properties.ServerTags) error {
 	fake.setMetadataMutex.Lock()
 	ret, specificReturn := fake.setMetadataReturnsOnCall[len(fake.setMetadataArgsForCall)]
@@ -258,6 +335,8 @@ func (fake *FakeComputeService) Invocations() map[string][][]interface{} {
 	defer fake.createServerMutex.RUnlock()
 	fake.deleteServerMutex.RLock()
 	defer fake.deleteServerMutex.RUnlock()
+	fake.getMetadataMutex.RLock()
+	defer fake.getMetadataMutex.RUnlock()
 	fake.setMetadataMutex.RLock()
 	defer fake.setMetadataMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

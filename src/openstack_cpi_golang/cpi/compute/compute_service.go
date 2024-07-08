@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/loadbalancer"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/google/uuid"
@@ -15,7 +14,6 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
-	"strings"
 	"time"
 )
 
@@ -41,16 +39,19 @@ type ComputeService interface {
 		server servers.Server,
 		tags properties.ServerTags,
 	) error
+
+	GetMetadata(
+		serverID string,
+	) (map[string]string, error)
 }
 
 type computeService struct {
-	serviceClients             utils.ServiceClients
-	computeFacade              ComputeFacade
-	flavorResolver             FlavorResolver
-	volumeConfigurator         VolumeConfigurator
-	availabilityZoneProvider   AvailabilityZoneProvider
-	loadbalancerServiceBuilder loadbalancer.LoadbalancerServiceBuilder
-	logger                     utils.Logger
+	serviceClients           utils.ServiceClients
+	computeFacade            ComputeFacade
+	flavorResolver           FlavorResolver
+	volumeConfigurator       VolumeConfigurator
+	availabilityZoneProvider AvailabilityZoneProvider
+	logger                   utils.Logger
 }
 
 func NewComputeService(
@@ -59,17 +60,15 @@ func NewComputeService(
 	flavorResolver FlavorResolver,
 	volumeConfigurator VolumeConfigurator,
 	availabilityZoneProvider AvailabilityZoneProvider,
-	loadbalancerServiceBuilder loadbalancer.LoadbalancerServiceBuilder,
 	logger utils.Logger,
 ) computeService {
 	return computeService{
-		serviceClients:             serviceClients,
-		computeFacade:              computeFacade,
-		flavorResolver:             flavorResolver,
-		volumeConfigurator:         volumeConfigurator,
-		availabilityZoneProvider:   availabilityZoneProvider,
-		loadbalancerServiceBuilder: loadbalancerServiceBuilder,
-		logger:                     logger,
+		serviceClients:           serviceClients,
+		computeFacade:            computeFacade,
+		flavorResolver:           flavorResolver,
+		volumeConfigurator:       volumeConfigurator,
+		availabilityZoneProvider: availabilityZoneProvider,
+		logger:                   logger,
 	}
 }
 
@@ -154,39 +153,6 @@ func (c computeService) DeleteServer(
 		return fmt.Errorf("failed to retrieve server information: %w", err)
 	}
 
-	serverMetadata, err := c.computeFacade.GetServerMetadata(c.serviceClients.RetryableServiceClient, serverID)
-	if err != nil {
-		if errors.As(err, &errDefault404) {
-			c.logger.Info("compute_service", fmt.Sprintf("SKIPPING: Metadata retrieval for server with id '%s' is not found", serverID))
-			serverMetadata = map[string]string{}
-		} else {
-			return fmt.Errorf("failed to retrieve server metadata: %w", err)
-		}
-	}
-
-	if len(serverMetadata) > 0 {
-		loadbalancerService, err := c.loadbalancerServiceBuilder.Build()
-		if err != nil {
-			return fmt.Errorf("failed to create loadbalancer service: %w", err)
-		}
-
-		for key, value := range serverMetadata {
-			if strings.HasPrefix(key, "lbaas_pool_") {
-				parts := strings.Split(value, "/")
-				err = loadbalancerService.DeletePoolMember(parts[0], parts[1])
-				if err != nil {
-					if errors.As(err, &errDefault404) {
-						c.logger.Info("compute_service", fmt.Sprintf("SKIPPING: pool member deletion with id '%s' in pool '%s' is not found", parts[1], parts[0]))
-						continue
-					} else {
-						return fmt.Errorf("failed to delete pool member: %w", err)
-					}
-				}
-				c.logger.Info("compute_service", fmt.Sprintf("Deleted pool member with id '%s' from pool '%s'", parts[1], parts[0]))
-			}
-		}
-	}
-
 	err = c.computeFacade.DeleteServer(c.serviceClients.RetryableServiceClient, serverID)
 	if err != nil && !errors.As(err, &errDefault404) {
 		return fmt.Errorf("failed to delete server: %w", err)
@@ -221,6 +187,21 @@ func (c computeService) SetMetadata(server servers.Server, tags properties.Serve
 	}
 
 	return nil
+}
+
+func (c computeService) GetMetadata(serverID string) (map[string]string, error) {
+	var errDefault404 gophercloud.ErrDefault404
+
+	serverMetadata, err := c.computeFacade.GetServerMetadata(c.serviceClients.RetryableServiceClient, serverID)
+	if err != nil {
+		if errors.As(err, &errDefault404) {
+			c.logger.Info("compute_service", fmt.Sprintf("SKIPPING: Metadata retrieval for server with id '%s' is not found", serverID))
+			serverMetadata = map[string]string{}
+		} else {
+			return nil, fmt.Errorf("failed to retrieve server metadata: %w", err)
+		}
+	}
+	return serverMetadata, nil
 }
 
 func (c computeService) createServerUserData(

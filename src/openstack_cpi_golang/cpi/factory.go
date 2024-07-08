@@ -89,6 +89,7 @@ func (f Factory) New(ctx apiv1.CallContext) (apiv1.CPI, error) {
 		methods.NewDeleteVMMethod(
 			network.NewNetworkServiceBuilder(openstackService, f.cpiConfig, f.logger),
 			compute.NewComputeServiceBuilder(openstackService, f.cpiConfig, f.logger),
+			loadbalancer.NewLoadbalancerServiceBuilder(openstackService, f.cpiConfig, f.logger),
 			f.cpiConfig,
 			f.logger,
 		),

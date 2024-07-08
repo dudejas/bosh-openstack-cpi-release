@@ -35,7 +35,6 @@ var _ = Describe("ComputeService", func() {
 	var computeService compute.ComputeService
 	var networkConfig properties.NetworkConfig
 	var defaultCloudConfig properties.CreateVM
-	var loadbalancerServiceBuilder loadbalancerfakes.FakeLoadbalancerServiceBuilder
 	var loadbalancerService loadbalancerfakes.FakeLoadbalancerService
 	var agentID apiv1.AgentID
 	var env apiv1.VMEnv
@@ -48,13 +47,9 @@ var _ = Describe("ComputeService", func() {
 		flavorResolver = computefakes.FakeFlavorResolver{}
 		volumeConfigurator = computefakes.FakeVolumeConfigurator{}
 		availabilityZoneProvider = computefakes.FakeAvailabilityZoneProvider{}
-		loadbalancerServiceBuilder = loadbalancerfakes.FakeLoadbalancerServiceBuilder{}
-		loadbalancerService = loadbalancerfakes.FakeLoadbalancerService{}
 		logger = utilsfakes.FakeLogger{}
 
-		loadbalancerServiceBuilder.BuildReturns(&loadbalancerService, nil)
-
-		computeService = compute.NewComputeService(serviceClients, &computeFacade, &flavorResolver, &volumeConfigurator, &availabilityZoneProvider, &loadbalancerServiceBuilder, &logger)
+		computeService = compute.NewComputeService(serviceClients, &computeFacade, &flavorResolver, &volumeConfigurator, &availabilityZoneProvider, &logger)
 		compute.ComputeServicePollingInterval = 0
 		networkConfig = properties.NetworkConfig{}
 		computeFacade.CreateServerReturns(&servers.Server{ID: "123-456"}, nil)
@@ -532,71 +527,6 @@ var _ = Describe("ComputeService", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 
-		It("deletes a pool member for tags with prefix 'lbaas_pool_'", func() {
-			err := computeService.DeleteServer(
-				"123-456",
-				createCpiConfig(10),
-			)
-
-			poolID, memberID := loadbalancerService.DeletePoolMemberArgsForCall(0)
-
-			Expect(poolID).To(Equal("poolID"))
-			Expect(memberID).To(Equal("memberID"))
-			Expect(err).ToNot(HaveOccurred())
-			Expect(computeFacade.GetServerMetadataCallCount()).To(Equal(1))
-			Expect(loadbalancerService.DeletePoolMemberCallCount()).To(Equal(1))
-		})
-
-		It("does not remove pool memberships if no server tags are found", func() {
-			testError := gophercloud.ErrDefault404{gophercloud.ErrUnexpectedResponseCode{Actual: 404}}
-			computeFacade.GetServerMetadataReturns(nil, testError)
-
-			err := computeService.DeleteServer(
-				"123-456",
-				createCpiConfig(10),
-			)
-
-			Expect(err).ToNot(HaveOccurred())
-			Expect(loadbalancerService.DeletePoolMemberCallCount()).To(Equal(0))
-			Expect(computeFacade.DeleteServerCallCount()).To(Equal(1))
-		})
-
-		It("returns an error if metadata retrieval fail", func() {
-			computeFacade.GetServerMetadataReturns(nil, errors.New("boom"))
-
-			err := computeService.DeleteServer(
-				"123-456",
-				createCpiConfig(10),
-			)
-
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("failed to retrieve server metadata: boom"))
-		})
-
-		It("returns an error if building loadbalancerService fails", func() {
-			loadbalancerServiceBuilder.BuildReturns(nil, errors.New("boom"))
-
-			err := computeService.DeleteServer(
-				"123-456",
-				createCpiConfig(10),
-			)
-
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("failed to create loadbalancer service: boom"))
-		})
-
-		It("returns an error if deleting a pool member fails", func() {
-			loadbalancerService.DeletePoolMemberReturns(errors.New("boom"))
-
-			err := computeService.DeleteServer(
-				"123-456",
-				createCpiConfig(10),
-			)
-
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("failed to delete pool member: boom"))
-		})
-
 		It("returns an error if delete server fails", func() {
 			computeFacade.DeleteServerReturns(errors.New("boom"))
 			err := computeService.DeleteServer(
@@ -670,6 +600,50 @@ var _ = Describe("ComputeService", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(Equal("failed while waiting on the server deletion: failed to retrieve server information: boom"))
 		})
+	})
+
+	Context("GetMetadata", func() {
+		BeforeEach(func() {
+			serverMetadata := make(map[string]string)
+			serverMetadata["tag1"] = "tag1Value"
+			serverMetadata["lbaas_pool_1"] = "poolID/memberID"
+
+			computeFacade.GetServerMetadataReturns(serverMetadata, nil)
+
+		})
+
+		It("returns server metadata", func() {
+			serverMetadata, err := computeService.GetMetadata(
+				"123-456",
+			)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(serverMetadata).To(Equal(map[string]string{"tag1": "tag1Value", "lbaas_pool_1": "poolID/memberID"}))
+		})
+
+		It("returns empty metadata and no error if metadata not found", func() {
+			testError := gophercloud.ErrDefault404{gophercloud.ErrUnexpectedResponseCode{Actual: 404}}
+			computeFacade.GetServerMetadataReturns(nil, testError)
+
+			serverMetadata, err := computeService.GetMetadata(
+				"123-456",
+			)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(serverMetadata).To(Equal(map[string]string{}))
+		})
+
+		It("returns an error if metadata retrieval fail", func() {
+			computeFacade.GetServerMetadataReturns(nil, errors.New("boom"))
+
+			_, err := computeService.GetMetadata(
+				"123-456",
+			)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("failed to retrieve server metadata: boom"))
+		})
+
 	})
 
 	Context("SetMetadata", func() {
