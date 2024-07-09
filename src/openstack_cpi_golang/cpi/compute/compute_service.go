@@ -243,7 +243,7 @@ func (c computeService) createServerUserData(
 		WithNetworks(userDataNetwork).
 		WithVM(properties.VM{Name: vmName}).
 		WithNetworks(userDataNetwork).
-		WithEphemeralDiskSize(flavor.Disk).
+		WithEphemeralDiskSize(flavor.Ephemeral).
 		WithAgentID(agentID).
 		WithEnvironment(environment).
 		WithConfig(cpiConfig).
