@@ -109,6 +109,19 @@ type FakeComputeFacade struct {
 		result1 pagination.Page
 		result2 error
 	}
+	RebootServerStub        func(utils.ServiceClient, string, servers.RebootOptsBuilder) error
+	rebootServerMutex       sync.RWMutex
+	rebootServerArgsForCall []struct {
+		arg1 utils.ServiceClient
+		arg2 string
+		arg3 servers.RebootOptsBuilder
+	}
+	rebootServerReturns struct {
+		result1 error
+	}
+	rebootServerReturnsOnCall map[int]struct {
+		result1 error
+	}
 	SetServerMetadataStub        func(utils.ServiceClient, string, servers.MetadatumOpts) (map[string]string, error)
 	setServerMetadataMutex       sync.RWMutex
 	setServerMetadataArgsForCall []struct {
@@ -580,6 +593,69 @@ func (fake *FakeComputeFacade) ListFlavorsReturnsOnCall(i int, result1 paginatio
 	}{result1, result2}
 }
 
+func (fake *FakeComputeFacade) RebootServer(arg1 utils.ServiceClient, arg2 string, arg3 servers.RebootOptsBuilder) error {
+	fake.rebootServerMutex.Lock()
+	ret, specificReturn := fake.rebootServerReturnsOnCall[len(fake.rebootServerArgsForCall)]
+	fake.rebootServerArgsForCall = append(fake.rebootServerArgsForCall, struct {
+		arg1 utils.ServiceClient
+		arg2 string
+		arg3 servers.RebootOptsBuilder
+	}{arg1, arg2, arg3})
+	stub := fake.RebootServerStub
+	fakeReturns := fake.rebootServerReturns
+	fake.recordInvocation("RebootServer", []interface{}{arg1, arg2, arg3})
+	fake.rebootServerMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeComputeFacade) RebootServerCallCount() int {
+	fake.rebootServerMutex.RLock()
+	defer fake.rebootServerMutex.RUnlock()
+	return len(fake.rebootServerArgsForCall)
+}
+
+func (fake *FakeComputeFacade) RebootServerCalls(stub func(utils.ServiceClient, string, servers.RebootOptsBuilder) error) {
+	fake.rebootServerMutex.Lock()
+	defer fake.rebootServerMutex.Unlock()
+	fake.RebootServerStub = stub
+}
+
+func (fake *FakeComputeFacade) RebootServerArgsForCall(i int) (utils.ServiceClient, string, servers.RebootOptsBuilder) {
+	fake.rebootServerMutex.RLock()
+	defer fake.rebootServerMutex.RUnlock()
+	argsForCall := fake.rebootServerArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *FakeComputeFacade) RebootServerReturns(result1 error) {
+	fake.rebootServerMutex.Lock()
+	defer fake.rebootServerMutex.Unlock()
+	fake.RebootServerStub = nil
+	fake.rebootServerReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeComputeFacade) RebootServerReturnsOnCall(i int, result1 error) {
+	fake.rebootServerMutex.Lock()
+	defer fake.rebootServerMutex.Unlock()
+	fake.RebootServerStub = nil
+	if fake.rebootServerReturnsOnCall == nil {
+		fake.rebootServerReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.rebootServerReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeComputeFacade) SetServerMetadata(arg1 utils.ServiceClient, arg2 string, arg3 servers.MetadatumOpts) (map[string]string, error) {
 	fake.setServerMetadataMutex.Lock()
 	ret, specificReturn := fake.setServerMetadataReturnsOnCall[len(fake.setServerMetadataArgsForCall)]
@@ -663,6 +739,8 @@ func (fake *FakeComputeFacade) Invocations() map[string][][]interface{} {
 	defer fake.getServerMetadataMutex.RUnlock()
 	fake.listFlavorsMutex.RLock()
 	defer fake.listFlavorsMutex.RUnlock()
+	fake.rebootServerMutex.RLock()
+	defer fake.rebootServerMutex.RUnlock()
 	fake.setServerMetadataMutex.RLock()
 	defer fake.setServerMetadataMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

@@ -14,6 +14,8 @@ type ComputeFacade interface {
 
 	DeleteServer(client utils.RetryableServiceClient, serverID string) error
 
+	RebootServer(client utils.ServiceClient, serverID string, opts servers.RebootOptsBuilder) error
+
 	GetServer(client utils.RetryableServiceClient, serverID string) (*servers.Server, error)
 
 	ListFlavors(client utils.RetryableServiceClient, opts flavors.ListOpts) (pagination.Page, error)
@@ -40,6 +42,10 @@ func (c computeFacade) CreateServer(client utils.ServiceClient, opts servers.Cre
 
 func (c computeFacade) DeleteServer(client utils.RetryableServiceClient, serverID string) error {
 	return servers.Delete(client, serverID).ExtractErr()
+}
+
+func (c computeFacade) RebootServer(client utils.ServiceClient, serverID string, opts servers.RebootOptsBuilder) error {
+	return servers.Reboot(client, serverID, opts).ExtractErr()
 }
 
 func (c computeFacade) GetServer(client utils.RetryableServiceClient, serverID string) (*servers.Server, error) {

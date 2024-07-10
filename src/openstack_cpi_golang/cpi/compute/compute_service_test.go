@@ -620,6 +620,76 @@ var _ = Describe("ComputeService", func() {
 		})
 	})
 
+	Context("RebootServer", func() {
+		BeforeEach(func() {
+			computeFacade.GetServerReturns(&servers.Server{ID: "123-456", Status: "TERMINATED"}, nil)
+			computeFacade.RebootServerReturns(nil)
+		})
+
+		It("gets the server information", func() {
+			computeFacade.GetServerReturns(&servers.Server{ID: "123-456", Status: "ACTIVE"}, nil)
+
+			err := computeService.RebootServer(
+				"123-456",
+				createCpiConfig(10),
+			)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(computeFacade.GetServerCallCount()).To(Equal(2))
+		})
+
+		It("waits for the server to become active", func() {
+			computeFacade.GetServerReturnsOnCall(0, &servers.Server{ID: "123-456", Status: "ACTIVE"}, nil)
+			computeFacade.GetServerReturnsOnCall(1, &servers.Server{ID: "123-456", Status: "TERMINATED"}, nil)
+			computeFacade.GetServerReturnsOnCall(2, &servers.Server{ID: "123-456", Status: "ACTIVE"}, nil)
+
+			err := computeService.RebootServer(
+				"123-456",
+				createCpiConfig(10),
+			)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(computeFacade.GetServerCallCount()).To(Equal(3))
+		})
+
+		It("fails retrieving the server", func() {
+			computeFacade.GetServerReturns(nil, errors.New("boom"))
+
+			err := computeService.RebootServer(
+				"123-456",
+				createCpiConfig(10),
+			)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("failed to retrieve server information: boom"))
+		})
+
+		It("failed to reboot the server", func() {
+			computeFacade.GetServerReturns(&servers.Server{ID: "123-456", Status: "ACTIVE"}, nil)
+			computeFacade.RebootServerReturns(errors.New("boom"))
+
+			err := computeService.RebootServer(
+				"123-456",
+				createCpiConfig(10),
+			)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("failed to reboot server: boom"))
+		})
+
+		It("times out waiting for the server to become active", func() {
+			computeFacade.GetServerReturnsOnCall(0, &servers.Server{ID: "123-456", Status: "ACTIVE"}, nil)
+
+			err := computeService.RebootServer(
+				"123-456",
+				createCpiConfig(0),
+			)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("compute_service: timeout while waiting for server to become active"))
+		})
+	})
+
 	Context("GetMetadata", func() {
 		BeforeEach(func() {
 			serverMetadata := make(map[string]string)

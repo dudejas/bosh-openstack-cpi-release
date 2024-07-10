@@ -39,6 +39,11 @@ type ComputeService interface {
 		cpiConfig config.CpiConfig,
 	) error
 
+	RebootServer(
+		vmcid string,
+		cpiConfig config.CpiConfig,
+	) error
+
 	SetMetadata(
 		server servers.Server,
 		tags properties.ServerTags,
@@ -182,6 +187,36 @@ func (c computeService) DeleteServer(
 
 	// deleting registry settings - Seems that it is not needed for V2
 	// https://bosh.io/docs/cpi-api-v2/#reference-table-based-on-each-component-version
+
+	return nil
+}
+
+func (c computeService) RebootServer(
+	serverID string,
+	cpiConfig config.CpiConfig,
+) error {
+	_, err := c.GetServer(serverID)
+	if err != nil {
+		return err
+	}
+
+	var rebootOpts servers.RebootOptsBuilder
+	rebootOpts = servers.RebootOpts{
+		Type: servers.SoftReboot,
+	}
+
+	err = c.computeFacade.RebootServer(c.serviceClients.ServiceClient, serverID, rebootOpts)
+	if err != nil {
+		return fmt.Errorf("failed to reboot server: %w", err)
+	}
+
+	_, err = c.waitForServerToBecomeActive(
+		serverID,
+		time.Duration(cpiConfig.Cloud.Properties.Openstack.StateTimeOut)*time.Second,
+	)
+	if err != nil {
+		return fmt.Errorf("compute_service: %w", err)
+	}
 
 	return nil
 }

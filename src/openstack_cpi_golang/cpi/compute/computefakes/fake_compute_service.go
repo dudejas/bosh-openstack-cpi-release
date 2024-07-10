@@ -68,6 +68,18 @@ type FakeComputeService struct {
 		result1 *servers.Server
 		result2 error
 	}
+	RebootServerStub        func(string, config.CpiConfig) error
+	rebootServerMutex       sync.RWMutex
+	rebootServerArgsForCall []struct {
+		arg1 string
+		arg2 config.CpiConfig
+	}
+	rebootServerReturns struct {
+		result1 error
+	}
+	rebootServerReturnsOnCall map[int]struct {
+		result1 error
+	}
 	SetMetadataStub        func(servers.Server, properties.ServerTags) error
 	setMetadataMutex       sync.RWMutex
 	setMetadataArgsForCall []struct {
@@ -343,6 +355,68 @@ func (fake *FakeComputeService) GetServerReturnsOnCall(i int, result1 *servers.S
 	}{result1, result2}
 }
 
+func (fake *FakeComputeService) RebootServer(arg1 string, arg2 config.CpiConfig) error {
+	fake.rebootServerMutex.Lock()
+	ret, specificReturn := fake.rebootServerReturnsOnCall[len(fake.rebootServerArgsForCall)]
+	fake.rebootServerArgsForCall = append(fake.rebootServerArgsForCall, struct {
+		arg1 string
+		arg2 config.CpiConfig
+	}{arg1, arg2})
+	stub := fake.RebootServerStub
+	fakeReturns := fake.rebootServerReturns
+	fake.recordInvocation("RebootServer", []interface{}{arg1, arg2})
+	fake.rebootServerMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeComputeService) RebootServerCallCount() int {
+	fake.rebootServerMutex.RLock()
+	defer fake.rebootServerMutex.RUnlock()
+	return len(fake.rebootServerArgsForCall)
+}
+
+func (fake *FakeComputeService) RebootServerCalls(stub func(string, config.CpiConfig) error) {
+	fake.rebootServerMutex.Lock()
+	defer fake.rebootServerMutex.Unlock()
+	fake.RebootServerStub = stub
+}
+
+func (fake *FakeComputeService) RebootServerArgsForCall(i int) (string, config.CpiConfig) {
+	fake.rebootServerMutex.RLock()
+	defer fake.rebootServerMutex.RUnlock()
+	argsForCall := fake.rebootServerArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeComputeService) RebootServerReturns(result1 error) {
+	fake.rebootServerMutex.Lock()
+	defer fake.rebootServerMutex.Unlock()
+	fake.RebootServerStub = nil
+	fake.rebootServerReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeComputeService) RebootServerReturnsOnCall(i int, result1 error) {
+	fake.rebootServerMutex.Lock()
+	defer fake.rebootServerMutex.Unlock()
+	fake.RebootServerStub = nil
+	if fake.rebootServerReturnsOnCall == nil {
+		fake.rebootServerReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.rebootServerReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeComputeService) SetMetadata(arg1 servers.Server, arg2 properties.ServerTags) error {
 	fake.setMetadataMutex.Lock()
 	ret, specificReturn := fake.setMetadataReturnsOnCall[len(fake.setMetadataArgsForCall)]
@@ -416,6 +490,8 @@ func (fake *FakeComputeService) Invocations() map[string][][]interface{} {
 	defer fake.getMetadataMutex.RUnlock()
 	fake.getServerMutex.RLock()
 	defer fake.getServerMutex.RUnlock()
+	fake.rebootServerMutex.RLock()
+	defer fake.rebootServerMutex.RUnlock()
 	fake.setMetadataMutex.RLock()
 	defer fake.setMetadataMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

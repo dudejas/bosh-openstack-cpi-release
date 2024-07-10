@@ -1,15 +1,18 @@
 package integration_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"io"
 	"net/http"
 )
 
-var _ = Describe("HAS VM", func() {
+var _ = Describe("REBOOT VM", func() {
+	var getServerCount = 0
+
 	BeforeEach(func() {
 		SetupHTTP()
 
@@ -75,32 +78,6 @@ var _ = Describe("HAS VM", func() {
 			}
 		})
 
-		Mux.HandleFunc("/v2.1/servers/deleted-server-id", func(w http.ResponseWriter, r *http.Request) {
-			switch r.Method {
-			case http.MethodGet:
-				w.WriteHeader(http.StatusOK)
-				fmt.Fprintf(w, `{
-					"server": {
-						"id": "deleted-server-id",
-						"status": "DELETED"
-					}
-				}`)
-			}
-		})
-
-		Mux.HandleFunc("/v2.1/servers/terminated-server-id", func(w http.ResponseWriter, r *http.Request) {
-			switch r.Method {
-			case http.MethodGet:
-				w.WriteHeader(http.StatusOK)
-				fmt.Fprintf(w, `{
-					"server": {
-						"id": "terminated-server-id",
-						"status": "TERMINATED"
-					}
-				}`)
-			}
-		})
-
 		Mux.HandleFunc("/v2.1/servers/wrong-vm-id", func(w http.ResponseWriter, r *http.Request) {
 			switch r.Method {
 			case http.MethodGet:
@@ -109,11 +86,85 @@ var _ = Describe("HAS VM", func() {
 			}
 		})
 
-		Mux.HandleFunc("/v2.1/servers/error-vm-id", func(w http.ResponseWriter, r *http.Request) {
+		Mux.HandleFunc("/v2.1/servers/error-reboot-server-id", func(w http.ResponseWriter, r *http.Request) {
 			switch r.Method {
 			case http.MethodGet:
-				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprintf(w, `{}`)
+				w.WriteHeader(http.StatusOK)
+				fmt.Fprintf(w, `{
+					"server": {
+						"id": "error-reboot-server-id",
+						"status": "ACTIVE"
+					}
+				}`)
+			}
+		})
+
+		Mux.HandleFunc("/v2.1/servers/error-server-state-id", func(w http.ResponseWriter, r *http.Request) {
+			getServerCount++
+			switchCase := getServerCount % 2
+
+			w.WriteHeader(http.StatusOK)
+
+			switch switchCase {
+			case 1:
+				fmt.Fprintf(w, `{
+					"server": {
+						"id": "error-server-state-id",
+						"status": "ACTIVE"
+					}
+				}`)
+			case 0:
+				fmt.Fprintf(w, `{
+					"server": {
+						"id": "error-server-state-id",
+						"status": "ERROR"
+					}
+				}`)
+			}
+		})
+
+		Mux.HandleFunc("/v2.1/servers/active-server-id/action", func(w http.ResponseWriter, r *http.Request) {
+			switch r.Method {
+			case http.MethodPost:
+				var result map[string]interface{}
+				body, _ := io.ReadAll(r.Body)
+				json.Unmarshal(body, &result)
+
+				cpi_reboot_method := result["reboot"].(map[string]interface{})
+				if cpi_reboot_method["type"].(string) == "SOFT" {
+					w.WriteHeader(http.StatusAccepted)
+					fmt.Fprintf(w, `{ }`)
+				}
+			}
+		})
+
+		Mux.HandleFunc("/v2.1/servers/error-reboot-server-id/action", func(w http.ResponseWriter, r *http.Request) {
+			switch r.Method {
+			case http.MethodPost:
+				var result map[string]interface{}
+				body, _ := io.ReadAll(r.Body)
+				json.Unmarshal(body, &result)
+
+				cpi_reboot_method := result["reboot"].(map[string]interface{})
+				if cpi_reboot_method["type"].(string) == "SOFT" {
+					w.WriteHeader(http.StatusNotFound)
+					fmt.Fprintf(w, `{}`)
+				}
+			}
+		})
+
+		Mux.HandleFunc("/v2.1/servers/error-server-state-id/action", func(w http.ResponseWriter, r *http.Request) {
+			switch r.Method {
+			case http.MethodPost:
+				var result map[string]interface{}
+				body, _ := io.ReadAll(r.Body)
+				json.Unmarshal(body, &result)
+
+				cpi_reboot_method := result["reboot"].(map[string]interface{})
+				if cpi_reboot_method["type"].(string) == "SOFT" {
+					w.WriteHeader(http.StatusAccepted)
+					fmt.Fprintf(w, `{ }`)
+				}
 			}
 		})
 
@@ -123,51 +174,26 @@ var _ = Describe("HAS VM", func() {
 		TeardownHTTP()
 	})
 
-	It("returns true if the server exists and is ACTIVE", func() {
+	It("Reboots a server", func() {
 		writeJsonParamToStdIn(`{
-				"method":"has_vm",
+				"method":"reboot_vm",
 				"arguments": ["active-server-id"],
 				"api_version": 2
 		}`)
 
-		err := cpi.Execute(getDefaultConfig(Endpoint()), logger)
+		cpiConfig := getDefaultConfig(Endpoint())
+		cpiConfig.Cloud.Properties.Openstack.StateTimeOut = 50
+
+		err := cpi.Execute(cpiConfig, logger)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		stdOutWriter.Close()
-		Expect(<-outChannel).To(ContainSubstring(`"result":true,"error":null`))
+		Expect(<-outChannel).To(ContainSubstring(`"result":"","error":null`))
 	})
 
-	It("returns false if the server exists and is DELETED", func() {
+	It("Fails if a server is not found", func() {
 		writeJsonParamToStdIn(`{
-				"method":"has_vm",
-				"arguments": ["deleted-server-id"],
-				"api_version": 2
-		}`)
-
-		err := cpi.Execute(getDefaultConfig(Endpoint()), logger)
-		Expect(err).ShouldNot(HaveOccurred())
-
-		stdOutWriter.Close()
-		Expect(<-outChannel).To(ContainSubstring(`"result":false,"error":null`))
-	})
-
-	It("returns false if the server exists and is TERMINATED", func() {
-		writeJsonParamToStdIn(`{
-				"method":"has_vm",
-				"arguments": ["terminated-server-id"],
-				"api_version": 2
-		}`)
-
-		err := cpi.Execute(getDefaultConfig(Endpoint()), logger)
-		Expect(err).ShouldNot(HaveOccurred())
-
-		stdOutWriter.Close()
-		Expect(<-outChannel).To(ContainSubstring(`"result":false,"error":null`))
-	})
-
-	It("returns false if the server does not exist", func() {
-		writeJsonParamToStdIn(`{
-				"method":"has_vm",
+				"method":"reboot_vm",
 				"arguments": ["wrong-vm-id"],
 				"api_version": 2
 		}`)
@@ -176,29 +202,41 @@ var _ = Describe("HAS VM", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 
 		stdOutWriter.Close()
-		Expect(<-outChannel).To(ContainSubstring(`"result":false,"error":null`))
+		Expect(<-outChannel).To(
+			ContainSubstring(`reboot_vm: failed to retrieve server information: Resource not found`),
+		)
 	})
 
-	It("returns false and raises an error if server retrieval fails", func() {
+	It("Fails if rebooting server raises an error", func() {
 		writeJsonParamToStdIn(`{
-				"method":"has_vm",
-				"arguments": ["error-vm-id"],
+				"method":"reboot_vm",
+				"arguments": ["error-reboot-server-id"],
 				"api_version": 2
 		}`)
 
-		cpiConfig := getDefaultConfig(Endpoint())
-		cpiConfig.Cloud.Properties.RetryConfig = config.RetryConfigMap{
-			"default": config.RetryConfig{
-				MaxAttempts:   10,
-				SleepDuration: 0,
-			},
-		}
-
-		err := cpi.Execute(cpiConfig, logger)
+		err := cpi.Execute(getDefaultConfig(Endpoint()), logger)
 		Expect(err).ShouldNot(HaveOccurred())
 
 		stdOutWriter.Close()
-		Expect(<-outChannel).To(ContainSubstring(`message":"has_vm: failed to retrieve server information: max retry attempts (10) reached, err: Internal Server Error`))
+		Expect(<-outChannel).To(
+			ContainSubstring(`reboot_vm: failed to reboot server: Resource not found`),
+		)
+	})
+
+	It("Fails if rebooting server results in an erroneous server state", func() {
+		writeJsonParamToStdIn(`{
+				"method":"reboot_vm",
+				"arguments": ["error-server-state-id"],
+				"api_version": 2
+		}`)
+
+		err := cpi.Execute(getDefaultConfig(Endpoint()), logger)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		stdOutWriter.Close()
+		Expect(<-outChannel).To(
+			ContainSubstring(`reboot_vm: compute_service: server became ERROR state while waiting to become ACTIVE"`),
+		)
 	})
 
 })
