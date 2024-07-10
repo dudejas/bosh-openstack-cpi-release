@@ -61,6 +61,24 @@ var _ = Describe("ComputeService", func() {
 		env = apiv1.VMEnv{}
 	})
 
+	Context("GetServer", func() {
+
+		It("returns error if server was failed to retrieved", func() {
+			computeFacade.GetServerReturns(&servers.Server{ID: "123-456", Status: "ACTIVE"}, errors.New("boom"))
+			_, err := computeService.GetServer("123-456")
+
+			Expect(err.Error()).To(Equal("failed to retrieve server information: boom"))
+		})
+
+		It("returns an active server", func() {
+			computeFacade.GetServerReturns(&servers.Server{ID: "123-456", Status: "ACTIVE"}, nil)
+			server, err := computeService.GetServer("123-456")
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(server).ToNot(BeNil())
+		})
+	})
+
 	Context("CreateServer", func() {
 
 		BeforeEach(func() {
@@ -81,7 +99,7 @@ var _ = Describe("ComputeService", func() {
 			Expect(flavorResolver.ResolveFlavorForInstanceTypeArgsForCall(0)).To(Equal("the_instance_type"))
 		})
 
-		It("return error if flavors resolution fails", func() {
+		It("returns error if flavors resolution fails", func() {
 			flavorResolver.ResolveFlavorForInstanceTypeReturns(flavors.Flavor{}, errors.New("boom"))
 
 			createCpiConfig(10)

@@ -76,7 +76,7 @@ var _ = Describe("DeleteVMMethod", func() {
 				apiv1.NewVMCID("vm-id"),
 			)
 
-			Expect(err.Error()).To(Equal("failed to create compute service: boom"))
+			Expect(err.Error()).To(Equal("delete_vm: boom"))
 		})
 
 		It("creates the network service", func() {
@@ -106,7 +106,7 @@ var _ = Describe("DeleteVMMethod", func() {
 				apiv1.NewVMCID("vm-id"),
 			)
 
-			Expect(err.Error()).To(Equal("failed to create network service: boom"))
+			Expect(err.Error()).To(Equal("delete_vm: boom"))
 		})
 
 		It("get ports has been called once with the correct parameters", func() {
@@ -138,7 +138,7 @@ var _ = Describe("DeleteVMMethod", func() {
 				apiv1.NewVMCID("vm-id"),
 			)
 
-			Expect(err.Error()).To(Equal("failed to get ports: boom"))
+			Expect(err.Error()).To(Equal("delete_vm: boom"))
 
 		})
 
@@ -157,9 +157,54 @@ var _ = Describe("DeleteVMMethod", func() {
 			Expect(serverID).To(Equal("vm-id"))
 		})
 
+		It("returns an error if no server metadata was found", func() {
+			computeService.GetMetadataReturns(nil, errors.New("boom"))
+
+			err := methods.NewDeleteVMMethod(
+				&networkServiceBuilder,
+				&computeServiceBuilder,
+				&loadbalancerServiceBuilder,
+				config.CpiConfig{},
+				&logger,
+			).DeleteVM(
+				apiv1.NewVMCID("vm-id"),
+			)
+
+			Expect(err.Error()).To(Equal("delete_vm: boom"))
+		})
+
+		It("creates the loadbalancer service", func() {
+			methods.NewDeleteVMMethod(
+				&networkServiceBuilder,
+				&computeServiceBuilder,
+				&loadbalancerServiceBuilder,
+				config.CpiConfig{},
+				&logger,
+			).DeleteVM(
+				apiv1.NewVMCID("vm-id"),
+			)
+
+			Expect(loadbalancerServiceBuilder.BuildCallCount()).To(Equal(1))
+		})
+
+		It("returns an error if the loadbalancer service cannot be retrieved", func() {
+			loadbalancerServiceBuilder.BuildReturns(nil, errors.New("boom"))
+
+			err := methods.NewDeleteVMMethod(
+				&networkServiceBuilder,
+				&computeServiceBuilder,
+				&loadbalancerServiceBuilder,
+				config.CpiConfig{},
+				&logger,
+			).DeleteVM(
+				apiv1.NewVMCID("vm-id"),
+			)
+
+			Expect(err.Error()).To(Equal("delete_vm: boom"))
+		})
+
 		It("does not remove pool memberships if no server tags are found", func() {
-			testError := gophercloud.ErrDefault404{gophercloud.ErrUnexpectedResponseCode{Actual: 404}}
-			computeService.GetMetadataReturns(map[string]string{}, testError)
+			computeService.GetMetadataReturns(map[string]string{}, nil)
 
 			err := methods.NewDeleteVMMethod(
 				&networkServiceBuilder,
@@ -174,23 +219,6 @@ var _ = Describe("DeleteVMMethod", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(loadbalancerService.DeletePoolMemberCallCount()).To(Equal(0))
 			Expect(computeService.DeleteServerCallCount()).To(Equal(1))
-		})
-
-		It("returns an error if building loadbalancerService fails", func() {
-			loadbalancerServiceBuilder.BuildReturns(nil, errors.New("boom"))
-
-			err := methods.NewDeleteVMMethod(
-				&networkServiceBuilder,
-				&computeServiceBuilder,
-				&loadbalancerServiceBuilder,
-				config.CpiConfig{},
-				&logger,
-			).DeleteVM(
-				apiv1.NewVMCID("vm-id"),
-			)
-
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("failed to create loadbalancer service: boom"))
 		})
 
 		It("deletes a pool member for tags with prefix 'lbaas_pool_'", func() {
@@ -212,7 +240,7 @@ var _ = Describe("DeleteVMMethod", func() {
 			Expect(loadbalancerService.DeletePoolMemberCallCount()).To(Equal(1))
 		})
 
-		It("does not fail if delete pool member returns is not found", func() {
+		It("does not fail if delete pool member returns error-not-found", func() {
 			testError := gophercloud.ErrDefault404{gophercloud.ErrUnexpectedResponseCode{Actual: 404}}
 			loadbalancerService.DeletePoolMemberReturns(testError)
 
@@ -245,7 +273,7 @@ var _ = Describe("DeleteVMMethod", func() {
 			)
 
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("failed to delete pool member: boom"))
+			Expect(err.Error()).To(Equal("delete_vm: boom"))
 		})
 
 		It("deletes a server", func() {
@@ -277,7 +305,7 @@ var _ = Describe("DeleteVMMethod", func() {
 				apiv1.NewVMCID("vm-id"),
 			)
 
-			Expect(err.Error()).To(Equal("failed to delete server: boom"))
+			Expect(err.Error()).To(Equal("delete_vm: boom"))
 		})
 
 		It("delete ports has been called once with the correct parameters", func() {
@@ -297,7 +325,7 @@ var _ = Describe("DeleteVMMethod", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 
-		It("returns an error if no ports were deleted", func() {
+		It("returns an error if deleting ports fails", func() {
 			networkService.DeletePortsReturns(errors.New("boom"))
 
 			err := methods.NewDeleteVMMethod(
@@ -310,7 +338,7 @@ var _ = Describe("DeleteVMMethod", func() {
 				apiv1.NewVMCID("vm-id"),
 			)
 
-			Expect(err.Error()).To(Equal("failed to delete ports: boom"))
+			Expect(err.Error()).To(Equal("delete_vm: boom"))
 
 		})
 

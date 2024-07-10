@@ -95,7 +95,10 @@ func (f Factory) New(ctx apiv1.CallContext) (apiv1.CPI, error) {
 		),
 
 		methods.NewCalculateVMCloudPropertiesMethod(),
-		methods.NewHasVMMethod(),
+		methods.NewHasVMMethod(
+			compute.NewComputeServiceBuilder(openstackService, f.cpiConfig, f.logger),
+			f.logger,
+		),
 		methods.NewRebootVMMethod(),
 		methods.NewSetVMMetadataMethod(),
 		methods.NewGetDisksMethod(),

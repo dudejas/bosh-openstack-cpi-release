@@ -389,6 +389,6 @@ var _ = Describe("Delete VM", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 
 		stdOutWriter.Close()
-		Expect(<-outChannel).To(ContainSubstring(`failed to delete pool member`))
+		Expect(<-outChannel).To(ContainSubstring(`message":"delete_vm: failed to delete pool member: max retry attempts (10) reached, err: Internal Server Error`))
 	})
 })

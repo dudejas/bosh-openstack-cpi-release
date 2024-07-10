@@ -21,6 +21,10 @@ var ComputeServicePollingInterval = 10 * time.Second
 
 //counterfeiter:generate . ComputeService
 type ComputeService interface {
+	GetServer(
+		vmcid string,
+	) (*servers.Server, error)
+
 	CreateServer(
 		stemcellCID apiv1.StemcellCID,
 		cloudProps properties.CreateVM,
@@ -70,6 +74,16 @@ func NewComputeService(
 		availabilityZoneProvider: availabilityZoneProvider,
 		logger:                   logger,
 	}
+}
+
+func (c computeService) GetServer(
+	serverID string,
+) (*servers.Server, error) {
+	server, err := c.computeFacade.GetServer(c.serviceClients.RetryableServiceClient, serverID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve server information: %w", err)
+	}
+	return server, nil
 }
 
 func (c computeService) CreateServer(
@@ -144,13 +158,13 @@ func (c computeService) DeleteServer(
 ) error {
 	var errDefault404 gophercloud.ErrDefault404
 
-	_, err := c.computeFacade.GetServer(c.serviceClients.RetryableServiceClient, serverID)
+	_, err := c.GetServer(serverID)
 	if err != nil {
 		if errors.As(err, &errDefault404) {
 			c.logger.Info("compute_service", fmt.Sprintf("SKIPPING: Server deletion with id '%s' is not found", serverID))
 			return nil
 		}
-		return fmt.Errorf("failed to retrieve server information: %w", err)
+		return err
 	}
 
 	err = c.computeFacade.DeleteServer(c.serviceClients.RetryableServiceClient, serverID)
@@ -334,9 +348,9 @@ func (c computeService) waitForServerToBecomeActive(serverID string, timeout tim
 		case <-timeoutTimer.C:
 			return nil, fmt.Errorf("timeout while waiting for server to become active")
 		default:
-			server, err := c.computeFacade.GetServer(c.serviceClients.RetryableServiceClient, serverID)
+			server, err := c.GetServer(serverID)
 			if err != nil {
-				return nil, fmt.Errorf("failed to retrieve server information: %w", err)
+				return nil, err
 			}
 
 			switch server.Status {
@@ -362,12 +376,12 @@ func (c computeService) waitForServerToBecomeDeleted(serverID string, timeout ti
 		case <-timeoutTimer.C:
 			return fmt.Errorf("timeout while waiting for server to become deleted")
 		default:
-			server, err := c.computeFacade.GetServer(c.serviceClients.RetryableServiceClient, serverID)
+			server, err := c.GetServer(serverID)
 			if err != nil {
 				if errors.As(err, &errDefault404) {
 					return nil
 				}
-				return fmt.Errorf("failed to retrieve server information: %w", err)
+				return err
 			}
 
 			switch server.Status {
