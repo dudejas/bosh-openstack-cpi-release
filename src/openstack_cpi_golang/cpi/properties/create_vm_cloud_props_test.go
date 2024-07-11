@@ -51,15 +51,6 @@ var _ = Describe("CreateVM", func() {
 				To(Equal("only one property of 'availability_zone' and 'availability_zones' can be configured"))
 		})
 
-		It("returns an error if neither 'availability_zone' nor 'availability_zones' is configured", func() {
-			cloudProps := properties.CreateVM{}
-
-			cloudProps.Validate(openstackConfig)
-
-			Expect(cloudProps.Validate(openstackConfig).Error()).
-				To(Equal("either 'availability_zone' or 'availability_zones' must be configured"))
-		})
-
 		It("returns an error if 'availability_zones' are configured without ignore_server_availability_zone", func() {
 			cloudProps := properties.CreateVM{
 				AvailabilityZones: []string{"az1", "az2"},

@@ -45,10 +45,6 @@ func (c CreateVM) Validate(opentackConfig config.OpenstackConfig) error {
 		return fmt.Errorf("only one property of 'availability_zone' and 'availability_zones' can be configured")
 	}
 
-	if c.AvailabilityZone == "" && len(c.AvailabilityZones) == 0 {
-		return fmt.Errorf("either 'availability_zone' or 'availability_zones' must be configured")
-	}
-
 	if len(c.AvailabilityZones) > 1 && !opentackConfig.IgnoreServerAvailabilityZone {
 		return fmt.Errorf("cannot use multiple azs without 'openstack.ignore_server_availability_zone' set to true")
 	}

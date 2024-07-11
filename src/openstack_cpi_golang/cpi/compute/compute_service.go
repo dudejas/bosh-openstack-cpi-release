@@ -151,7 +151,11 @@ func (c computeService) CreateServer(
 			}
 			c.logger.Warn("failed while waiting on the server creation in availability zone '%s': %v, "+
 				"retrying in a different availability zone", availabilityZone, err)
+
+			continue
 		}
+
+		break
 	}
 
 	return server, nil
