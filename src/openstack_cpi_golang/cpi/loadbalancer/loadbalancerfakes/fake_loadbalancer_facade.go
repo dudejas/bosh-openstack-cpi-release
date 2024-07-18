@@ -52,6 +52,20 @@ type FakeLoadbalancerFacade struct {
 		result1 []pools.Pool
 		result2 error
 	}
+	GetPoolStub        func(utils.RetryableServiceClient, string) (*pools.Pool, error)
+	getPoolMutex       sync.RWMutex
+	getPoolArgsForCall []struct {
+		arg1 utils.RetryableServiceClient
+		arg2 string
+	}
+	getPoolReturns struct {
+		result1 *pools.Pool
+		result2 error
+	}
+	getPoolReturnsOnCall map[int]struct {
+		result1 *pools.Pool
+		result2 error
+	}
 	GetPoolMemberStub        func(utils.RetryableServiceClient, string, string) (*pools.Member, error)
 	getPoolMemberMutex       sync.RWMutex
 	getPoolMemberArgsForCall []struct {
@@ -278,6 +292,71 @@ func (fake *FakeLoadbalancerFacade) ExtractPoolsReturnsOnCall(i int, result1 []p
 	}{result1, result2}
 }
 
+func (fake *FakeLoadbalancerFacade) GetPool(arg1 utils.RetryableServiceClient, arg2 string) (*pools.Pool, error) {
+	fake.getPoolMutex.Lock()
+	ret, specificReturn := fake.getPoolReturnsOnCall[len(fake.getPoolArgsForCall)]
+	fake.getPoolArgsForCall = append(fake.getPoolArgsForCall, struct {
+		arg1 utils.RetryableServiceClient
+		arg2 string
+	}{arg1, arg2})
+	stub := fake.GetPoolStub
+	fakeReturns := fake.getPoolReturns
+	fake.recordInvocation("GetPool", []interface{}{arg1, arg2})
+	fake.getPoolMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeLoadbalancerFacade) GetPoolCallCount() int {
+	fake.getPoolMutex.RLock()
+	defer fake.getPoolMutex.RUnlock()
+	return len(fake.getPoolArgsForCall)
+}
+
+func (fake *FakeLoadbalancerFacade) GetPoolCalls(stub func(utils.RetryableServiceClient, string) (*pools.Pool, error)) {
+	fake.getPoolMutex.Lock()
+	defer fake.getPoolMutex.Unlock()
+	fake.GetPoolStub = stub
+}
+
+func (fake *FakeLoadbalancerFacade) GetPoolArgsForCall(i int) (utils.RetryableServiceClient, string) {
+	fake.getPoolMutex.RLock()
+	defer fake.getPoolMutex.RUnlock()
+	argsForCall := fake.getPoolArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeLoadbalancerFacade) GetPoolReturns(result1 *pools.Pool, result2 error) {
+	fake.getPoolMutex.Lock()
+	defer fake.getPoolMutex.Unlock()
+	fake.GetPoolStub = nil
+	fake.getPoolReturns = struct {
+		result1 *pools.Pool
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeLoadbalancerFacade) GetPoolReturnsOnCall(i int, result1 *pools.Pool, result2 error) {
+	fake.getPoolMutex.Lock()
+	defer fake.getPoolMutex.Unlock()
+	fake.GetPoolStub = nil
+	if fake.getPoolReturnsOnCall == nil {
+		fake.getPoolReturnsOnCall = make(map[int]struct {
+			result1 *pools.Pool
+			result2 error
+		})
+	}
+	fake.getPoolReturnsOnCall[i] = struct {
+		result1 *pools.Pool
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeLoadbalancerFacade) GetPoolMember(arg1 utils.RetryableServiceClient, arg2 string, arg3 string) (*pools.Member, error) {
 	fake.getPoolMemberMutex.Lock()
 	ret, specificReturn := fake.getPoolMemberReturnsOnCall[len(fake.getPoolMemberArgsForCall)]
@@ -418,6 +497,8 @@ func (fake *FakeLoadbalancerFacade) Invocations() map[string][][]interface{} {
 	defer fake.deletePoolMemberMutex.RUnlock()
 	fake.extractPoolsMutex.RLock()
 	defer fake.extractPoolsMutex.RUnlock()
+	fake.getPoolMutex.RLock()
+	defer fake.getPoolMutex.RUnlock()
 	fake.getPoolMemberMutex.RLock()
 	defer fake.getPoolMemberMutex.RUnlock()
 	fake.listPoolsMutex.RLock()

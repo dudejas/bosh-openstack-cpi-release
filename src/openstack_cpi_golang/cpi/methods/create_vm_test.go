@@ -91,8 +91,8 @@ var _ = Describe("CreateVMMethod", func() {
 					
 				}`
 			networkService.GetSubnetIDReturns("the-subnet-id", nil)
-			loadbalancerService.GetPoolIDReturnsOnCall(0, "the-pool-id", nil)
-			loadbalancerService.GetPoolIDReturnsOnCall(1, "the-pool-id-1", nil)
+			loadbalancerService.GetPoolReturnsOnCall(0, pools.Pool{ID: "the-pool-id"}, nil)
+			loadbalancerService.GetPoolReturnsOnCall(1, pools.Pool{ID: "the-pool-id-1"}, nil)
 			loadbalancerService.CreatePoolMemberReturns(&pools.Member{ID: "the-member-id", PoolID: "the-pool-id"}, nil)
 		})
 
@@ -496,12 +496,12 @@ var _ = Describe("CreateVMMethod", func() {
 					env,
 				)
 
-				poolName := loadbalancerService.GetPoolIDArgsForCall(0)
+				poolName := loadbalancerService.GetPoolArgsForCall(0)
 				Expect(poolName).To(Equal("the-pool-name"))
 			})
 
 			It("returns an error if getting pool ids fails", func() {
-				loadbalancerService.GetPoolIDReturnsOnCall(0, "", errors.New("boom"))
+				loadbalancerService.GetPoolReturnsOnCall(0, pools.Pool{}, errors.New("boom"))
 
 				_, _, err := methods.NewCreateVMMethod(
 					&imageServiceBuilder,

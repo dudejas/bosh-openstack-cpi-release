@@ -18,7 +18,7 @@ type DeleteVMMethod struct {
 	networkServiceBuilder      network.NetworkServiceBuilder
 	computeServiceBuilder      compute.ComputeServiceBuilder
 	loadbalancerServiceBuilder loadbalancer.LoadbalancerServiceBuilder
-	config                     config.CpiConfig
+	cpiConfig                  config.CpiConfig
 	logger                     utils.Logger
 }
 
@@ -33,7 +33,7 @@ func NewDeleteVMMethod(
 		networkServiceBuilder:      networkServiceBuilder,
 		computeServiceBuilder:      computeServiceBuilder,
 		loadbalancerServiceBuilder: loadbalancerServiceBuilder,
-		config:                     config,
+		cpiConfig:                  config,
 		logger:                     logger,
 	}
 }
@@ -71,7 +71,7 @@ func (a DeleteVMMethod) DeleteVM(cid apiv1.VMCID) error {
 		for key, value := range serverMetadata {
 			if strings.HasPrefix(key, "lbaas_pool_") {
 				parts := strings.Split(value, "/")
-				err = loadbalancerService.DeletePoolMember(parts[0], parts[1])
+				err = loadbalancerService.DeletePoolMember(parts[0], parts[1], a.cpiConfig.Cloud.Properties.Openstack.StateTimeOut)
 				if err != nil {
 					if errors.As(err, &errDefault404) {
 						a.logger.Info("delete_vm", fmt.Sprintf("SKIPPING: pool member deletion with id '%s' in pool '%s' is not found", parts[1], parts[0]))
@@ -85,7 +85,7 @@ func (a DeleteVMMethod) DeleteVM(cid apiv1.VMCID) error {
 		}
 	}
 
-	err = computeService.DeleteServer(cid.AsString(), a.config)
+	err = computeService.DeleteServer(cid.AsString(), a.cpiConfig)
 	if err != nil {
 		return fmt.Errorf("delete_vm: %w", err)
 	}

@@ -232,7 +232,7 @@ var _ = Describe("DeleteVMMethod", func() {
 				apiv1.NewVMCID("vm-id"),
 			)
 
-			poolID, memberID := loadbalancerService.DeletePoolMemberArgsForCall(0)
+			poolID, memberID, _ := loadbalancerService.DeletePoolMemberArgsForCall(0)
 
 			Expect(poolID).To(Equal("poolID"))
 			Expect(memberID).To(Equal("memberID"))

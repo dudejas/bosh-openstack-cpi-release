@@ -12,11 +12,11 @@ var LoadbalancerServicePollingInterval = 10 * time.Second
 
 //counterfeiter:generate . LoadbalancerService
 type LoadbalancerService interface {
-	GetPoolID(poolName string) (string, error)
+	GetPool(poolName string) (pools.Pool, error)
 
 	CreatePoolMember(poolID string, ip string, pool properties.LoadbalancerPool, subnetID string, timeout int) (*pools.Member, error)
 
-	DeletePoolMember(poolID string, memberID string) error
+	DeletePoolMember(poolID string, memberID string, timeout int) error
 }
 
 type loadbalancerService struct {
@@ -37,41 +37,46 @@ func NewLoadbalancerService(
 	}
 }
 
-func (l loadbalancerService) GetPoolID(poolName string) (string, error) {
+func (l loadbalancerService) GetPool(poolName string) (pools.Pool, error) {
 	listOpts := pools.ListOpts{
 		Name: poolName,
 	}
 
 	page, err := l.loadbalancerFacade.ListPools(l.serviceClients.RetryableServiceClient, listOpts)
 	if err != nil {
-		return "", fmt.Errorf("failed to list loadbalancer pools: %w", err)
+		return pools.Pool{}, fmt.Errorf("failed to list loadbalancer pools: %w", err)
 	}
 
-	pools, err := l.loadbalancerFacade.ExtractPools(page)
+	extractedPools, err := l.loadbalancerFacade.ExtractPools(page)
 	if err != nil {
-		return "", fmt.Errorf("failed to extract loadbalancer pool pages: %w", err)
+		return pools.Pool{}, fmt.Errorf("failed to extract loadbalancer pool pages: %w", err)
 	}
 
-	if len(pools) == 0 {
-		return "", fmt.Errorf("loadbalancer pool '%s' does not exist", poolName)
+	if len(extractedPools) == 0 {
+		return pools.Pool{}, fmt.Errorf("loadbalancer pool '%s' does not exist", poolName)
 	}
 
-	if len(pools) > 1 {
-		return "", fmt.Errorf("found more than one loadbalancer pool with name '%s'. Make sure to use unique naming", poolName)
+	if len(extractedPools) > 1 {
+		return pools.Pool{}, fmt.Errorf("found more than one loadbalancer pool with name '%s'. Make sure to use unique naming", poolName)
 	}
 
-	return pools[0].ID, nil
+	return extractedPools[0], nil
 }
 
-func (l loadbalancerService) CreatePoolMember(poolID string, ip string, pool properties.LoadbalancerPool, subnetID string, timeout int) (*pools.Member, error) {
+func (l loadbalancerService) CreatePoolMember(poolID string, ip string, loadbalancerPool properties.LoadbalancerPool, subnetID string, timeout int) (*pools.Member, error) {
 	createMemberOpts := pools.CreateMemberOpts{
 		Address:      ip,
-		ProtocolPort: pool.ProtocolPort,
+		ProtocolPort: loadbalancerPool.ProtocolPort,
 		SubnetID:     subnetID,
 	}
 
-	if pool.MonitoringPort != nil {
-		createMemberOpts.MonitorPort = pool.MonitoringPort
+	if loadbalancerPool.MonitoringPort != nil {
+		createMemberOpts.MonitorPort = loadbalancerPool.MonitoringPort
+	}
+
+	_, err := l.waitForPoolToBecomeActive(poolID, time.Duration(timeout)*time.Second)
+	if err != nil {
+		return nil, fmt.Errorf("failed while waiting for pool to become active: %w", err)
 	}
 
 	member, err := l.loadbalancerFacade.CreatePoolMember(l.serviceClients.ServiceClient, poolID, createMemberOpts)
@@ -81,19 +86,50 @@ func (l loadbalancerService) CreatePoolMember(poolID string, ip string, pool pro
 
 	member, err = l.waitForPoolMemberToBecomeActive(poolID, member.ID, time.Duration(timeout)*time.Second)
 	if err != nil {
-		return nil, fmt.Errorf("failed while waiting for pool member: %w", err)
+		return nil, fmt.Errorf("failed while waiting for pool member to become active: %w", err)
 	}
 
 	return member, nil
 }
 
-func (l loadbalancerService) DeletePoolMember(poolID string, memberID string) error {
-	err := l.loadbalancerFacade.DeletePoolMember(l.serviceClients.RetryableServiceClient, poolID, memberID)
+func (l loadbalancerService) DeletePoolMember(poolID string, memberID string, timeout int) error {
+	_, err := l.waitForPoolToBecomeActive(poolID, time.Duration(timeout)*time.Second)
+	if err != nil {
+		return fmt.Errorf("failed while waiting for pool to become active: %w", err)
+	}
+
+	err = l.loadbalancerFacade.DeletePoolMember(l.serviceClients.RetryableServiceClient, poolID, memberID)
 	if err != nil {
 		return fmt.Errorf("failed to delete pool member: %w", err)
 	}
 
 	return nil
+}
+
+func (l loadbalancerService) waitForPoolToBecomeActive(poolID string, timeout time.Duration) (*pools.Pool, error) {
+	timeoutTimer := time.NewTimer(timeout)
+
+	for {
+		select {
+		case <-timeoutTimer.C:
+			return nil, fmt.Errorf("timeout while waiting for pool '%s' to become active", poolID)
+		default:
+			pool, err := l.loadbalancerFacade.GetPool(l.serviceClients.RetryableServiceClient, poolID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to retrieve pool '%s': %w", poolID, err)
+			}
+
+			switch pool.ProvisioningStatus {
+			case "ACTIVE":
+				return pool, nil
+			case "ERROR":
+				return nil, fmt.Errorf("pool status ended up in ERROR state")
+			default:
+				time.Sleep(LoadbalancerServicePollingInterval)
+				continue
+			}
+		}
+	}
 }
 
 func (l loadbalancerService) waitForPoolMemberToBecomeActive(poolID string, memberID string, timeout time.Duration) (*pools.Member, error) {

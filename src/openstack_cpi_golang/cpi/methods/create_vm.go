@@ -127,13 +127,13 @@ func (m CreateVMMethod) configureLoadbalancerPools(
 	networkConfig properties.NetworkConfig,
 ) ([]pools.Member, error) {
 	poolMemberships := []pools.Member{}
-	for _, pool := range cloudProps.LoadbalancerPools {
 
-		poolID, err := loadbalancerService.GetPoolID(pool.Name)
+	for _, loadbalancerPool := range cloudProps.LoadbalancerPools {
+		pool, err := loadbalancerService.GetPool(loadbalancerPool.Name)
 		if err != nil {
-			return []pools.Member{}, fmt.Errorf("failed to get pool ID of pool '%s': %w", pool.Name, err)
+			return []pools.Member{}, fmt.Errorf("failed to get pool ID of pool '%s': %w", loadbalancerPool.Name, err)
 		}
-		m.logger.Info("create_vm_method", fmt.Sprintf("Resolved pool id '%s' for pool '%s'", poolID, pool.Name))
+		m.logger.Info("create_vm_method", fmt.Sprintf("Resolved pool id '%s' for pool '%s'", pool.ID, loadbalancerPool.Name))
 
 		ip := networkConfig.DefaultNetwork.IP
 
@@ -144,16 +144,17 @@ func (m CreateVMMethod) configureLoadbalancerPools(
 			return []pools.Member{}, fmt.Errorf("failed to get subnet: %w", err)
 		}
 
-		poolMember, err := loadbalancerService.CreatePoolMember(poolID, ip, pool, subnetID, m.cpiConfig.Cloud.Properties.Openstack.StateTimeOut)
+		poolMember, err := loadbalancerService.CreatePoolMember(pool.ID, ip, loadbalancerPool, subnetID, m.cpiConfig.Cloud.Properties.Openstack.StateTimeOut)
 		if err != nil {
-			return []pools.Member{}, fmt.Errorf("failed to create pool membership of IP '%s' in pool '%s': %w", ip, pool.Name, err)
+			return []pools.Member{}, fmt.Errorf("failed to create pool membership of IP '%s' in pool '%s': %w", ip, loadbalancerPool.Name, err)
 		}
 
-		poolMember.PoolID = poolID
+		poolMember.PoolID = pool.ID
 		poolMemberships = append(poolMemberships, *poolMember)
 
-		m.logger.Info("create_vm_method", fmt.Sprintf("Created pool member '%+v' in pool '%s'", *poolMember, pool.Name))
+		m.logger.Info("create_vm_method", fmt.Sprintf("Created pool member '%+v' in pool '%s'", *poolMember, loadbalancerPool.Name))
 	}
+
 	return poolMemberships, nil
 }
 

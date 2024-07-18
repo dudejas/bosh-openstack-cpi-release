@@ -68,7 +68,8 @@ var _ = Describe("Create VM", func() {
 
 			fmt.Fprintf(w, `{
 				"server": {
-					"id": "f5dc173b-6804-445a-a6d8-c705dad5b5eb"
+					"id": "f5dc173b-6804-445a-a6d8-c705dad5b5eb",
+					"status": "ACTIVE"
 				}
 			}`)
 		})

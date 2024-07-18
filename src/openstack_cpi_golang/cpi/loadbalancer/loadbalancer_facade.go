@@ -8,6 +8,8 @@ import (
 
 //counterfeiter:generate . LoadbalancerFacade
 type LoadbalancerFacade interface {
+	GetPool(client utils.RetryableServiceClient, poolID string) (*pools.Pool, error)
+
 	ListPools(client utils.RetryableServiceClient, listOpts pools.ListOpts) (pagination.Page, error)
 
 	ExtractPools(allPages pagination.Page) ([]pools.Pool, error)
@@ -16,7 +18,6 @@ type LoadbalancerFacade interface {
 
 	GetPoolMember(client utils.RetryableServiceClient, poolID string, memberID string) (*pools.Member, error)
 
-	//https://pkg.go.dev/github.com/gophercloud/gophercloud/v2/openstack/loadbalancer/v2/pools
 	DeletePoolMember(client utils.RetryableServiceClient, poolID string, memberID string) error
 }
 
@@ -25,6 +26,10 @@ type loadbalancerFacade struct {
 
 func NewLoadbalancerFacade() loadbalancerFacade {
 	return loadbalancerFacade{}
+}
+
+func (l loadbalancerFacade) GetPool(client utils.RetryableServiceClient, poolID string) (*pools.Pool, error) {
+	return pools.Get(client, poolID).Extract()
 }
 
 func (l loadbalancerFacade) ListPools(client utils.RetryableServiceClient, listOpts pools.ListOpts) (pagination.Page, error) {

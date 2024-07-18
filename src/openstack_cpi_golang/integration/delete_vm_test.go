@@ -172,6 +172,20 @@ var _ = Describe("Delete VM", func() {
 			}
 		})
 
+		Mux.HandleFunc("/v2.1/servers/5/metadata", func(w http.ResponseWriter, r *http.Request) {
+			switch r.Method {
+			case http.MethodGet:
+				w.WriteHeader(http.StatusOK)
+
+				fmt.Fprintf(w, `{
+					"metadata": {
+						"foo": "foo_value",
+						"lbaas_pool_id_timeout": "pool_id_timeout/member_id_1"
+					}
+				}`)
+			}
+		})
+
 		Mux.HandleFunc("/v2.1/servers/2", func(w http.ResponseWriter, r *http.Request) {
 			switch r.Method {
 			case http.MethodDelete:
@@ -260,6 +274,36 @@ var _ = Describe("Delete VM", func() {
 			}
 		})
 
+		Mux.HandleFunc("/v2.1/servers/5", func(w http.ResponseWriter, r *http.Request) {
+			switch r.Method {
+			case http.MethodDelete:
+				w.WriteHeader(http.StatusNoContent)
+				fmt.Fprintf(w, `{}`)
+
+			case http.MethodGet:
+				getServerCount++
+				switchCase := getServerCount % 2
+
+				switch switchCase {
+				case 1:
+					w.WriteHeader(http.StatusOK)
+					fmt.Fprintf(w, `{
+						"server": {
+							"id": "5",
+							"status": "ACTIVE"
+						}
+					}`)
+				case 0:
+					fmt.Fprintf(w, `{
+						"server": {
+							"id": "1",
+							"status": "DELETED"
+						}
+					}`)
+				}
+			}
+		})
+
 		Mux.HandleFunc("/v2.1/servers/3/metadata", func(w http.ResponseWriter, r *http.Request) {
 			switch r.Method {
 			case http.MethodGet:
@@ -279,6 +323,62 @@ var _ = Describe("Delete VM", func() {
 			case http.MethodGet:
 				w.WriteHeader(http.StatusNotFound)
 				fmt.Fprintf(w, `{}`)
+			}
+		})
+
+		Mux.HandleFunc("/v2.0/lbaas/pools/pool_id_1", func(w http.ResponseWriter, r *http.Request) {
+			switch r.Method {
+			case http.MethodGet:
+				w.WriteHeader(http.StatusOK)
+
+				fmt.Fprintf(w, `{
+						"pool": {
+							"id": "pool_id_1",
+							"provisioning_status": "ACTIVE"
+						}
+					}`)
+			}
+		})
+
+		Mux.HandleFunc("/v2.0/lbaas/pools/pool_id_2", func(w http.ResponseWriter, r *http.Request) {
+			switch r.Method {
+			case http.MethodGet:
+				w.WriteHeader(http.StatusOK)
+
+				fmt.Fprintf(w, `{
+						"pool": {
+							"id": "pool_id_2",
+							"provisioning_status": "ACTIVE"
+						}
+					}`)
+			}
+		})
+
+		Mux.HandleFunc("/v2.0/lbaas/pools/pool_id_3", func(w http.ResponseWriter, r *http.Request) {
+			switch r.Method {
+			case http.MethodGet:
+				w.WriteHeader(http.StatusOK)
+
+				fmt.Fprintf(w, `{
+						"pool": {
+							"id": "pool_id_3",
+							"provisioning_status": "ACTIVE"
+						}
+					}`)
+			}
+		})
+
+		Mux.HandleFunc("/v2.0/lbaas/pools/pool_id_timeout", func(w http.ResponseWriter, r *http.Request) {
+			switch r.Method {
+			case http.MethodGet:
+				w.WriteHeader(http.StatusOK)
+
+				fmt.Fprintf(w, `{
+						"pool": {
+							"id": "pool_id_3",
+							"provisioning_status": "PENDING_UPDATE"
+						}
+					}`)
 			}
 		})
 
@@ -327,6 +427,29 @@ var _ = Describe("Delete VM", func() {
 
 		stdOutWriter.Close()
 		Expect(<-outChannel).To(ContainSubstring(`"result":null,"error":null`))
+	})
+
+	It("times out waiting for the load balancer pool to become ACTIVE", func() {
+		writeJsonParamToStdIn(`{
+			"method": "delete_vm",
+			"arguments": ["5"],
+			"api_version": 2
+		}`)
+
+		cpiConfig := getDefaultConfig(Endpoint())
+		cpiConfig.Cloud.Properties.Openstack.StateTimeOut = 1
+		cpiConfig.Cloud.Properties.RetryConfig = config.RetryConfigMap{
+			"default": config.RetryConfig{
+				MaxAttempts:   10,
+				SleepDuration: 0,
+			},
+		}
+
+		err := cpi.Execute(cpiConfig, logger)
+		Expect(err).ShouldNot(HaveOccurred())
+
+		stdOutWriter.Close()
+		Expect(<-outChannel).To(ContainSubstring(`message":"delete_vm: failed while waiting for pool to become active: timeout while waiting for pool 'pool_id_timeout`))
 	})
 
 	It("does not fail when deleting not-existing vm", func() {
@@ -379,6 +502,7 @@ var _ = Describe("Delete VM", func() {
 		}`)
 
 		cpiConfig := getDefaultConfig(Endpoint())
+		cpiConfig.Cloud.Properties.Openstack.StateTimeOut = 1
 		cpiConfig.Cloud.Properties.RetryConfig = config.RetryConfigMap{
 			"default": config.RetryConfig{
 				MaxAttempts:   10,
