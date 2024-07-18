@@ -27,11 +27,12 @@ type FakeLoadbalancerService struct {
 		result1 *pools.Member
 		result2 error
 	}
-	DeletePoolMemberStub        func(string, string) error
+	DeletePoolMemberStub        func(string, string, int) error
 	deletePoolMemberMutex       sync.RWMutex
 	deletePoolMemberArgsForCall []struct {
 		arg1 string
 		arg2 string
+		arg3 int
 	}
 	deletePoolMemberReturns struct {
 		result1 error
@@ -39,17 +40,17 @@ type FakeLoadbalancerService struct {
 	deletePoolMemberReturnsOnCall map[int]struct {
 		result1 error
 	}
-	GetPoolIDStub        func(string) (string, error)
-	getPoolIDMutex       sync.RWMutex
-	getPoolIDArgsForCall []struct {
+	GetPoolStub        func(string) (pools.Pool, error)
+	getPoolMutex       sync.RWMutex
+	getPoolArgsForCall []struct {
 		arg1 string
 	}
-	getPoolIDReturns struct {
-		result1 string
+	getPoolReturns struct {
+		result1 pools.Pool
 		result2 error
 	}
-	getPoolIDReturnsOnCall map[int]struct {
-		result1 string
+	getPoolReturnsOnCall map[int]struct {
+		result1 pools.Pool
 		result2 error
 	}
 	invocations      map[string][][]interface{}
@@ -124,19 +125,20 @@ func (fake *FakeLoadbalancerService) CreatePoolMemberReturnsOnCall(i int, result
 	}{result1, result2}
 }
 
-func (fake *FakeLoadbalancerService) DeletePoolMember(arg1 string, arg2 string) error {
+func (fake *FakeLoadbalancerService) DeletePoolMember(arg1 string, arg2 string, arg3 int) error {
 	fake.deletePoolMemberMutex.Lock()
 	ret, specificReturn := fake.deletePoolMemberReturnsOnCall[len(fake.deletePoolMemberArgsForCall)]
 	fake.deletePoolMemberArgsForCall = append(fake.deletePoolMemberArgsForCall, struct {
 		arg1 string
 		arg2 string
-	}{arg1, arg2})
+		arg3 int
+	}{arg1, arg2, arg3})
 	stub := fake.DeletePoolMemberStub
 	fakeReturns := fake.deletePoolMemberReturns
-	fake.recordInvocation("DeletePoolMember", []interface{}{arg1, arg2})
+	fake.recordInvocation("DeletePoolMember", []interface{}{arg1, arg2, arg3})
 	fake.deletePoolMemberMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
@@ -150,17 +152,17 @@ func (fake *FakeLoadbalancerService) DeletePoolMemberCallCount() int {
 	return len(fake.deletePoolMemberArgsForCall)
 }
 
-func (fake *FakeLoadbalancerService) DeletePoolMemberCalls(stub func(string, string) error) {
+func (fake *FakeLoadbalancerService) DeletePoolMemberCalls(stub func(string, string, int) error) {
 	fake.deletePoolMemberMutex.Lock()
 	defer fake.deletePoolMemberMutex.Unlock()
 	fake.DeletePoolMemberStub = stub
 }
 
-func (fake *FakeLoadbalancerService) DeletePoolMemberArgsForCall(i int) (string, string) {
+func (fake *FakeLoadbalancerService) DeletePoolMemberArgsForCall(i int) (string, string, int) {
 	fake.deletePoolMemberMutex.RLock()
 	defer fake.deletePoolMemberMutex.RUnlock()
 	argsForCall := fake.deletePoolMemberArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
 func (fake *FakeLoadbalancerService) DeletePoolMemberReturns(result1 error) {
@@ -186,16 +188,16 @@ func (fake *FakeLoadbalancerService) DeletePoolMemberReturnsOnCall(i int, result
 	}{result1}
 }
 
-func (fake *FakeLoadbalancerService) GetPoolID(arg1 string) (string, error) {
-	fake.getPoolIDMutex.Lock()
-	ret, specificReturn := fake.getPoolIDReturnsOnCall[len(fake.getPoolIDArgsForCall)]
-	fake.getPoolIDArgsForCall = append(fake.getPoolIDArgsForCall, struct {
+func (fake *FakeLoadbalancerService) GetPool(arg1 string) (pools.Pool, error) {
+	fake.getPoolMutex.Lock()
+	ret, specificReturn := fake.getPoolReturnsOnCall[len(fake.getPoolArgsForCall)]
+	fake.getPoolArgsForCall = append(fake.getPoolArgsForCall, struct {
 		arg1 string
 	}{arg1})
-	stub := fake.GetPoolIDStub
-	fakeReturns := fake.getPoolIDReturns
-	fake.recordInvocation("GetPoolID", []interface{}{arg1})
-	fake.getPoolIDMutex.Unlock()
+	stub := fake.GetPoolStub
+	fakeReturns := fake.getPoolReturns
+	fake.recordInvocation("GetPool", []interface{}{arg1})
+	fake.getPoolMutex.Unlock()
 	if stub != nil {
 		return stub(arg1)
 	}
@@ -205,47 +207,47 @@ func (fake *FakeLoadbalancerService) GetPoolID(arg1 string) (string, error) {
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *FakeLoadbalancerService) GetPoolIDCallCount() int {
-	fake.getPoolIDMutex.RLock()
-	defer fake.getPoolIDMutex.RUnlock()
-	return len(fake.getPoolIDArgsForCall)
+func (fake *FakeLoadbalancerService) GetPoolCallCount() int {
+	fake.getPoolMutex.RLock()
+	defer fake.getPoolMutex.RUnlock()
+	return len(fake.getPoolArgsForCall)
 }
 
-func (fake *FakeLoadbalancerService) GetPoolIDCalls(stub func(string) (string, error)) {
-	fake.getPoolIDMutex.Lock()
-	defer fake.getPoolIDMutex.Unlock()
-	fake.GetPoolIDStub = stub
+func (fake *FakeLoadbalancerService) GetPoolCalls(stub func(string) (pools.Pool, error)) {
+	fake.getPoolMutex.Lock()
+	defer fake.getPoolMutex.Unlock()
+	fake.GetPoolStub = stub
 }
 
-func (fake *FakeLoadbalancerService) GetPoolIDArgsForCall(i int) string {
-	fake.getPoolIDMutex.RLock()
-	defer fake.getPoolIDMutex.RUnlock()
-	argsForCall := fake.getPoolIDArgsForCall[i]
+func (fake *FakeLoadbalancerService) GetPoolArgsForCall(i int) string {
+	fake.getPoolMutex.RLock()
+	defer fake.getPoolMutex.RUnlock()
+	argsForCall := fake.getPoolArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *FakeLoadbalancerService) GetPoolIDReturns(result1 string, result2 error) {
-	fake.getPoolIDMutex.Lock()
-	defer fake.getPoolIDMutex.Unlock()
-	fake.GetPoolIDStub = nil
-	fake.getPoolIDReturns = struct {
-		result1 string
+func (fake *FakeLoadbalancerService) GetPoolReturns(result1 pools.Pool, result2 error) {
+	fake.getPoolMutex.Lock()
+	defer fake.getPoolMutex.Unlock()
+	fake.GetPoolStub = nil
+	fake.getPoolReturns = struct {
+		result1 pools.Pool
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeLoadbalancerService) GetPoolIDReturnsOnCall(i int, result1 string, result2 error) {
-	fake.getPoolIDMutex.Lock()
-	defer fake.getPoolIDMutex.Unlock()
-	fake.GetPoolIDStub = nil
-	if fake.getPoolIDReturnsOnCall == nil {
-		fake.getPoolIDReturnsOnCall = make(map[int]struct {
-			result1 string
+func (fake *FakeLoadbalancerService) GetPoolReturnsOnCall(i int, result1 pools.Pool, result2 error) {
+	fake.getPoolMutex.Lock()
+	defer fake.getPoolMutex.Unlock()
+	fake.GetPoolStub = nil
+	if fake.getPoolReturnsOnCall == nil {
+		fake.getPoolReturnsOnCall = make(map[int]struct {
+			result1 pools.Pool
 			result2 error
 		})
 	}
-	fake.getPoolIDReturnsOnCall[i] = struct {
-		result1 string
+	fake.getPoolReturnsOnCall[i] = struct {
+		result1 pools.Pool
 		result2 error
 	}{result1, result2}
 }
@@ -257,8 +259,8 @@ func (fake *FakeLoadbalancerService) Invocations() map[string][][]interface{} {
 	defer fake.createPoolMemberMutex.RUnlock()
 	fake.deletePoolMemberMutex.RLock()
 	defer fake.deletePoolMemberMutex.RUnlock()
-	fake.getPoolIDMutex.RLock()
-	defer fake.getPoolIDMutex.RUnlock()
+	fake.getPoolMutex.RLock()
+	defer fake.getPoolMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
