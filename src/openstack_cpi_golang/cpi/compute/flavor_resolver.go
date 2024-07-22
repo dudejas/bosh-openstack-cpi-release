@@ -2,13 +2,21 @@ package compute
 
 import (
 	"fmt"
+	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
+	"math"
+	"sort"
 )
+
+const NoDisk = 0
 
 //counterfeiter:generate . FlavorResolver
 type FlavorResolver interface {
 	ResolveFlavorForInstanceType(flavorName string) (flavors.Flavor, error)
+	ResolveFlavorForRequirements(vmResources apiv1.VMResources, bootFromVolume bool) ([]flavors.Flavor, error)
+	GetClosestMatchedFlavor(possibleFlavors []flavors.Flavor) flavors.Flavor
 }
 
 type flavorResolver struct {
@@ -27,14 +35,9 @@ func NewFlavorResolver(
 }
 
 func (f flavorResolver) ResolveFlavorForInstanceType(instanceType string) (flavors.Flavor, error) {
-	flavorPages, err := f.computeFacade.ListFlavors(f.serviceClients.RetryableServiceClient, flavors.ListOpts{})
+	allFlavors, err := f.getFlavors()
 	if err != nil {
-		return flavors.Flavor{}, fmt.Errorf("failed to list flavors: %w", err)
-	}
-
-	allFlavors, err := f.computeFacade.ExtractFlavors(flavorPages)
-	if err != nil {
-		return flavors.Flavor{}, fmt.Errorf("failed to extract flavors: %w", err)
+		return flavors.Flavor{}, fmt.Errorf("failed to get flavors: %w", err)
 	}
 
 	var flavor *flavors.Flavor
@@ -60,4 +63,86 @@ func (f flavorResolver) ResolveFlavorForInstanceType(instanceType string) (flavo
 	}
 
 	return *flavor, nil
+}
+
+func (f flavorResolver) ResolveFlavorForRequirements(vmResources apiv1.VMResources, bootFromVolume bool) ([]flavors.Flavor, error) {
+	normalizedEphemeralDiskSize := float64(vmResources.EphemeralDiskSize) / 1024
+
+	allFlavors, err := f.getFlavors()
+	if err != nil {
+		return []flavors.Flavor{}, fmt.Errorf("failed to get flavors: %w", err)
+	}
+
+	var validFlavors []flavors.Flavor
+	for _, singleFlavor := range allFlavors {
+		if singleFlavor.RAM >= vmResources.RAM && singleFlavor.VCPUs >= vmResources.CPU {
+			validFlavors = append(validFlavors, singleFlavor)
+		}
+	}
+
+	var possibleFlavors []flavors.Flavor
+	if bootFromVolume {
+		for _, singleFlavor := range validFlavors {
+			if singleFlavor.Ephemeral == NoDisk {
+				possibleFlavors = append(possibleFlavors, singleFlavor)
+			}
+		}
+	} else {
+		possibleFlavors = f.bootDefaultFlavors(int(math.Ceil(normalizedEphemeralDiskSize)), validFlavors)
+	}
+	return possibleFlavors, nil
+}
+
+func (f flavorResolver) GetClosestMatchedFlavor(possibleFlavors []flavors.Flavor) flavors.Flavor {
+	// sort the flavors by vcpus, ram, disk and ephemeral disk
+	// the first element is the closest match
+	sort.Slice(possibleFlavors, func(i, j int) bool {
+		if possibleFlavors[i].VCPUs != possibleFlavors[j].VCPUs {
+			return possibleFlavors[i].VCPUs < possibleFlavors[j].VCPUs
+		}
+		if possibleFlavors[i].RAM != possibleFlavors[j].RAM {
+			return possibleFlavors[i].RAM < possibleFlavors[j].RAM
+		}
+		if (possibleFlavors[i].Disk + possibleFlavors[i].Ephemeral) != (possibleFlavors[j].Disk + possibleFlavors[j].Ephemeral) {
+			return (possibleFlavors[i].Disk + possibleFlavors[i].Ephemeral) < (possibleFlavors[j].Disk + possibleFlavors[j].Ephemeral)
+		}
+		return possibleFlavors[i].Disk < possibleFlavors[j].Disk
+	})
+
+	// After sorting, the first element is the closest match
+	return possibleFlavors[0]
+}
+
+func (f flavorResolver) getFlavors() ([]flavors.Flavor, error) {
+	flavorPages, err := f.computeFacade.ListFlavors(f.serviceClients.RetryableServiceClient, flavors.ListOpts{})
+	if err != nil {
+		return []flavors.Flavor{}, fmt.Errorf("failed to list flavors: %w", err)
+	}
+
+	allFlavors, err := f.computeFacade.ExtractFlavors(flavorPages)
+	if err != nil {
+		return []flavors.Flavor{}, fmt.Errorf("failed to extract flavors: %w", err)
+	}
+
+	return allFlavors, nil
+}
+
+func (f flavorResolver) bootDefaultFlavors(ephemeralDiskSize int, validFlavors []flavors.Flavor) []flavors.Flavor {
+	var resultFlavors []flavors.Flavor
+	for _, singleFlavor := range validFlavors {
+		if singleFlavor.Ephemeral >= ephemeralDiskSize && singleFlavor.Disk >= properties.OsOverheadInGb {
+			resultFlavors = append(resultFlavors, singleFlavor)
+		}
+	}
+
+	if len(resultFlavors) != 0 {
+		return resultFlavors
+	}
+
+	for _, singleFlavor := range validFlavors {
+		if singleFlavor.Ephemeral == NoDisk && singleFlavor.Disk >= ephemeralDiskSize+properties.OsOverheadInGb {
+			resultFlavors = append(resultFlavors, singleFlavor)
+		}
+	}
+	return resultFlavors
 }

@@ -22,6 +22,7 @@ func TestIntegration(t *testing.T) {
 }
 
 var defaultConfig config.CpiConfig
+var bootFromVolumeConfig config.CpiConfig
 var logger = utils.NewLogger(boshlog.NewWriterLogger(boshlog.LevelDebug, os.Stderr))
 var Mux *http.ServeMux
 var Server *httptest.Server
@@ -55,6 +56,22 @@ func getDefaultConfig(url string) config.CpiConfig {
 	}
 
 	return defaultConfig
+}
+
+func getBootFromVolumeConfig(url string) config.CpiConfig {
+	bootFromVolumeConfig.Cloud.Properties.Openstack = config.OpenstackConfig{
+		AuthURL:                 url,
+		Username:                "admin",
+		APIKey:                  "admin",
+		DomainName:              "domain",
+		Tenant:                  "tenant",
+		Region:                  "region",
+		DefaultKeyName:          "default_key_name",
+		StemcellPubliclyVisible: true,
+		BootFromVolume:          true,
+	}
+
+	return bootFromVolumeConfig
 }
 
 func SetupHTTP() {

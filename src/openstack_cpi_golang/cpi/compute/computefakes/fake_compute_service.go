@@ -8,6 +8,7 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/compute"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 )
 
@@ -41,6 +42,20 @@ type FakeComputeService struct {
 	}
 	deleteServerReturnsOnCall map[int]struct {
 		result1 error
+	}
+	GetMatchingFlavorStub        func(apiv1.VMResources, bool) (flavors.Flavor, error)
+	getMatchingFlavorMutex       sync.RWMutex
+	getMatchingFlavorArgsForCall []struct {
+		arg1 apiv1.VMResources
+		arg2 bool
+	}
+	getMatchingFlavorReturns struct {
+		result1 flavors.Flavor
+		result2 error
+	}
+	getMatchingFlavorReturnsOnCall map[int]struct {
+		result1 flavors.Flavor
+		result2 error
 	}
 	GetMetadataStub        func(string) (map[string]string, error)
 	getMetadataMutex       sync.RWMutex
@@ -225,6 +240,71 @@ func (fake *FakeComputeService) DeleteServerReturnsOnCall(i int, result1 error) 
 	fake.deleteServerReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
+}
+
+func (fake *FakeComputeService) GetMatchingFlavor(arg1 apiv1.VMResources, arg2 bool) (flavors.Flavor, error) {
+	fake.getMatchingFlavorMutex.Lock()
+	ret, specificReturn := fake.getMatchingFlavorReturnsOnCall[len(fake.getMatchingFlavorArgsForCall)]
+	fake.getMatchingFlavorArgsForCall = append(fake.getMatchingFlavorArgsForCall, struct {
+		arg1 apiv1.VMResources
+		arg2 bool
+	}{arg1, arg2})
+	stub := fake.GetMatchingFlavorStub
+	fakeReturns := fake.getMatchingFlavorReturns
+	fake.recordInvocation("GetMatchingFlavor", []interface{}{arg1, arg2})
+	fake.getMatchingFlavorMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeComputeService) GetMatchingFlavorCallCount() int {
+	fake.getMatchingFlavorMutex.RLock()
+	defer fake.getMatchingFlavorMutex.RUnlock()
+	return len(fake.getMatchingFlavorArgsForCall)
+}
+
+func (fake *FakeComputeService) GetMatchingFlavorCalls(stub func(apiv1.VMResources, bool) (flavors.Flavor, error)) {
+	fake.getMatchingFlavorMutex.Lock()
+	defer fake.getMatchingFlavorMutex.Unlock()
+	fake.GetMatchingFlavorStub = stub
+}
+
+func (fake *FakeComputeService) GetMatchingFlavorArgsForCall(i int) (apiv1.VMResources, bool) {
+	fake.getMatchingFlavorMutex.RLock()
+	defer fake.getMatchingFlavorMutex.RUnlock()
+	argsForCall := fake.getMatchingFlavorArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeComputeService) GetMatchingFlavorReturns(result1 flavors.Flavor, result2 error) {
+	fake.getMatchingFlavorMutex.Lock()
+	defer fake.getMatchingFlavorMutex.Unlock()
+	fake.GetMatchingFlavorStub = nil
+	fake.getMatchingFlavorReturns = struct {
+		result1 flavors.Flavor
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeComputeService) GetMatchingFlavorReturnsOnCall(i int, result1 flavors.Flavor, result2 error) {
+	fake.getMatchingFlavorMutex.Lock()
+	defer fake.getMatchingFlavorMutex.Unlock()
+	fake.GetMatchingFlavorStub = nil
+	if fake.getMatchingFlavorReturnsOnCall == nil {
+		fake.getMatchingFlavorReturnsOnCall = make(map[int]struct {
+			result1 flavors.Flavor
+			result2 error
+		})
+	}
+	fake.getMatchingFlavorReturnsOnCall[i] = struct {
+		result1 flavors.Flavor
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeComputeService) GetMetadata(arg1 string) (map[string]string, error) {
@@ -486,6 +566,8 @@ func (fake *FakeComputeService) Invocations() map[string][][]interface{} {
 	defer fake.createServerMutex.RUnlock()
 	fake.deleteServerMutex.RLock()
 	defer fake.deleteServerMutex.RUnlock()
+	fake.getMatchingFlavorMutex.RLock()
+	defer fake.getMatchingFlavorMutex.RUnlock()
 	fake.getMetadataMutex.RLock()
 	defer fake.getMetadataMutex.RUnlock()
 	fake.getServerMutex.RLock()

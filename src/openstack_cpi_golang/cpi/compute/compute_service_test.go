@@ -777,6 +777,45 @@ var _ = Describe("ComputeService", func() {
 			Expect(err.Error()).To(Equal("failed to set metadata: boom"))
 		})
 	})
+
+	Context("GetMatchingFlavor", func() {
+		var vmResources apiv1.VMResources
+
+		BeforeEach(func() {
+			vmResources = apiv1.VMResources{CPU: 2, RAM: 4096, EphemeralDiskSize: 10}
+		})
+
+		Context("GetMatchingFlavor", func() {
+			It("returns the flavor", func() {
+				possibleFlavors := []flavors.Flavor{{ID: "the_flavor_id", Name: "the_instance_type", VCPUs: 2, RAM: 4096, Ephemeral: 10}}
+				matchedFlavor := flavors.Flavor{ID: "the_flavor_id", Name: "the_instance_type", VCPUs: 2, RAM: 4096, Ephemeral: 10}
+				flavorResolver.ResolveFlavorForRequirementsReturns(possibleFlavors, nil)
+				flavorResolver.GetClosestMatchedFlavorReturns(matchedFlavor)
+
+				returnedFlavor, err := computeService.GetMatchingFlavor(vmResources, false)
+				inputFlavor := flavorResolver.GetClosestMatchedFlavorArgsForCall(0)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(inputFlavor).To(Equal(possibleFlavors))
+				Expect(returnedFlavor).To(Equal(matchedFlavor))
+			})
+		})
+
+		It("returns an error if no flavor is found", func() {
+			flavorResolver.ResolveFlavorForRequirementsReturns([]flavors.Flavor{}, nil)
+
+			_, err := computeService.GetMatchingFlavor(vmResources, false)
+
+			Expect(err.Error()).To(ContainSubstring("Unable to meet requested VM requirements:"))
+		})
+
+		It("returns an error if flavorResolver.ResolveFlavorForRequirements returns an error", func() {
+			flavorResolver.ResolveFlavorForRequirementsReturns([]flavors.Flavor{}, errors.New("boom"))
+
+			_, err := computeService.GetMatchingFlavor(vmResources, false)
+
+			Expect(err.Error()).To(ContainSubstring("failed to get flavors:"))
+		})
+	})
 })
 
 func createCpiConfig(stateTimeOut int) config.CpiConfig {

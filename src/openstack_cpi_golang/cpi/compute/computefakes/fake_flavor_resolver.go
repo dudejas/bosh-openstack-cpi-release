@@ -4,11 +4,23 @@ package computefakes
 import (
 	"sync"
 
+	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/compute"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 )
 
 type FakeFlavorResolver struct {
+	GetClosestMatchedFlavorStub        func([]flavors.Flavor) flavors.Flavor
+	getClosestMatchedFlavorMutex       sync.RWMutex
+	getClosestMatchedFlavorArgsForCall []struct {
+		arg1 []flavors.Flavor
+	}
+	getClosestMatchedFlavorReturns struct {
+		result1 flavors.Flavor
+	}
+	getClosestMatchedFlavorReturnsOnCall map[int]struct {
+		result1 flavors.Flavor
+	}
 	ResolveFlavorForInstanceTypeStub        func(string) (flavors.Flavor, error)
 	resolveFlavorForInstanceTypeMutex       sync.RWMutex
 	resolveFlavorForInstanceTypeArgsForCall []struct {
@@ -22,8 +34,88 @@ type FakeFlavorResolver struct {
 		result1 flavors.Flavor
 		result2 error
 	}
+	ResolveFlavorForRequirementsStub        func(apiv1.VMResources, bool) ([]flavors.Flavor, error)
+	resolveFlavorForRequirementsMutex       sync.RWMutex
+	resolveFlavorForRequirementsArgsForCall []struct {
+		arg1 apiv1.VMResources
+		arg2 bool
+	}
+	resolveFlavorForRequirementsReturns struct {
+		result1 []flavors.Flavor
+		result2 error
+	}
+	resolveFlavorForRequirementsReturnsOnCall map[int]struct {
+		result1 []flavors.Flavor
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeFlavorResolver) GetClosestMatchedFlavor(arg1 []flavors.Flavor) flavors.Flavor {
+	var arg1Copy []flavors.Flavor
+	if arg1 != nil {
+		arg1Copy = make([]flavors.Flavor, len(arg1))
+		copy(arg1Copy, arg1)
+	}
+	fake.getClosestMatchedFlavorMutex.Lock()
+	ret, specificReturn := fake.getClosestMatchedFlavorReturnsOnCall[len(fake.getClosestMatchedFlavorArgsForCall)]
+	fake.getClosestMatchedFlavorArgsForCall = append(fake.getClosestMatchedFlavorArgsForCall, struct {
+		arg1 []flavors.Flavor
+	}{arg1Copy})
+	stub := fake.GetClosestMatchedFlavorStub
+	fakeReturns := fake.getClosestMatchedFlavorReturns
+	fake.recordInvocation("GetClosestMatchedFlavor", []interface{}{arg1Copy})
+	fake.getClosestMatchedFlavorMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeFlavorResolver) GetClosestMatchedFlavorCallCount() int {
+	fake.getClosestMatchedFlavorMutex.RLock()
+	defer fake.getClosestMatchedFlavorMutex.RUnlock()
+	return len(fake.getClosestMatchedFlavorArgsForCall)
+}
+
+func (fake *FakeFlavorResolver) GetClosestMatchedFlavorCalls(stub func([]flavors.Flavor) flavors.Flavor) {
+	fake.getClosestMatchedFlavorMutex.Lock()
+	defer fake.getClosestMatchedFlavorMutex.Unlock()
+	fake.GetClosestMatchedFlavorStub = stub
+}
+
+func (fake *FakeFlavorResolver) GetClosestMatchedFlavorArgsForCall(i int) []flavors.Flavor {
+	fake.getClosestMatchedFlavorMutex.RLock()
+	defer fake.getClosestMatchedFlavorMutex.RUnlock()
+	argsForCall := fake.getClosestMatchedFlavorArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeFlavorResolver) GetClosestMatchedFlavorReturns(result1 flavors.Flavor) {
+	fake.getClosestMatchedFlavorMutex.Lock()
+	defer fake.getClosestMatchedFlavorMutex.Unlock()
+	fake.GetClosestMatchedFlavorStub = nil
+	fake.getClosestMatchedFlavorReturns = struct {
+		result1 flavors.Flavor
+	}{result1}
+}
+
+func (fake *FakeFlavorResolver) GetClosestMatchedFlavorReturnsOnCall(i int, result1 flavors.Flavor) {
+	fake.getClosestMatchedFlavorMutex.Lock()
+	defer fake.getClosestMatchedFlavorMutex.Unlock()
+	fake.GetClosestMatchedFlavorStub = nil
+	if fake.getClosestMatchedFlavorReturnsOnCall == nil {
+		fake.getClosestMatchedFlavorReturnsOnCall = make(map[int]struct {
+			result1 flavors.Flavor
+		})
+	}
+	fake.getClosestMatchedFlavorReturnsOnCall[i] = struct {
+		result1 flavors.Flavor
+	}{result1}
 }
 
 func (fake *FakeFlavorResolver) ResolveFlavorForInstanceType(arg1 string) (flavors.Flavor, error) {
@@ -90,11 +182,80 @@ func (fake *FakeFlavorResolver) ResolveFlavorForInstanceTypeReturnsOnCall(i int,
 	}{result1, result2}
 }
 
+func (fake *FakeFlavorResolver) ResolveFlavorForRequirements(arg1 apiv1.VMResources, arg2 bool) ([]flavors.Flavor, error) {
+	fake.resolveFlavorForRequirementsMutex.Lock()
+	ret, specificReturn := fake.resolveFlavorForRequirementsReturnsOnCall[len(fake.resolveFlavorForRequirementsArgsForCall)]
+	fake.resolveFlavorForRequirementsArgsForCall = append(fake.resolveFlavorForRequirementsArgsForCall, struct {
+		arg1 apiv1.VMResources
+		arg2 bool
+	}{arg1, arg2})
+	stub := fake.ResolveFlavorForRequirementsStub
+	fakeReturns := fake.resolveFlavorForRequirementsReturns
+	fake.recordInvocation("ResolveFlavorForRequirements", []interface{}{arg1, arg2})
+	fake.resolveFlavorForRequirementsMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeFlavorResolver) ResolveFlavorForRequirementsCallCount() int {
+	fake.resolveFlavorForRequirementsMutex.RLock()
+	defer fake.resolveFlavorForRequirementsMutex.RUnlock()
+	return len(fake.resolveFlavorForRequirementsArgsForCall)
+}
+
+func (fake *FakeFlavorResolver) ResolveFlavorForRequirementsCalls(stub func(apiv1.VMResources, bool) ([]flavors.Flavor, error)) {
+	fake.resolveFlavorForRequirementsMutex.Lock()
+	defer fake.resolveFlavorForRequirementsMutex.Unlock()
+	fake.ResolveFlavorForRequirementsStub = stub
+}
+
+func (fake *FakeFlavorResolver) ResolveFlavorForRequirementsArgsForCall(i int) (apiv1.VMResources, bool) {
+	fake.resolveFlavorForRequirementsMutex.RLock()
+	defer fake.resolveFlavorForRequirementsMutex.RUnlock()
+	argsForCall := fake.resolveFlavorForRequirementsArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeFlavorResolver) ResolveFlavorForRequirementsReturns(result1 []flavors.Flavor, result2 error) {
+	fake.resolveFlavorForRequirementsMutex.Lock()
+	defer fake.resolveFlavorForRequirementsMutex.Unlock()
+	fake.ResolveFlavorForRequirementsStub = nil
+	fake.resolveFlavorForRequirementsReturns = struct {
+		result1 []flavors.Flavor
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeFlavorResolver) ResolveFlavorForRequirementsReturnsOnCall(i int, result1 []flavors.Flavor, result2 error) {
+	fake.resolveFlavorForRequirementsMutex.Lock()
+	defer fake.resolveFlavorForRequirementsMutex.Unlock()
+	fake.ResolveFlavorForRequirementsStub = nil
+	if fake.resolveFlavorForRequirementsReturnsOnCall == nil {
+		fake.resolveFlavorForRequirementsReturnsOnCall = make(map[int]struct {
+			result1 []flavors.Flavor
+			result2 error
+		})
+	}
+	fake.resolveFlavorForRequirementsReturnsOnCall[i] = struct {
+		result1 []flavors.Flavor
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeFlavorResolver) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.getClosestMatchedFlavorMutex.RLock()
+	defer fake.getClosestMatchedFlavorMutex.RUnlock()
 	fake.resolveFlavorForInstanceTypeMutex.RLock()
 	defer fake.resolveFlavorForInstanceTypeMutex.RUnlock()
+	fake.resolveFlavorForRequirementsMutex.RLock()
+	defer fake.resolveFlavorForRequirementsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

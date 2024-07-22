@@ -52,6 +52,11 @@ type ComputeService interface {
 	GetMetadata(
 		serverID string,
 	) (map[string]string, error)
+
+	GetMatchingFlavor(
+		vmResources apiv1.VMResources,
+		bootFromVolume bool,
+	) (flavors.Flavor, error)
 }
 
 type computeService struct {
@@ -255,6 +260,26 @@ func (c computeService) GetMetadata(serverID string) (map[string]string, error) 
 		}
 	}
 	return serverMetadata, nil
+}
+
+func (c computeService) GetMatchingFlavor(vmResources apiv1.VMResources, bootFromVolume bool) (flavors.Flavor, error) {
+	possibleFlavors, err := c.flavorResolver.ResolveFlavorForRequirements(vmResources, bootFromVolume)
+	if err != nil {
+		return flavors.Flavor{}, fmt.Errorf("failed to get flavors: %w", err)
+	}
+
+	if len(possibleFlavors) == 0 {
+		return flavors.Flavor{}, fmt.Errorf("Unable to meet requested VM requirements: %d CPU, %d MB RAM, %g GB Disk.\n",
+			vmResources.CPU,
+			vmResources.RAM,
+			float64(vmResources.EphemeralDiskSize)/1024,
+		)
+	}
+
+	matchedFlavor := c.flavorResolver.GetClosestMatchedFlavor(possibleFlavors)
+
+	return matchedFlavor, nil
+
 }
 
 func (c computeService) createServerUserData(
