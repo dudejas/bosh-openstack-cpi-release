@@ -13,34 +13,7 @@ var _ = Describe("Calculate VM cloud properties", func() {
 	BeforeEach(func() {
 		SetupHTTP()
 
-		Mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			fmt.Fprintf(w, `{
-				"versions": {"values": [
-					{"status": "stable","id": "v3.0","links": [{ "href": "%s", "rel": "self" }]},
-					{"status": "stable","id": "v2.0","links": [{ "href": "%s", "rel": "self" }]}
-				]}
-			}`, Endpoint()+"/v3", Endpoint()+"/v2.0")
-		})
-
-		Mux.HandleFunc("/v3/auth/tokens", func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Add("X-Subject-Token", "0123456789")
-			w.WriteHeader(http.StatusCreated)
-
-			fmt.Fprintf(w, `{
-  				"token": {
-    				"expires_at": "2013-02-02T18:30:59.000000Z",
-					"catalog": [{
-						"endpoints": [
-							{"id": "1", "interface": "public", "region": "RegionOne", "url": "%s/v2.1"},
-							{"id": "2", "interface": "admin", "region": "RegionOne", "url": "%s/v2.1"},
-							{"id": "3", "interface": "internal", "region": "RegionOne", "url": "%s/v2.1"}
-						],
-						"type": "compute", 
-						"name": "nova"
-					}]
-  				}
-			}`, Endpoint(), Endpoint(), Endpoint())
-		})
+		MockAuthentication()
 
 		Mux.HandleFunc("/v2.1/flavors/detail", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Content-Type", "application/json")

@@ -9,7 +9,6 @@ import (
 var _ = Describe("Testing the 'info' CPI method", func() {
 	Describe("Invoking `info`", func() {
 		It("receives expected response", func() {
-
 			writeJsonParamToStdIn(`{
 				"method":"info",
 				"arguments":[],

@@ -16,30 +16,7 @@ var _ = Describe("Create Stemcell", func() {
 	BeforeEach(func() {
 		SetupHTTP()
 
-		Mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			fmt.Fprintf(w, `{
-				"versions": {"values": [
-					{"status": "stable","id": "v3.0","links": [{ "href": "%s/v3", "rel": "self" }]},
-					{"status": "stable","id": "v2.0","links": [{ "href": "%s/v2.0", "rel": "self" }]}
-				]}
-			}`, Endpoint(), Endpoint())
-		})
-
-		Mux.HandleFunc("/v3/auth/tokens", func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Add("X-Subject-Token", "0123456789")
-			w.WriteHeader(http.StatusCreated)
-
-			fmt.Fprintf(w, `{
-  				"token": {
-    				"expires_at": "2013-02-02T18:30:59.000000Z",
-					"catalog": [{
-						"endpoints": [{"url": "%s","interface": "public","region": "RegionOne"}],
-						"type": "image",
-						"name": "glance"
-					}]
-  				}
-			}`, Endpoint())
-		})
+		MockAuthentication()
 	})
 
 	AfterEach(func() {
