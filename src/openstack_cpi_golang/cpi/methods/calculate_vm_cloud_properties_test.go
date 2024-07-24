@@ -2,6 +2,7 @@ package methods_test
 
 import (
 	"errors"
+	"fmt"
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/compute/computefakes"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
@@ -27,8 +28,8 @@ var _ = Describe("HasVMMethod", func() {
 			logger = utilsfakes.FakeLogger{}
 			computeService = computefakes.FakeComputeService{}
 			computeServiceBuilder.BuildReturns(&computeService, nil)
-			computeService.GetMatchingFlavorReturns(flavors.Flavor{ID: "the_flavor_id", Name: "the_instance_type", VCPUs: 2, RAM: 4096, Ephemeral: 10}, nil)
-			vmResources = apiv1.VMResources{CPU: 2, RAM: 4096, EphemeralDiskSize: 10}
+			computeService.GetMatchingFlavorReturns(flavors.Flavor{ID: "the_flavor_id", Name: "the_instance_type", VCPUs: 2, RAM: 4096, Ephemeral: 5}, nil)
+			vmResources = apiv1.VMResources{CPU: 2, RAM: 4096, EphemeralDiskSize: 10240}
 			cpiConfig = config.CpiConfig{
 				Cloud: struct {
 					Properties config.Properties `json:"properties"`
@@ -91,6 +92,7 @@ var _ = Describe("HasVMMethod", func() {
 					},
 				}
 			})
+
 			It("calculate the vm cloud properties with root disk", func() {
 				vmCloudProperties, err := methods.NewCalculateVMCloudPropertiesMethod(
 					&computeServiceBuilder,
@@ -108,7 +110,7 @@ var _ = Describe("HasVMMethod", func() {
 				Expect(vmCloudProperties).To(Equal(apiv1.NewVMCloudPropsFromMap(map[string]interface{}{
 					"instance_type": "the_instance_type",
 					"root_disk": map[string]interface{}{
-						"size": 10 + properties.OsOverheadInGb,
+						"size": fmt.Sprintf("%.1f", float64(10+properties.OsOverheadInGb)),
 					},
 				})))
 				Expect(err).ToNot(HaveOccurred())
