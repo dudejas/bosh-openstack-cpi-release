@@ -79,7 +79,7 @@ var _ = Describe("Calculate VM cloud properties", func() {
 				{
 					"cpu": 1,
 					"ram": 8192, 
-					"ephemeral_disk_size": 4096
+					"ephemeral_disk_size": 4194304
 				}	
 			],
 			"api_version": 2
@@ -90,7 +90,7 @@ var _ = Describe("Calculate VM cloud properties", func() {
 
 		stdOutWriter.Close()
 		actual := <-outChannel
-		Expect(actual).To(ContainSubstring(`"result":{"instance_type":"m_c2_m16","root_disk":{"size":4099}},"error":null`))
+		Expect(actual).To(ContainSubstring(`"result":{"instance_type":"m_c2_m16","root_disk":{"size":"4099.0"}},"error":null`))
 	})
 
 	It("fails if no flavor can fulfill the requirement", func() {
