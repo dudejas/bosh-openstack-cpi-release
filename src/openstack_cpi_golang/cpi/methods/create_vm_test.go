@@ -58,7 +58,9 @@ var _ = Describe("CreateVMMethod", func() {
 			networkService.ConfigureVIPNetworkReturns(nil)
 
 			cpiConfig = config.CpiConfig{}
-			cpiConfig.Cloud.Properties.Openstack = config.OpenstackConfig{IgnoreServerAvailabilityZone: true}
+			cpiConfig.Cloud.Properties.Openstack = config.OpenstackConfig{
+				IgnoreServerAvailabilityZone: true, StateTimeOut: 1,
+			}
 
 			networkConfig = properties.NetworkConfig{
 				DefaultNetwork: properties.Network{
@@ -86,14 +88,14 @@ var _ = Describe("CreateVMMethod", func() {
 
 			jsonStr = `{
 					"instance_type": "type1",
-					"loadbalancer_pools": [{"name": "the-pool-name","port": 1234,"monitoring_port": 5678}],
+					"loadbalancer_pools": [{"name": "the-pool-name-1","port": 1234,"monitoring_port": 5678}],
 					"availability_zones": ["z1", "z2"]
 					
 				}`
 			networkService.GetSubnetIDReturns("the-subnet-id", nil)
-			loadbalancerService.GetPoolReturnsOnCall(0, pools.Pool{ID: "the-pool-id"}, nil)
-			loadbalancerService.GetPoolReturnsOnCall(1, pools.Pool{ID: "the-pool-id-1"}, nil)
-			loadbalancerService.CreatePoolMemberReturns(&pools.Member{ID: "the-member-id", PoolID: "the-pool-id"}, nil)
+			loadbalancerService.GetPoolReturnsOnCall(0, pools.Pool{ID: "the-pool-id-1"}, nil)
+			loadbalancerService.GetPoolReturnsOnCall(1, pools.Pool{ID: "the-pool-id-2"}, nil)
+			loadbalancerService.CreatePoolMemberReturns(&pools.Member{ID: "the-member-id", PoolID: "the-pool-id-1"}, nil)
 		})
 
 		It("creates the compute service", func() {
@@ -497,7 +499,7 @@ var _ = Describe("CreateVMMethod", func() {
 				)
 
 				poolName := loadbalancerService.GetPoolArgsForCall(0)
-				Expect(poolName).To(Equal("the-pool-name"))
+				Expect(poolName).To(Equal("the-pool-name-1"))
 			})
 
 			It("returns an error if getting pool ids fails", func() {
@@ -519,13 +521,13 @@ var _ = Describe("CreateVMMethod", func() {
 					env,
 				)
 
-				Expect(err.Error()).To(ContainSubstring("failed to get pool ID of pool 'the-pool-name': boom"))
+				Expect(err.Error()).To(ContainSubstring("failed to get pool ID of pool 'the-pool-name-1': boom"))
 			})
 
 			It("gets subnets of the default network", func() {
 				jsonStr := `{
 					"instance_type": "type1",
-					"loadbalancer_pools": [{"name": "the-pool-name","port": 1234,"monitoring_port": 5678}],
+					"loadbalancer_pools": [{"name": "the-pool-name-1","port": 1234,"monitoring_port": 5678}],
 					"availability_zones": ["z1", "z2"]
 				}`
 
@@ -588,19 +590,19 @@ var _ = Describe("CreateVMMethod", func() {
 				)
 
 				poolID, ip, pool, subnetID, stateTimeOut := loadbalancerService.CreatePoolMemberArgsForCall(0)
-				Expect(poolID).To(Equal("the-pool-id"))
+				Expect(poolID).To(Equal("the-pool-id-1"))
 				Expect(ip).To(Equal("1.1.1.1"))
-				Expect(pool.Name).To(Equal("the-pool-name"))
+				Expect(pool.Name).To(Equal("the-pool-name-1"))
 				Expect(subnetID).To(Equal("the-subnet-id"))
-				Expect(stateTimeOut).To(Equal(0))
+				Expect(stateTimeOut).To(Equal(1))
 			})
 
 			It("Creates multiple pool members", func() {
 				jsonStr = `{
 					"instance_type": "type1",
 					"loadbalancer_pools": [
-						{"name": "the-pool-name","port": 1234,"monitoring_port": 5678},
-						{"name": "the-pool-name-1","port": 1234,"monitoring_port": 5678}
+						{"name": "the-pool-name-1","port": 1234,"monitoring_port": 5678},
+						{"name": "the-pool-name-2","port": 1234,"monitoring_port": 5678}
 					],
 					"availability_zones": ["z1", "z2"]
 				}`
@@ -622,18 +624,18 @@ var _ = Describe("CreateVMMethod", func() {
 				)
 
 				poolID, ip, pool, subnetID, stateTimeOut := loadbalancerService.CreatePoolMemberArgsForCall(0)
-				Expect(poolID).To(Equal("the-pool-id"))
-				Expect(ip).To(Equal("1.1.1.1"))
-				Expect(pool.Name).To(Equal("the-pool-name"))
-				Expect(subnetID).To(Equal("the-subnet-id"))
-				Expect(stateTimeOut).To(Equal(0))
-
-				poolID, ip, pool, subnetID, stateTimeOut = loadbalancerService.CreatePoolMemberArgsForCall(1)
 				Expect(poolID).To(Equal("the-pool-id-1"))
 				Expect(ip).To(Equal("1.1.1.1"))
 				Expect(pool.Name).To(Equal("the-pool-name-1"))
 				Expect(subnetID).To(Equal("the-subnet-id"))
-				Expect(stateTimeOut).To(Equal(0))
+				Expect(stateTimeOut).To(Equal(1))
+
+				poolID, ip, pool, subnetID, stateTimeOut = loadbalancerService.CreatePoolMemberArgsForCall(1)
+				Expect(poolID).To(Equal("the-pool-id-2"))
+				Expect(ip).To(Equal("1.1.1.1"))
+				Expect(pool.Name).To(Equal("the-pool-name-2"))
+				Expect(subnetID).To(Equal("the-subnet-id"))
+				Expect(stateTimeOut).To(Equal(1))
 			})
 
 			It("returns an error if pool member creation fails", func() {
@@ -655,7 +657,7 @@ var _ = Describe("CreateVMMethod", func() {
 					env,
 				)
 
-				Expect(err.Error()).To(ContainSubstring("failed to create pool membership of IP '1.1.1.1' in pool 'the-pool-name': boom"))
+				Expect(err.Error()).To(ContainSubstring("failed to create pool membership of IP '1.1.1.1' in pool 'the-pool-name-1': boom"))
 			})
 		})
 
@@ -663,14 +665,14 @@ var _ = Describe("CreateVMMethod", func() {
 			jsonStr = `{
 					"instance_type": "type1",
 					"loadbalancer_pools": [
-						{"name": "the-pool-name","port": 1234,"monitoring_port": 5678},
-						{"name": "the-pool-name-1","port": 1234,"monitoring_port": 5678}
+						{"name": "the-pool-name-1","port": 1234,"monitoring_port": 5678},
+						{"name": "the-pool-name-2","port": 1234,"monitoring_port": 5678}
 					],
 					"availability_zones": ["z1", "z2"]
 				}`
 
-			loadbalancerService.CreatePoolMemberReturnsOnCall(0, &pools.Member{ID: "the-member-id", PoolID: "the-pool-id"}, nil)
-			loadbalancerService.CreatePoolMemberReturnsOnCall(1, &pools.Member{ID: "the-member-id-1", PoolID: "the-pool-id-1"}, nil)
+			loadbalancerService.CreatePoolMemberReturnsOnCall(0, &pools.Member{ID: "the-member-id", PoolID: "the-pool-id-1"}, nil)
+			loadbalancerService.CreatePoolMemberReturnsOnCall(1, &pools.Member{ID: "the-member-id-1", PoolID: "the-pool-id-2"}, nil)
 
 			methods.NewCreateVMMethod(
 				&imageServiceBuilder,
@@ -689,8 +691,8 @@ var _ = Describe("CreateVMMethod", func() {
 			)
 
 			_, tags := computeService.SetMetadataArgsForCall(0)
-			Expect(tags["lbaas_pool_1"]).To(Equal("the-pool-id/the-member-id"))
-			Expect(tags["lbaas_pool_2"]).To(Equal("the-pool-id-1/the-member-id-1"))
+			Expect(tags["lbaas_pool_1"]).To(Equal("the-pool-id-1/the-member-id"))
+			Expect(tags["lbaas_pool_2"]).To(Equal("the-pool-id-2/the-member-id-1"))
 		})
 
 		It("returns a server ID and a network spec", func() {

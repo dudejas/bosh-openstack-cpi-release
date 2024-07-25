@@ -30,6 +30,7 @@ var _ = Describe("LoadbalancerService", func() {
 		logger = utilsfakes.FakeLogger{}
 		poolsPage = mocks.MockPage{}
 
+		loadbalancer.LoadbalancerServicePollingInterval = 0
 		loadbalancerFacade.GetPoolReturns(&pools.Pool{ID: "pool-id", ProvisioningStatus: "ACTIVE"}, nil)
 	})
 
@@ -110,8 +111,6 @@ var _ = Describe("LoadbalancerService", func() {
 		})
 
 		It("waits for the pool to become ACTIVE", func() {
-			loadbalancer.LoadbalancerServicePollingInterval = 0
-
 			loadbalancerFacade.GetPoolReturnsOnCall(0, &pools.Pool{ID: "pool-id", ProvisioningStatus: "PENDING_UPDATE"}, nil)
 			loadbalancerFacade.GetPoolReturnsOnCall(1, &pools.Pool{ID: "pool-id", ProvisioningStatus: "ACTIVE"}, nil)
 
@@ -140,7 +139,7 @@ var _ = Describe("LoadbalancerService", func() {
 			loadbalancerFacade.GetPoolReturns(nil, errors.New("boom"))
 
 			poolMember, err := loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
-				CreatePoolMember("pool-id", "1.1.1.1", properties.LoadbalancerPool{}, "subnet-id", 100)
+				CreatePoolMember("pool-id", "1.1.1.1", properties.LoadbalancerPool{}, "subnet-id", 1)
 
 			Expect(err.Error()).To(ContainSubstring("failed to retrieve pool 'pool-id': boom"))
 			Expect(poolMember).To(BeNil())
@@ -200,8 +199,6 @@ var _ = Describe("LoadbalancerService", func() {
 		It("waits for the pool member to become ACTIVE", func() {
 			loadbalancerFacade.GetPoolMemberReturnsOnCall(0, &pools.Member{ID: "the-member-id", ProvisioningStatus: "PENDING_CREATE"}, nil)
 			loadbalancerFacade.GetPoolMemberReturnsOnCall(1, &pools.Member{ID: "the-member-id", ProvisioningStatus: "ACTIVE"}, nil)
-
-			loadbalancer.LoadbalancerServicePollingInterval = 0
 
 			poolMember, err := loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
 				CreatePoolMember("pool-id", "1.1.1.1", properties.LoadbalancerPool{}, "subnet-id", 1)
