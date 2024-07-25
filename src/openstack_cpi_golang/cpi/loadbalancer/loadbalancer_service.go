@@ -1,9 +1,11 @@
 package loadbalancer
 
 import (
+	"errors"
 	"fmt"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
+	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/pools"
 	"time"
 )
@@ -63,7 +65,11 @@ func (l loadbalancerService) GetPool(poolName string) (pools.Pool, error) {
 	return extractedPools[0], nil
 }
 
-func (l loadbalancerService) CreatePoolMember(poolID string, ip string, loadbalancerPool properties.LoadbalancerPool, subnetID string, timeout int) (*pools.Member, error) {
+func (l loadbalancerService) CreatePoolMember(poolID string, ip string, loadbalancerPool properties.LoadbalancerPool, subnetID string, stateTimeOut int) (*pools.Member, error) {
+	var err error
+	var errDefault409 gophercloud.ErrDefault409
+	var poolMember *pools.Member
+
 	createMemberOpts := pools.CreateMemberOpts{
 		Address:      ip,
 		ProtocolPort: loadbalancerPool.ProtocolPort,
@@ -74,22 +80,36 @@ func (l loadbalancerService) CreatePoolMember(poolID string, ip string, loadbala
 		createMemberOpts.MonitorPort = loadbalancerPool.MonitoringPort
 	}
 
-	_, err := l.waitForPoolToBecomeActive(poolID, time.Duration(timeout)*time.Second)
-	if err != nil {
-		return nil, fmt.Errorf("failed while waiting for pool to become active: %w", err)
+	timeoutDuration := time.Duration(stateTimeOut) * time.Second
+	createPoolMemberTimeoutTimer := time.NewTimer(timeoutDuration)
+	attempts := 0
+
+	for {
+		select {
+		case <-createPoolMemberTimeoutTimer.C:
+			return nil, fmt.Errorf("timeout after %v attempts while creating pool membership of IP '%s' in pool '%s'", attempts, ip, loadbalancerPool.Name)
+		default:
+			poolMember, err = l.createPoolMember(poolID, createMemberOpts, timeoutDuration)
+			if err != nil {
+				if errors.As(err, &errDefault409) {
+					attempts++
+					l.logger.Warn("create_vm_method", fmt.Sprintf("Changing load balancer resource failed in attempt number '%v' with error: %s", attempts, err.Error()))
+				} else {
+					return nil, err
+				}
+			}
+		}
+		if poolMember != nil {
+			break
+		}
 	}
 
-	member, err := l.loadbalancerFacade.CreatePoolMember(l.serviceClients.ServiceClient, poolID, createMemberOpts)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create pool member: %w", err)
-	}
-
-	member, err = l.waitForPoolMemberToBecomeActive(poolID, member.ID, time.Duration(timeout)*time.Second)
+	poolMember, err = l.waitForPoolMemberToBecomeActive(poolID, poolMember.ID, timeoutDuration)
 	if err != nil {
 		return nil, fmt.Errorf("failed while waiting for pool member to become active: %w", err)
 	}
 
-	return member, nil
+	return poolMember, nil
 }
 
 func (l loadbalancerService) DeletePoolMember(poolID string, memberID string, timeout int) error {
@@ -104,6 +124,20 @@ func (l loadbalancerService) DeletePoolMember(poolID string, memberID string, ti
 	}
 
 	return nil
+}
+
+func (l loadbalancerService) createPoolMember(poolID string, createMemberOpts pools.CreateMemberOpts, timeout time.Duration) (*pools.Member, error) {
+	_, err := l.waitForPoolToBecomeActive(poolID, timeout)
+	if err != nil {
+		return nil, fmt.Errorf("failed while waiting for pool to become active: %w", err)
+	}
+
+	member, err := l.loadbalancerFacade.CreatePoolMember(l.serviceClients.ServiceClient, poolID, createMemberOpts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create pool member: %w", err)
+	}
+
+	return member, nil
 }
 
 func (l loadbalancerService) waitForPoolToBecomeActive(poolID string, timeout time.Duration) (*pools.Pool, error) {
