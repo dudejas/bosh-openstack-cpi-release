@@ -10,6 +10,19 @@ import (
 )
 
 type FakeOpenstackService struct {
+	BlockStorageV3Stub        func(config.OpenstackConfig) (*gophercloud.ServiceClient, error)
+	blockStorageV3Mutex       sync.RWMutex
+	blockStorageV3ArgsForCall []struct {
+		arg1 config.OpenstackConfig
+	}
+	blockStorageV3Returns struct {
+		result1 *gophercloud.ServiceClient
+		result2 error
+	}
+	blockStorageV3ReturnsOnCall map[int]struct {
+		result1 *gophercloud.ServiceClient
+		result2 error
+	}
 	ComputeServiceV2Stub        func(config.OpenstackConfig) (*gophercloud.ServiceClient, error)
 	computeServiceV2Mutex       sync.RWMutex
 	computeServiceV2ArgsForCall []struct {
@@ -64,6 +77,70 @@ type FakeOpenstackService struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeOpenstackService) BlockStorageV3(arg1 config.OpenstackConfig) (*gophercloud.ServiceClient, error) {
+	fake.blockStorageV3Mutex.Lock()
+	ret, specificReturn := fake.blockStorageV3ReturnsOnCall[len(fake.blockStorageV3ArgsForCall)]
+	fake.blockStorageV3ArgsForCall = append(fake.blockStorageV3ArgsForCall, struct {
+		arg1 config.OpenstackConfig
+	}{arg1})
+	stub := fake.BlockStorageV3Stub
+	fakeReturns := fake.blockStorageV3Returns
+	fake.recordInvocation("BlockStorageV3", []interface{}{arg1})
+	fake.blockStorageV3Mutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeOpenstackService) BlockStorageV3CallCount() int {
+	fake.blockStorageV3Mutex.RLock()
+	defer fake.blockStorageV3Mutex.RUnlock()
+	return len(fake.blockStorageV3ArgsForCall)
+}
+
+func (fake *FakeOpenstackService) BlockStorageV3Calls(stub func(config.OpenstackConfig) (*gophercloud.ServiceClient, error)) {
+	fake.blockStorageV3Mutex.Lock()
+	defer fake.blockStorageV3Mutex.Unlock()
+	fake.BlockStorageV3Stub = stub
+}
+
+func (fake *FakeOpenstackService) BlockStorageV3ArgsForCall(i int) config.OpenstackConfig {
+	fake.blockStorageV3Mutex.RLock()
+	defer fake.blockStorageV3Mutex.RUnlock()
+	argsForCall := fake.blockStorageV3ArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeOpenstackService) BlockStorageV3Returns(result1 *gophercloud.ServiceClient, result2 error) {
+	fake.blockStorageV3Mutex.Lock()
+	defer fake.blockStorageV3Mutex.Unlock()
+	fake.BlockStorageV3Stub = nil
+	fake.blockStorageV3Returns = struct {
+		result1 *gophercloud.ServiceClient
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeOpenstackService) BlockStorageV3ReturnsOnCall(i int, result1 *gophercloud.ServiceClient, result2 error) {
+	fake.blockStorageV3Mutex.Lock()
+	defer fake.blockStorageV3Mutex.Unlock()
+	fake.BlockStorageV3Stub = nil
+	if fake.blockStorageV3ReturnsOnCall == nil {
+		fake.blockStorageV3ReturnsOnCall = make(map[int]struct {
+			result1 *gophercloud.ServiceClient
+			result2 error
+		})
+	}
+	fake.blockStorageV3ReturnsOnCall[i] = struct {
+		result1 *gophercloud.ServiceClient
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeOpenstackService) ComputeServiceV2(arg1 config.OpenstackConfig) (*gophercloud.ServiceClient, error) {
@@ -325,6 +402,8 @@ func (fake *FakeOpenstackService) NetworkServiceV2ReturnsOnCall(i int, result1 *
 func (fake *FakeOpenstackService) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.blockStorageV3Mutex.RLock()
+	defer fake.blockStorageV3Mutex.RUnlock()
 	fake.computeServiceV2Mutex.RLock()
 	defer fake.computeServiceV2Mutex.RUnlock()
 	fake.imageServiceV2Mutex.RLock()

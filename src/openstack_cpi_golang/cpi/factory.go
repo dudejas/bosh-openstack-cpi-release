@@ -11,6 +11,7 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/network"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/openstack"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/volume"
 )
 
 type Factory struct {
@@ -114,7 +115,12 @@ func (f Factory) New(ctx apiv1.CallContext) (apiv1.CPI, error) {
 		methods.NewSetVMMetadataMethod(),
 		methods.NewGetDisksMethod(),
 
-		methods.NewCreateDiskMethod(),
+		methods.NewCreateDiskMethod(
+			compute.NewComputeServiceBuilder(openstackService, f.cpiConfig, f.logger),
+			volume.NewVolumeServiceBuilder(openstackService, f.cpiConfig, f.logger),
+			f.cpiConfig,
+			f.logger,
+		),
 		methods.NewDeleteDiskMethod(),
 		methods.NewAttachDiskMethod(),
 		methods.NewDetachDiskMethod(),

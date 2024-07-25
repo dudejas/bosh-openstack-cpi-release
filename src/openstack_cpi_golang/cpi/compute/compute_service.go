@@ -57,6 +57,10 @@ type ComputeService interface {
 		vmResources apiv1.VMResources,
 		bootFromVolume bool,
 	) (flavors.Flavor, error)
+
+	GetServerAZ(
+		vmcid string,
+	) (string, error)
 }
 
 type computeService struct {
@@ -94,6 +98,17 @@ func (c computeService) GetServer(
 		return nil, fmt.Errorf("failed to retrieve server information: %w", err)
 	}
 	return server, nil
+}
+
+func (c computeService) GetServerAZ(
+	serverID string,
+) (string, error) {
+	serverWithAz, err := c.computeFacade.GetServerWithAZ(c.serviceClients.RetryableServiceClient, serverID)
+
+	if err != nil {
+		return "", fmt.Errorf("failed to retrieve server information: %w", err)
+	}
+	return serverWithAz.AvailabilityZone, nil
 }
 
 func (c computeService) CreateServer(

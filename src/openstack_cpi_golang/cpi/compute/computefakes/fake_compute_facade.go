@@ -95,6 +95,20 @@ type FakeComputeFacade struct {
 		result1 map[string]string
 		result2 error
 	}
+	GetServerWithAZStub        func(utils.RetryableServiceClient, string) (*compute.ServerWithAZ, error)
+	getServerWithAZMutex       sync.RWMutex
+	getServerWithAZArgsForCall []struct {
+		arg1 utils.RetryableServiceClient
+		arg2 string
+	}
+	getServerWithAZReturns struct {
+		result1 *compute.ServerWithAZ
+		result2 error
+	}
+	getServerWithAZReturnsOnCall map[int]struct {
+		result1 *compute.ServerWithAZ
+		result2 error
+	}
 	ListFlavorsStub        func(utils.RetryableServiceClient, flavors.ListOpts) (pagination.Page, error)
 	listFlavorsMutex       sync.RWMutex
 	listFlavorsArgsForCall []struct {
@@ -528,6 +542,71 @@ func (fake *FakeComputeFacade) GetServerMetadataReturnsOnCall(i int, result1 map
 	}{result1, result2}
 }
 
+func (fake *FakeComputeFacade) GetServerWithAZ(arg1 utils.RetryableServiceClient, arg2 string) (*compute.ServerWithAZ, error) {
+	fake.getServerWithAZMutex.Lock()
+	ret, specificReturn := fake.getServerWithAZReturnsOnCall[len(fake.getServerWithAZArgsForCall)]
+	fake.getServerWithAZArgsForCall = append(fake.getServerWithAZArgsForCall, struct {
+		arg1 utils.RetryableServiceClient
+		arg2 string
+	}{arg1, arg2})
+	stub := fake.GetServerWithAZStub
+	fakeReturns := fake.getServerWithAZReturns
+	fake.recordInvocation("GetServerWithAZ", []interface{}{arg1, arg2})
+	fake.getServerWithAZMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeComputeFacade) GetServerWithAZCallCount() int {
+	fake.getServerWithAZMutex.RLock()
+	defer fake.getServerWithAZMutex.RUnlock()
+	return len(fake.getServerWithAZArgsForCall)
+}
+
+func (fake *FakeComputeFacade) GetServerWithAZCalls(stub func(utils.RetryableServiceClient, string) (*compute.ServerWithAZ, error)) {
+	fake.getServerWithAZMutex.Lock()
+	defer fake.getServerWithAZMutex.Unlock()
+	fake.GetServerWithAZStub = stub
+}
+
+func (fake *FakeComputeFacade) GetServerWithAZArgsForCall(i int) (utils.RetryableServiceClient, string) {
+	fake.getServerWithAZMutex.RLock()
+	defer fake.getServerWithAZMutex.RUnlock()
+	argsForCall := fake.getServerWithAZArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeComputeFacade) GetServerWithAZReturns(result1 *compute.ServerWithAZ, result2 error) {
+	fake.getServerWithAZMutex.Lock()
+	defer fake.getServerWithAZMutex.Unlock()
+	fake.GetServerWithAZStub = nil
+	fake.getServerWithAZReturns = struct {
+		result1 *compute.ServerWithAZ
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeComputeFacade) GetServerWithAZReturnsOnCall(i int, result1 *compute.ServerWithAZ, result2 error) {
+	fake.getServerWithAZMutex.Lock()
+	defer fake.getServerWithAZMutex.Unlock()
+	fake.GetServerWithAZStub = nil
+	if fake.getServerWithAZReturnsOnCall == nil {
+		fake.getServerWithAZReturnsOnCall = make(map[int]struct {
+			result1 *compute.ServerWithAZ
+			result2 error
+		})
+	}
+	fake.getServerWithAZReturnsOnCall[i] = struct {
+		result1 *compute.ServerWithAZ
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeComputeFacade) ListFlavors(arg1 utils.RetryableServiceClient, arg2 flavors.ListOpts) (pagination.Page, error) {
 	fake.listFlavorsMutex.Lock()
 	ret, specificReturn := fake.listFlavorsReturnsOnCall[len(fake.listFlavorsArgsForCall)]
@@ -737,6 +816,8 @@ func (fake *FakeComputeFacade) Invocations() map[string][][]interface{} {
 	defer fake.getServerMutex.RUnlock()
 	fake.getServerMetadataMutex.RLock()
 	defer fake.getServerMetadataMutex.RUnlock()
+	fake.getServerWithAZMutex.RLock()
+	defer fake.getServerWithAZMutex.RUnlock()
 	fake.listFlavorsMutex.RLock()
 	defer fake.listFlavorsMutex.RUnlock()
 	fake.rebootServerMutex.RLock()

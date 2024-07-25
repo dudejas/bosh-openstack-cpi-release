@@ -15,6 +15,8 @@ type OpenstackFacade interface {
 
 	NewImageServiceV2(client *gophercloud.ProviderClient, eo gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error)
 
+	NewBlockStorageV3(client *gophercloud.ProviderClient, eo gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error)
+
 	AuthenticatedClient(options gophercloud.AuthOptions) (*gophercloud.ProviderClient, error)
 }
 
@@ -38,6 +40,10 @@ func (c openstackFacade) NewNetworkV2(client *gophercloud.ProviderClient, endpoi
 
 func (c openstackFacade) NewImageServiceV2(client *gophercloud.ProviderClient, endpointOpts gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error) {
 	return openstack.NewImageServiceV2(client, endpointOpts)
+}
+
+func (c openstackFacade) NewBlockStorageV3(client *gophercloud.ProviderClient, endpointOpts gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error) {
+	return openstack.NewBlockStorageV3(client, endpointOpts)
 }
 
 func (c openstackFacade) AuthenticatedClient(options gophercloud.AuthOptions) (*gophercloud.ProviderClient, error) {

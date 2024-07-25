@@ -83,6 +83,19 @@ type FakeComputeService struct {
 		result1 *servers.Server
 		result2 error
 	}
+	GetServerAZStub        func(string) (string, error)
+	getServerAZMutex       sync.RWMutex
+	getServerAZArgsForCall []struct {
+		arg1 string
+	}
+	getServerAZReturns struct {
+		result1 string
+		result2 error
+	}
+	getServerAZReturnsOnCall map[int]struct {
+		result1 string
+		result2 error
+	}
 	RebootServerStub        func(string, config.CpiConfig) error
 	rebootServerMutex       sync.RWMutex
 	rebootServerArgsForCall []struct {
@@ -435,6 +448,70 @@ func (fake *FakeComputeService) GetServerReturnsOnCall(i int, result1 *servers.S
 	}{result1, result2}
 }
 
+func (fake *FakeComputeService) GetServerAZ(arg1 string) (string, error) {
+	fake.getServerAZMutex.Lock()
+	ret, specificReturn := fake.getServerAZReturnsOnCall[len(fake.getServerAZArgsForCall)]
+	fake.getServerAZArgsForCall = append(fake.getServerAZArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.GetServerAZStub
+	fakeReturns := fake.getServerAZReturns
+	fake.recordInvocation("GetServerAZ", []interface{}{arg1})
+	fake.getServerAZMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeComputeService) GetServerAZCallCount() int {
+	fake.getServerAZMutex.RLock()
+	defer fake.getServerAZMutex.RUnlock()
+	return len(fake.getServerAZArgsForCall)
+}
+
+func (fake *FakeComputeService) GetServerAZCalls(stub func(string) (string, error)) {
+	fake.getServerAZMutex.Lock()
+	defer fake.getServerAZMutex.Unlock()
+	fake.GetServerAZStub = stub
+}
+
+func (fake *FakeComputeService) GetServerAZArgsForCall(i int) string {
+	fake.getServerAZMutex.RLock()
+	defer fake.getServerAZMutex.RUnlock()
+	argsForCall := fake.getServerAZArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeComputeService) GetServerAZReturns(result1 string, result2 error) {
+	fake.getServerAZMutex.Lock()
+	defer fake.getServerAZMutex.Unlock()
+	fake.GetServerAZStub = nil
+	fake.getServerAZReturns = struct {
+		result1 string
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeComputeService) GetServerAZReturnsOnCall(i int, result1 string, result2 error) {
+	fake.getServerAZMutex.Lock()
+	defer fake.getServerAZMutex.Unlock()
+	fake.GetServerAZStub = nil
+	if fake.getServerAZReturnsOnCall == nil {
+		fake.getServerAZReturnsOnCall = make(map[int]struct {
+			result1 string
+			result2 error
+		})
+	}
+	fake.getServerAZReturnsOnCall[i] = struct {
+		result1 string
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeComputeService) RebootServer(arg1 string, arg2 config.CpiConfig) error {
 	fake.rebootServerMutex.Lock()
 	ret, specificReturn := fake.rebootServerReturnsOnCall[len(fake.rebootServerArgsForCall)]
@@ -572,6 +649,8 @@ func (fake *FakeComputeService) Invocations() map[string][][]interface{} {
 	defer fake.getMetadataMutex.RUnlock()
 	fake.getServerMutex.RLock()
 	defer fake.getServerMutex.RUnlock()
+	fake.getServerAZMutex.RLock()
+	defer fake.getServerAZMutex.RUnlock()
 	fake.rebootServerMutex.RLock()
 	defer fake.rebootServerMutex.RUnlock()
 	fake.setMetadataMutex.RLock()

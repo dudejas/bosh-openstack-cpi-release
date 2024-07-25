@@ -13,6 +13,7 @@ type OpenstackService interface {
 	LoadbalancerV2(config config.OpenstackConfig) (*gophercloud.ServiceClient, error)
 	NetworkServiceV2(config config.OpenstackConfig) (*gophercloud.ServiceClient, error)
 	ImageServiceV2(config config.OpenstackConfig) (*gophercloud.ServiceClient, error)
+	BlockStorageV3(config config.OpenstackConfig) (*gophercloud.ServiceClient, error)
 }
 
 type openstackService struct {
@@ -61,6 +62,15 @@ func (c openstackService) ImageServiceV2(config config.OpenstackConfig) (*gopher
 	}
 
 	return c.openstackFacade.NewImageServiceV2(authenticatedClient, c.endpointOpts())
+}
+
+func (c openstackService) BlockStorageV3(config config.OpenstackConfig) (*gophercloud.ServiceClient, error) {
+	authenticatedClient, err := c.openstackFacade.AuthenticatedClient(config.AuthOptions())
+	if err != nil {
+		return nil, fmt.Errorf("failed to authenticate: %w", err)
+	}
+
+	return c.openstackFacade.NewBlockStorageV3(authenticatedClient, c.endpointOpts())
 }
 
 func (c openstackService) endpointOpts() gophercloud.EndpointOpts {

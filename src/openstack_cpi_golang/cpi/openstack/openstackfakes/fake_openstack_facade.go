@@ -22,6 +22,20 @@ type FakeOpenstackFacade struct {
 		result1 *gophercloud.ProviderClient
 		result2 error
 	}
+	NewBlockStorageV3Stub        func(*gophercloud.ProviderClient, gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error)
+	newBlockStorageV3Mutex       sync.RWMutex
+	newBlockStorageV3ArgsForCall []struct {
+		arg1 *gophercloud.ProviderClient
+		arg2 gophercloud.EndpointOpts
+	}
+	newBlockStorageV3Returns struct {
+		result1 *gophercloud.ServiceClient
+		result2 error
+	}
+	newBlockStorageV3ReturnsOnCall map[int]struct {
+		result1 *gophercloud.ServiceClient
+		result2 error
+	}
 	NewComputeV2Stub        func(*gophercloud.ProviderClient, gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error)
 	newComputeV2Mutex       sync.RWMutex
 	newComputeV2ArgsForCall []struct {
@@ -142,6 +156,71 @@ func (fake *FakeOpenstackFacade) AuthenticatedClientReturnsOnCall(i int, result1
 	}
 	fake.authenticatedClientReturnsOnCall[i] = struct {
 		result1 *gophercloud.ProviderClient
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeOpenstackFacade) NewBlockStorageV3(arg1 *gophercloud.ProviderClient, arg2 gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error) {
+	fake.newBlockStorageV3Mutex.Lock()
+	ret, specificReturn := fake.newBlockStorageV3ReturnsOnCall[len(fake.newBlockStorageV3ArgsForCall)]
+	fake.newBlockStorageV3ArgsForCall = append(fake.newBlockStorageV3ArgsForCall, struct {
+		arg1 *gophercloud.ProviderClient
+		arg2 gophercloud.EndpointOpts
+	}{arg1, arg2})
+	stub := fake.NewBlockStorageV3Stub
+	fakeReturns := fake.newBlockStorageV3Returns
+	fake.recordInvocation("NewBlockStorageV3", []interface{}{arg1, arg2})
+	fake.newBlockStorageV3Mutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeOpenstackFacade) NewBlockStorageV3CallCount() int {
+	fake.newBlockStorageV3Mutex.RLock()
+	defer fake.newBlockStorageV3Mutex.RUnlock()
+	return len(fake.newBlockStorageV3ArgsForCall)
+}
+
+func (fake *FakeOpenstackFacade) NewBlockStorageV3Calls(stub func(*gophercloud.ProviderClient, gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error)) {
+	fake.newBlockStorageV3Mutex.Lock()
+	defer fake.newBlockStorageV3Mutex.Unlock()
+	fake.NewBlockStorageV3Stub = stub
+}
+
+func (fake *FakeOpenstackFacade) NewBlockStorageV3ArgsForCall(i int) (*gophercloud.ProviderClient, gophercloud.EndpointOpts) {
+	fake.newBlockStorageV3Mutex.RLock()
+	defer fake.newBlockStorageV3Mutex.RUnlock()
+	argsForCall := fake.newBlockStorageV3ArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeOpenstackFacade) NewBlockStorageV3Returns(result1 *gophercloud.ServiceClient, result2 error) {
+	fake.newBlockStorageV3Mutex.Lock()
+	defer fake.newBlockStorageV3Mutex.Unlock()
+	fake.NewBlockStorageV3Stub = nil
+	fake.newBlockStorageV3Returns = struct {
+		result1 *gophercloud.ServiceClient
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeOpenstackFacade) NewBlockStorageV3ReturnsOnCall(i int, result1 *gophercloud.ServiceClient, result2 error) {
+	fake.newBlockStorageV3Mutex.Lock()
+	defer fake.newBlockStorageV3Mutex.Unlock()
+	fake.NewBlockStorageV3Stub = nil
+	if fake.newBlockStorageV3ReturnsOnCall == nil {
+		fake.newBlockStorageV3ReturnsOnCall = make(map[int]struct {
+			result1 *gophercloud.ServiceClient
+			result2 error
+		})
+	}
+	fake.newBlockStorageV3ReturnsOnCall[i] = struct {
+		result1 *gophercloud.ServiceClient
 		result2 error
 	}{result1, result2}
 }
@@ -411,6 +490,8 @@ func (fake *FakeOpenstackFacade) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.authenticatedClientMutex.RLock()
 	defer fake.authenticatedClientMutex.RUnlock()
+	fake.newBlockStorageV3Mutex.RLock()
+	defer fake.newBlockStorageV3Mutex.RUnlock()
 	fake.newComputeV2Mutex.RLock()
 	defer fake.newComputeV2Mutex.RUnlock()
 	fake.newImageServiceV2Mutex.RLock()

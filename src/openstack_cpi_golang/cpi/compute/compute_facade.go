@@ -2,11 +2,17 @@ package compute
 
 import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/availabilityzones"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/pagination"
 )
+
+type ServerWithAZ struct {
+	servers.Server
+	availabilityzones.ServerAvailabilityZoneExt
+}
 
 //counterfeiter:generate . ComputeFacade
 type ComputeFacade interface {
@@ -17,6 +23,8 @@ type ComputeFacade interface {
 	RebootServer(client utils.ServiceClient, serverID string, opts servers.RebootOptsBuilder) error
 
 	GetServer(client utils.RetryableServiceClient, serverID string) (*servers.Server, error)
+
+	GetServerWithAZ(client utils.RetryableServiceClient, serverID string) (*ServerWithAZ, error)
 
 	ListFlavors(client utils.RetryableServiceClient, opts flavors.ListOpts) (pagination.Page, error)
 
@@ -50,6 +58,12 @@ func (c computeFacade) RebootServer(client utils.ServiceClient, serverID string,
 
 func (c computeFacade) GetServer(client utils.RetryableServiceClient, serverID string) (*servers.Server, error) {
 	return servers.Get(client, serverID).Extract()
+}
+
+func (c computeFacade) GetServerWithAZ(client utils.RetryableServiceClient, serverID string) (*ServerWithAZ, error) {
+	var serverWithAz ServerWithAZ
+	err := servers.Get(client, serverID).ExtractInto(&serverWithAz)
+	return &serverWithAz, err
 }
 
 func (c computeFacade) ListFlavors(client utils.RetryableServiceClient, opts flavors.ListOpts) (pagination.Page, error) {
