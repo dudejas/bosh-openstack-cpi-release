@@ -774,7 +774,7 @@ var _ = Describe("ComputeService", func() {
 
 			err := computeService.SetMetadata(server, serverTags)
 
-			Expect(err.Error()).To(Equal("failed to set metadata: boom"))
+			Expect(err.Error()).To(Equal("failed to set VM Metadata: boom"))
 		})
 	})
 

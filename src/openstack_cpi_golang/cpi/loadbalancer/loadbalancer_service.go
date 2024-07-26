@@ -149,7 +149,7 @@ func (l loadbalancerService) waitForPoolToBecomeActive(poolID string, timeout ti
 			return nil, fmt.Errorf("timeout while waiting for pool '%s' to become active", poolID)
 		default:
 			pool, err := l.loadbalancerFacade.GetPool(l.serviceClients.RetryableServiceClient, poolID)
-			if err != nil {
+			if err != nil || pool == nil {
 				return nil, fmt.Errorf("failed to retrieve pool '%s': %w", poolID, err)
 			}
 
@@ -175,7 +175,7 @@ func (l loadbalancerService) waitForPoolMemberToBecomeActive(poolID string, memb
 			return nil, fmt.Errorf("timeout while waiting for pool member '%s' to become active", memberID)
 		default:
 			member, err := l.loadbalancerFacade.GetPoolMember(l.serviceClients.RetryableServiceClient, poolID, memberID)
-			if err != nil {
+			if err != nil || member == nil {
 				return nil, fmt.Errorf("failed to retrieve pool member '%s': %w", memberID, err)
 			}
 

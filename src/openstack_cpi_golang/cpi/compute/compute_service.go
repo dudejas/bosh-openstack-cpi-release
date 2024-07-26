@@ -167,6 +167,7 @@ func (c computeService) CreateServer(
 
 	var server *servers.Server
 	availabilityZones := c.availabilityZoneProvider.GetAvailabilityZones(cloudProps)
+
 	for _, availabilityZone := range availabilityZones {
 		createOpts := c.getServerCreateOpts(vmName, availabilityZone, stemcellCID, networkConfig, flavor, keyname, blockDevices, userDataJson)
 
@@ -272,7 +273,7 @@ func (c computeService) SetMetadata(server servers.Server, tags properties.Serve
 
 		_, err := c.computeFacade.SetServerMetadata(c.serviceClients.ServiceClient, server.ID, metadatumOpts)
 		if err != nil {
-			return fmt.Errorf("failed to set metadata: %w", err)
+			return fmt.Errorf("failed to set VM Metadata: %w", err)
 		}
 	}
 

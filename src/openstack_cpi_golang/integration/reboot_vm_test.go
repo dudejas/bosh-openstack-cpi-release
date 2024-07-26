@@ -188,7 +188,7 @@ var _ = Describe("REBOOT VM", func() {
 		}`)
 
 		cpiConfig := getDefaultConfig(Endpoint())
-		cpiConfig.Cloud.Properties.Openstack.StateTimeOut = 50
+		cpiConfig.Cloud.Properties.Openstack.StateTimeOut = 1
 
 		err := cpi.Execute(cpiConfig, logger)
 		Expect(err).ShouldNot(HaveOccurred())
