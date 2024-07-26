@@ -2,6 +2,7 @@ package compute
 
 import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
+	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/availabilityzones"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
@@ -35,6 +36,12 @@ type ComputeFacade interface {
 	GetServerMetadata(client utils.RetryableServiceClient, serverID string) (map[string]string, error)
 
 	SetServerMetadata(client utils.ServiceClient, serverID string, opts servers.MetadatumOpts) (map[string]string, error)
+
+	UpdateServer(client utils.ServiceClient, serverID string, opt servers.UpdateOptsBuilder) (*servers.Server, error)
+
+	UpdateServerMetadata(client utils.ServiceClient, serverID string, opts servers.UpdateMetadataOptsBuilder) (map[string]string, error)
+
+	DeleteServerMetaData(client *gophercloud.ServiceClient, serverID string, key string) error
 }
 
 type computeFacade struct {
@@ -84,4 +91,16 @@ func (c computeFacade) GetServerMetadata(client utils.RetryableServiceClient, se
 
 func (c computeFacade) SetServerMetadata(client utils.ServiceClient, serverID string, opts servers.MetadatumOpts) (map[string]string, error) {
 	return servers.CreateMetadatum(client, serverID, opts).Extract()
+}
+
+func (c computeFacade) UpdateServer(client utils.ServiceClient, serverID string, opts servers.UpdateOptsBuilder) (*servers.Server, error) {
+	return servers.Update(client, serverID, opts).Extract()
+}
+
+func (c computeFacade) UpdateServerMetadata(client utils.ServiceClient, serverID string, opts servers.UpdateMetadataOptsBuilder) (map[string]string, error) {
+	return servers.UpdateMetadata(client, serverID, opts).Extract()
+}
+
+func (c computeFacade) DeleteServerMetaData(client *gophercloud.ServiceClient, serverID string, key string) error {
+	return servers.DeleteMetadatum(client, serverID, key).ExtractErr()
 }

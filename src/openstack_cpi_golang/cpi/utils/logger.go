@@ -10,6 +10,8 @@ type Logger interface {
 
 	Error(tag, msg string, args ...interface{})
 
+	Debug(tag, msg string, args ...interface{})
+
 	HandlePanic(tag string)
 
 	TargetLogger() boshlog.Logger
@@ -35,6 +37,10 @@ func (l logger) Warn(tag, msg string, args ...interface{}) {
 
 func (l logger) Error(tag, msg string, args ...interface{}) {
 	l.logger.Error(tag, msg, args)
+}
+
+func (l logger) Debug(tag, msg string, args ...interface{}) {
+	l.logger.Debug(tag, msg, args)
 }
 
 func (l logger) HandlePanic(tag string) {

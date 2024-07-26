@@ -778,6 +778,180 @@ var _ = Describe("ComputeService", func() {
 		})
 	})
 
+	Context("UpdateServer", func() {
+		var serverExp servers.Server
+		serverExp = servers.Server{ID: "123-456", Status: "ACTIVE"}
+
+		It("updates a server without raising errors", func() {
+			computeFacade.UpdateServerReturns(&serverExp, nil)
+			serverResult, err := computeService.UpdateServer(
+				"123-456",
+				"test-server",
+			)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(*serverResult).To(Equal(serverExp))
+		})
+
+		It("returns an error if UpdateServer fails", func() {
+			computeFacade.UpdateServerReturns(nil, errors.New("boom"))
+
+			serverResult, err := computeService.UpdateServer(
+				"123-456",
+				"test-server",
+			)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("failed to update server: boom"))
+			Expect(serverResult).To(BeNil())
+		})
+
+	})
+
+	Context("UpdateServerMetadata", func() {
+		var server servers.Server
+
+		BeforeEach(func() {
+			server = servers.Server{ID: "123-456"}
+		})
+
+		It("does not update metadata due to empty importing map", func() {
+			server := servers.Server{ID: "123-456"}
+			updateMetaDataMap := map[string]interface{}{}
+
+			err := computeService.UpdateServerMetadata(server.ID, updateMetaDataMap)
+			firstLoggerInfo, secondLoggerInfo, _ := logger.InfoArgsForCall(0)
+
+			Expect(computeFacade.UpdateServerMetadataCallCount()).To(Equal(0))
+			Expect(logger.InfoCallCount()).To(Equal(1))
+			Expect(firstLoggerInfo).To(Equal("compute_service"))
+			Expect(secondLoggerInfo).To(Equal("SKIPPING: No Metadata was found to be updated for server with id '123-456'"))
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("does not update metadata due to importing map with only id", func() {
+			updateMetaDataMap := map[string]interface{}{
+				"id": "value1",
+			}
+
+			err := computeService.UpdateServerMetadata(server.ID, updateMetaDataMap)
+			firstLoggerInfo, secondLoggerInfo, _ := logger.InfoArgsForCall(0)
+
+			Expect(computeFacade.UpdateServerMetadataCallCount()).To(Equal(0))
+			Expect(logger.InfoCallCount()).To(Equal(1))
+			Expect(firstLoggerInfo).To(Equal("compute_service"))
+			Expect(secondLoggerInfo).To(Equal("SKIPPING: No Metadata was found to be updated for server with id '123-456'"))
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("returns an error if updating server metadata fails", func() {
+			computeFacade.UpdateServerMetadataReturns(nil, errors.New("boom"))
+			updateMetaDataMap := map[string]interface{}{
+				"test": "value1",
+			}
+
+			err := computeService.UpdateServerMetadata(server.ID, updateMetaDataMap)
+
+			Expect(err.Error()).To(Equal("failed to update server metadata: boom"))
+		})
+
+		It("returns no error if server metadata was updated successfully", func() {
+			computeFacade.UpdateServerMetadataReturns(nil, nil)
+			updateMetaDataMap := map[string]interface{}{
+				"test": "value1",
+			}
+
+			err := computeService.UpdateServerMetadata(server.ID, updateMetaDataMap)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(logger.InfoCallCount()).To(Equal(0))
+		})
+	})
+
+	Context("DeleteServerMetadata", func() {
+		var server servers.Server
+
+		BeforeEach(func() {
+			server = servers.Server{ID: "123-456"}
+		})
+
+		It("does not delete metadata due to empty updated importing map", func() {
+			updateMetaDataMap := map[string]interface{}{}
+			oldMetaDataMap := map[string]string{}
+
+			err := computeService.DeleteServerMetaData(server.ID, oldMetaDataMap, updateMetaDataMap)
+			firstLoggerInfo, secondLoggerInfo, _ := logger.InfoArgsForCall(0)
+
+			Expect(computeFacade.UpdateServerMetadataCallCount()).To(Equal(0))
+			Expect(logger.InfoCallCount()).To(Equal(1))
+			Expect(firstLoggerInfo).To(Equal("compute_service"))
+			Expect(secondLoggerInfo).To(Equal("SKIPPING: No metadata was provided to be deleted for server with id '123-456'"))
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("does not delete metadata due to empty old importing map", func() {
+			updateMetaDataMap := map[string]interface{}{
+				"name":  "value1",
+				"index": "value2",
+				"test":  "value3",
+			}
+			oldMetaDataMap := map[string]string{
+				"name":  "value1",
+				"index": "value2",
+			}
+
+			err := computeService.DeleteServerMetaData(server.ID, oldMetaDataMap, updateMetaDataMap)
+			firstLoggerInfo, secondLoggerInfo, _ := logger.InfoArgsForCall(0)
+
+			Expect(computeFacade.UpdateServerMetadataCallCount()).To(Equal(0))
+			Expect(logger.InfoCallCount()).To(Equal(1))
+			Expect(firstLoggerInfo).To(Equal("compute_service"))
+			Expect(secondLoggerInfo).To(Equal("SKIPPING: No metadata was provided to be deleted for server with id '123-456'"))
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("returns error when deleting server metadata fails", func() {
+			computeFacade.DeleteServerMetaDataReturns(errors.New("boom"))
+			updateMetaDataMap := map[string]interface{}{
+				"name":  "value1",
+				"index": "value2",
+				"test":  "value3",
+			}
+			oldMetaDataMap := map[string]string{
+				"name":  "value1",
+				"index": "value2",
+				"test":  "value3",
+			}
+
+			err := computeService.DeleteServerMetaData(server.ID, oldMetaDataMap, updateMetaDataMap)
+
+			Expect(err.Error()).To(Equal("failed to delete server metadata for key test: boom"))
+			Expect(computeFacade.DeleteServerMetaDataCallCount()).To(Equal(1))
+		})
+
+		It("does not delete metadata due to empty importing map", func() {
+			updateMetaDataMap := map[string]interface{}{
+				"name":  "value1",
+				"index": "value2",
+				"test":  "value3",
+			}
+			oldMetaDataMap := map[string]string{
+				"name":  "value1",
+				"index": "value2",
+				"test":  "value3",
+			}
+
+			err := computeService.DeleteServerMetaData(server.ID, oldMetaDataMap, updateMetaDataMap)
+			_, actServerID, actMapKey := computeFacade.DeleteServerMetaDataArgsForCall(0)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(computeFacade.DeleteServerMetaDataCallCount()).To(Equal(1))
+			Expect(actServerID).To(Equal(server.ID))
+			Expect(actMapKey).To(Equal("test"))
+		})
+
+	})
+
 	Context("GetMatchingFlavor", func() {
 		var vmResources apiv1.VMResources
 

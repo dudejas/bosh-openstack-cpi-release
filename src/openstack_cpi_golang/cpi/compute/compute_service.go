@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
@@ -52,6 +53,22 @@ type ComputeService interface {
 	GetMetadata(
 		serverID string,
 	) (map[string]string, error)
+
+	UpdateServer(
+		serverID string,
+		serverName string,
+	) (*servers.Server, error)
+
+	UpdateServerMetadata(
+		serverID string,
+		metaMap map[string]interface{},
+	) error
+
+	DeleteServerMetaData(
+		serverID string,
+		oldMetaDataMap map[string]string,
+		updateMetaDataMap map[string]interface{},
+	) error
 
 	GetMatchingFlavor(
 		vmResources apiv1.VMResources,
@@ -275,6 +292,103 @@ func (c computeService) GetMetadata(serverID string) (map[string]string, error) 
 		}
 	}
 	return serverMetadata, nil
+}
+
+func (c computeService) UpdateServer(serverID string, serverName string) (*servers.Server, error) {
+
+	updateOptsBuilder := servers.UpdateOpts{
+		Name: serverName,
+	}
+
+	server, err := c.computeFacade.UpdateServer(c.serviceClients.ServiceClient, serverID, updateOptsBuilder)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update server: %w", err)
+	}
+	return server, nil
+
+}
+
+func (c computeService) UpdateServerMetadata(serverID string, updateMetaDataMap map[string]interface{}) error {
+	if length := len(updateMetaDataMap); length == 0 {
+		c.logger.Info("compute_service", fmt.Sprintf("SKIPPING: No Metadata was found to be updated for server with id '%s'", serverID))
+		return nil
+	}
+
+	var blacklistedMetadataKeys = []string{
+		"id",
+	}
+
+	updateMetadataOpts := servers.MetadataOpts{}
+	for k, v := range updateMetaDataMap {
+		updateMetadataOpts[k] = v.(string)
+	}
+
+	for _, key := range blacklistedMetadataKeys {
+		delete(updateMetadataOpts, key)
+	}
+
+	if length := len(updateMetadataOpts); length == 0 {
+		c.logger.Info("compute_service", fmt.Sprintf("SKIPPING: No Metadata was found to be updated for server with id '%s'", serverID))
+		return nil
+	}
+
+	_, err := c.computeFacade.UpdateServerMetadata(c.serviceClients.ServiceClient, serverID, updateMetadataOpts)
+	if err != nil {
+		return fmt.Errorf("failed to update server metadata: %w", err)
+	}
+	return nil
+
+}
+
+func (c computeService) DeleteServerMetaData(
+	serverID string,
+	oldMetaDataMap map[string]string,
+	updateMetaDataMap map[string]interface{},
+) error {
+	if length := len(updateMetaDataMap); length == 0 {
+		c.logger.Info("compute_service", fmt.Sprintf("SKIPPING: No metadata was provided to be deleted for server with id '%s'", serverID))
+		return nil
+	}
+
+	var oldMetaDataMapToBeDeleted = map[string]string{}
+
+	//it is not required to delete blacklisted metadata (key); they get updated without prior deletion
+	//(keeping the sequence in the dashboard)
+	var blacklistedMetadataKeysOld = []string{
+		"director",
+		"deployment",
+		"instance_group",
+		"job",
+		"id",
+		"name",
+		"index",
+		"created_at",
+		"compiling",
+	}
+
+	for _, key := range blacklistedMetadataKeysOld {
+		delete(oldMetaDataMap, key)
+	}
+
+	if length := len(oldMetaDataMap); length == 0 {
+		c.logger.Info("compute_service", fmt.Sprintf("SKIPPING: No metadata was provided to be deleted for server with id '%s'", serverID))
+		return nil
+	}
+
+	for key, value := range oldMetaDataMap {
+		if _, exists := updateMetaDataMap[key]; exists {
+			oldMetaDataMapToBeDeleted[key] = value
+		}
+	}
+
+	for id, _ := range oldMetaDataMapToBeDeleted {
+		err := c.computeFacade.DeleteServerMetaData(c.serviceClients.ServiceClient, serverID, id)
+		if err != nil {
+			return fmt.Errorf("failed to delete server metadata for key %s: %w", id, err)
+		}
+	}
+
+	return nil
 }
 
 func (c computeService) GetMatchingFlavor(vmResources apiv1.VMResources, bootFromVolume bool) (flavors.Flavor, error) {
