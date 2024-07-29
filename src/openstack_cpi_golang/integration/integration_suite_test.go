@@ -144,9 +144,17 @@ func MockAuthentication() {
 						  ],
 						  "type": "load-balancer",
 						  "name": "octavia"
+						},{
+						   "endpoints": [
+							 { "id": "1", "interface": "public",  "region": "RegionOne", "url": "%s/v3"},
+							 { "id": "2", "interface": "admin",   "region": "RegionOne", "url": "%s/v3"},
+							 { "id": "3", "interface": "internal","region": "RegionOne", "url": "%s/v3"}
+						  ],
+						  "type": "volumev3",
+						  "name": "cinderv3"
 						}]
 					}
-				}`, Endpoint(), Endpoint(), Endpoint(), Endpoint(), Endpoint(), Endpoint(), Endpoint(), Endpoint(), Endpoint(), Endpoint())
+				}`, Endpoint(), Endpoint(), Endpoint(), Endpoint(), Endpoint(), Endpoint(), Endpoint(), Endpoint(), Endpoint(), Endpoint(), Endpoint(), Endpoint(), Endpoint())
 		}
 	})
 }
