@@ -9,7 +9,6 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/methods"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/network/networkfakes"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils/utilsfakes"
-	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -238,25 +237,6 @@ var _ = Describe("DeleteVMMethod", func() {
 			Expect(memberID).To(Equal("memberID"))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(loadbalancerService.DeletePoolMemberCallCount()).To(Equal(1))
-		})
-
-		It("does not fail if delete pool member returns error-not-found", func() {
-			testError := gophercloud.ErrDefault404{gophercloud.ErrUnexpectedResponseCode{Actual: 404}}
-			loadbalancerService.DeletePoolMemberReturns(testError)
-
-			err := methods.NewDeleteVMMethod(
-				&networkServiceBuilder,
-				&computeServiceBuilder,
-				&loadbalancerServiceBuilder,
-				config.CpiConfig{},
-				&logger,
-			).DeleteVM(
-				apiv1.NewVMCID("vm-id"),
-			)
-
-			Expect(err).ToNot(HaveOccurred())
-			Expect(loadbalancerService.DeletePoolMemberCallCount()).To(Equal(1))
-			Expect(computeService.DeleteServerCallCount()).To(Equal(1))
 		})
 
 		It("returns an error if deleting a pool member fails", func() {

@@ -272,6 +272,7 @@ var _ = Describe("LoadbalancerService", func() {
 
 			Expect(poolId).To(Equal("pool-id"))
 			Expect(err).ToNot(HaveOccurred())
+			Expect(loadbalancerFacade.DeletePoolMemberCallCount()).To(Equal(1))
 		})
 
 		It("times out while waiting for pool to become ACTIVE", func() {
@@ -282,6 +283,7 @@ var _ = Describe("LoadbalancerService", func() {
 
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("timeout while waiting for pool 'pool-id' to become active"))
+			Expect(loadbalancerFacade.DeletePoolMemberCallCount()).To(Equal(0))
 		})
 
 		It("returns an error while waiting if getting pool fails", func() {
@@ -292,6 +294,7 @@ var _ = Describe("LoadbalancerService", func() {
 
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("failed to retrieve pool 'pool-id': boom"))
+			Expect(loadbalancerFacade.DeletePoolMemberCallCount()).To(Equal(0))
 		})
 
 		It("returns an error while waiting if the pool is in state ERROR", func() {
@@ -302,6 +305,7 @@ var _ = Describe("LoadbalancerService", func() {
 
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("pool status ended up in ERROR state"))
+			Expect(loadbalancerFacade.DeletePoolMemberCallCount()).To(Equal(0))
 		})
 
 		It("deletes pool member", func() {
@@ -313,6 +317,18 @@ var _ = Describe("LoadbalancerService", func() {
 			Expect(retryableServiceClient).To(BeAssignableToTypeOf(utilsRetryableServiceClient))
 
 			Expect(err).ToNot(HaveOccurred())
+			Expect(loadbalancerFacade.DeletePoolMemberCallCount()).To(Equal(1))
+		})
+
+		It("does not fail if delete pool member returns error-not-found", func() {
+			testError := gophercloud.ErrDefault404{gophercloud.ErrUnexpectedResponseCode{Actual: 404}}
+			loadbalancerFacade.DeletePoolMemberReturns(testError)
+
+			err := loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
+				DeletePoolMember("pool-name", "member-id", 1)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(loadbalancerFacade.DeletePoolMemberCallCount()).To(Equal(1))
 		})
 
 		It("returns an error if deleting pool member fails", func() {
@@ -322,6 +338,7 @@ var _ = Describe("LoadbalancerService", func() {
 				DeletePoolMember("pool-name", "member-id", 1)
 
 			Expect(err.Error()).To(Equal("failed to delete pool member: boom"))
+			Expect(loadbalancerFacade.DeletePoolMemberCallCount()).To(Equal(1))
 		})
 	})
 

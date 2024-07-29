@@ -1,7 +1,6 @@
 package methods
 
 import (
-	"errors"
 	"fmt"
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/compute"
@@ -10,7 +9,6 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/network"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
-	"github.com/gophercloud/gophercloud"
 	"strings"
 )
 
@@ -39,8 +37,6 @@ func NewDeleteVMMethod(
 }
 
 func (a DeleteVMMethod) DeleteVM(cid apiv1.VMCID) error {
-	var errDefault404 gophercloud.ErrDefault404
-
 	computeService, err := a.computeServiceBuilder.Build()
 	if err != nil {
 		return fmt.Errorf("delete_vm: %w", err)
@@ -73,14 +69,8 @@ func (a DeleteVMMethod) DeleteVM(cid apiv1.VMCID) error {
 				parts := strings.Split(value, "/")
 				err = loadbalancerService.DeletePoolMember(parts[0], parts[1], a.cpiConfig.Cloud.Properties.Openstack.StateTimeOut)
 				if err != nil {
-					if errors.As(err, &errDefault404) {
-						a.logger.Info("delete_vm", fmt.Sprintf("SKIPPING: pool member deletion with id '%s' in pool '%s' is not found", parts[1], parts[0]))
-						continue
-					} else {
-						return fmt.Errorf("delete_vm: %w", err)
-					}
+					return fmt.Errorf("delete_vm: %w", err)
 				}
-				a.logger.Info("delete_vm", fmt.Sprintf("Deleted pool member with id '%s' from pool '%s'", parts[1], parts[0]))
 			}
 		}
 	}

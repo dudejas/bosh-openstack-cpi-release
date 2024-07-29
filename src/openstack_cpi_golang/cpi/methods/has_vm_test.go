@@ -6,6 +6,7 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/compute/computefakes"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/methods"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils/utilsfakes"
+	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -50,6 +51,21 @@ var _ = Describe("HasVMMethod", func() {
 
 			Expect(exists).To(Equal(false))
 			Expect(err.Error()).To(Equal("has_vm: boom"))
+		})
+
+		It("returns false and no error if GetServer fails with notFound", func() {
+			testError := gophercloud.ErrDefault404{gophercloud.ErrUnexpectedResponseCode{Actual: 404}}
+			computeService.GetServerReturns(nil, testError)
+
+			exists, err := methods.NewHasVMMethod(
+				&computeServiceBuilder,
+				&logger,
+			).HasVM(
+				apiv1.NewVMCID("vm-id"),
+			)
+
+			Expect(exists).To(Equal(false))
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("returns false and error if GetServer fails", func() {

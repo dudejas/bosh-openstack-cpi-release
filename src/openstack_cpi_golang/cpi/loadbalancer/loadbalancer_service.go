@@ -84,23 +84,20 @@ func (l loadbalancerService) CreatePoolMember(poolID string, ip string, loadbala
 	createPoolMemberTimeoutTimer := time.NewTimer(timeoutDuration)
 	attempts := 0
 
-	for {
+	for poolMember == nil {
 		select {
 		case <-createPoolMemberTimeoutTimer.C:
-			return nil, fmt.Errorf("timeout after %v attempts while creating pool membership of IP '%s' in pool '%s'", attempts, ip, loadbalancerPool.Name)
+			return nil, fmt.Errorf("timeout after %v attempts while creating pool membership with IP '%s' in pool '%s'", attempts, ip, loadbalancerPool.Name)
 		default:
 			poolMember, err = l.createPoolMember(poolID, createMemberOpts, timeoutDuration)
 			if err != nil {
 				if errors.As(err, &errDefault409) {
 					attempts++
-					l.logger.Warn("create_vm_method", fmt.Sprintf("Changing load balancer resource failed in attempt number '%v' with error: %s", attempts, err.Error()))
+					l.logger.Warn("loadbalancer_service", fmt.Sprintf("creating pool membership with IP '%s' in pool '%s' failed in attempt number '%v' with error: %s", ip, poolID, attempts, err.Error()))
 				} else {
 					return nil, err
 				}
 			}
-		}
-		if poolMember != nil {
-			break
 		}
 	}
 
@@ -112,15 +109,37 @@ func (l loadbalancerService) CreatePoolMember(poolID string, ip string, loadbala
 	return poolMember, nil
 }
 
-func (l loadbalancerService) DeletePoolMember(poolID string, memberID string, timeout int) error {
-	_, err := l.waitForPoolToBecomeActive(poolID, time.Duration(timeout)*time.Second)
-	if err != nil {
-		return fmt.Errorf("failed while waiting for pool to become active: %w", err)
-	}
+func (l loadbalancerService) DeletePoolMember(poolID string, memberID string, stateTimeOut int) error {
+	var err error
+	var errDefault409 gophercloud.ErrDefault409
+	var errDefault404 gophercloud.ErrDefault404
 
-	err = l.loadbalancerFacade.DeletePoolMember(l.serviceClients.RetryableServiceClient, poolID, memberID)
-	if err != nil {
-		return fmt.Errorf("failed to delete pool member: %w", err)
+	var isDeleted bool
+
+	timeoutDuration := time.Duration(stateTimeOut) * time.Second
+	deletePoolMemberTimeoutTimer := time.NewTimer(timeoutDuration)
+	attempts := 0
+
+	for !isDeleted {
+		select {
+		case <-deletePoolMemberTimeoutTimer.C:
+			return fmt.Errorf("timeout after %v attempts while deleting pool membership with ID '%s' in pool '%s'", attempts, memberID, poolID)
+		default:
+			err = l.deletePoolMember(poolID, memberID, timeoutDuration)
+			if err != nil {
+				if errors.As(err, &errDefault409) {
+					attempts++
+					l.logger.Warn("loadbalancer_service", fmt.Sprintf("deleting pool membership with ID '%s' in pool '%s' failed in attempt number '%v' with error: %s", memberID, poolID, attempts, err.Error()))
+				} else if errors.As(err, &errDefault404) {
+					l.logger.Info("loadbalancer_service", fmt.Sprintf("SKIPPING deletion: pool member with id '%s' in pool '%s' is not found", memberID, poolID))
+					return nil
+				} else {
+					return err
+				}
+			}
+			isDeleted = true
+			l.logger.Info("loadbalancer_service", fmt.Sprintf("Deleted pool member with id '%s' from pool '%s'", memberID, poolID))
+		}
 	}
 
 	return nil
@@ -138,6 +157,20 @@ func (l loadbalancerService) createPoolMember(poolID string, createMemberOpts po
 	}
 
 	return member, nil
+}
+
+func (l loadbalancerService) deletePoolMember(poolID string, memberID string, timeout time.Duration) error {
+	_, err := l.waitForPoolToBecomeActive(poolID, timeout)
+	if err != nil {
+		return fmt.Errorf("failed while waiting for pool to become active: %w", err)
+	}
+
+	err = l.loadbalancerFacade.DeletePoolMember(l.serviceClients.RetryableServiceClient, poolID, memberID)
+	if err != nil {
+		return fmt.Errorf("failed to delete pool member: %w", err)
+	}
+
+	return nil
 }
 
 func (l loadbalancerService) waitForPoolToBecomeActive(poolID string, timeout time.Duration) (*pools.Pool, error) {
