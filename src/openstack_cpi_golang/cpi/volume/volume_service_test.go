@@ -29,22 +29,22 @@ var _ = Describe("VolumeService", func() {
 
 		volumeService = volume.NewVolumeService(serviceClients, &volumeFacade)
 		volume.VolumeServicePollingInterval = 0
-		volumeFacade.CreateDiskReturns(&volumes.Volume{ID: "123-456"}, nil)
+		volumeFacade.CreateVolumeReturns(&volumes.Volume{ID: "123-456"}, nil)
 		defaultCloudConfig = properties.CreateDisk{VolumeType: "the_volume_type"}
 	})
 
 	Context("CreateVolume", func() {
 
 		It("returns error if volume was failed to be created", func() {
-			volumeFacade.CreateDiskReturns(&volumes.Volume{ID: "123-456", Status: "available"}, errors.New("boom"))
+			volumeFacade.CreateVolumeReturns(&volumes.Volume{ID: "123-456", Status: "available"}, errors.New("boom"))
 
 			_, err := volumeService.CreateVolume(1, defaultCloudConfig, "z1")
 
 			Expect(err.Error()).To(Equal("failed to create volume: boom"))
 		})
 
-		It("returns an active server", func() {
-			volumeFacade.CreateDiskReturns(&volumes.Volume{ID: "123-456", Status: "available"}, nil)
+		It("returns an available volume", func() {
+			volumeFacade.CreateVolumeReturns(&volumes.Volume{ID: "123-456", Status: "available"}, nil)
 
 			volume, err := volumeService.CreateVolume(1, defaultCloudConfig, "z1")
 
@@ -53,41 +53,59 @@ var _ = Describe("VolumeService", func() {
 		})
 	})
 
-	Context("WaitForVolumeToBecomeAvailable", func() {
+	Context("WaitForVolumeToBecomeStatus", func() {
 		It("returns error if volume was failed to become available", func() {
 			volumeFacade.GetVolumeReturns(&volumes.Volume{ID: "123-456", Status: "error"}, nil)
 
-			_, err := volumeService.WaitForVolumeToBecomeAvailable("123-456", 1*time.Second)
+			err := volumeService.WaitForVolumeToBecomeStatus("123-456", 1*time.Second, "some_target_status")
 
-			Expect(err.Error()).To(Equal("volume became error state while waiting to become available"))
+			Expect(err.Error()).To(Equal("volume became error state while waiting to become some_target_status"))
 		})
 
 		It("returns an available volume", func() {
 			volumeFacade.GetVolumeReturnsOnCall(0, &volumes.Volume{ID: "123-456", Status: "creating"}, nil)
-			volumeFacade.GetVolumeReturnsOnCall(1, &volumes.Volume{ID: "123-456", Status: "available"}, nil)
+			volumeFacade.GetVolumeReturnsOnCall(1, &volumes.Volume{ID: "123-456", Status: "some_target_status"}, nil)
 
-			volume, err := volumeService.WaitForVolumeToBecomeAvailable("123-456", 1*time.Second)
+			err := volumeService.WaitForVolumeToBecomeStatus("123-456", 1*time.Second, "some_target_status")
 
 			Expect(volumeFacade.GetVolumeCallCount()).To(Equal(2))
 			Expect(err).ToNot(HaveOccurred())
-			Expect(volume).ToNot(BeNil())
 		})
 
-		It("times out while waiting for volume to become available", func() {
+		It("times out while waiting for volume to become some_target_status", func() {
 			volumeFacade.GetVolumeReturns(&volumes.Volume{ID: "123-456", Status: "creating"}, nil)
 
-			_, err := volumeService.WaitForVolumeToBecomeAvailable("123-456", 0)
+			err := volumeService.WaitForVolumeToBecomeStatus("123-456", 0, "some_target_status")
 
-			Expect(err.Error()).To(Equal("timeout while waiting for volume to become available"))
+			Expect(err.Error()).To(Equal("timeout while waiting for volume to become some_target_status"))
 		})
 
 		It("returns an error if it cannot get the volume", func() {
 			volumeFacade.GetVolumeReturns(&volumes.Volume{}, errors.New("boom"))
 
-			_, err := volumeService.WaitForVolumeToBecomeAvailable("123-456", 0)
+			err := volumeService.WaitForVolumeToBecomeStatus("123-456", 0, "some_target_status")
 
 			Expect(volumeFacade.GetVolumeCallCount()).To(Equal(1))
 			Expect(err.Error()).To(Equal("boom"))
+		})
+	})
+
+	Context("DeleteVolume", func() {
+
+		It("returns error if volume was failed to be deleted", func() {
+			volumeFacade.DeleteVolumeReturns(errors.New("boom"))
+
+			err := volumeService.DeleteVolume("some_disk_cid")
+
+			Expect(err.Error()).To(Equal("failed to delete volume: boom"))
+		})
+
+		It("returns nil if deletion of volume was successful", func() {
+			volumeFacade.DeleteVolumeReturns(nil)
+
+			err := volumeService.DeleteVolume("some_disk_cid")
+
+			Expect(err).ToNot(HaveOccurred())
 		})
 	})
 })

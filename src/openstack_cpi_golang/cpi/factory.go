@@ -124,7 +124,11 @@ func (f Factory) New(ctx apiv1.CallContext) (apiv1.CPI, error) {
 			f.cpiConfig,
 			f.logger,
 		),
-		methods.NewDeleteDiskMethod(),
+		methods.NewDeleteDiskMethod(
+			volume.NewVolumeServiceBuilder(openstackService, f.cpiConfig, f.logger),
+			f.cpiConfig,
+			f.logger,
+		),
 		methods.NewAttachDiskMethod(),
 		methods.NewDetachDiskMethod(),
 		methods.NewHasDiskMethod(),

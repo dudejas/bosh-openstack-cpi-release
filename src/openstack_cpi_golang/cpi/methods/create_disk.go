@@ -64,6 +64,7 @@ func (a CreateDiskMethod) CreateDisk(
 		}
 		return apiv1.DiskCID{}, fmt.Errorf("create_disk: %w", err)
 	}
+
 	var az string
 	if server.ID != "" && !openstackConfig.IgnoreServerAvailabilityZone {
 		az, err = computeService.GetServerAZ(vmCID.AsString())
@@ -79,9 +80,9 @@ func (a CreateDiskMethod) CreateDisk(
 	}
 
 	a.logger.Info("create_disk", fmt.Sprintf("Creating new volume %s ...", volume.ID))
-	volume, err = volumeService.WaitForVolumeToBecomeAvailable(volume.ID, time.Duration(openstackConfig.StateTimeOut)*time.Second)
+	err = volumeService.WaitForVolumeToBecomeStatus(volume.ID, time.Duration(openstackConfig.StateTimeOut)*time.Second, "available")
 	if err != nil {
-		return apiv1.DiskCID{}, fmt.Errorf("failed while waiting on the volume creation: %w", err)
+		return apiv1.DiskCID{}, fmt.Errorf("create disk: %w", err)
 	}
 
 	return apiv1.NewDiskCID(volume.ID), nil

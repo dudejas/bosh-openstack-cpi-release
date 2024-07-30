@@ -10,19 +10,32 @@ import (
 )
 
 type FakeVolumeFacade struct {
-	CreateDiskStub        func(utils.ServiceClient, volumes.CreateOptsBuilder) (*volumes.Volume, error)
-	createDiskMutex       sync.RWMutex
-	createDiskArgsForCall []struct {
+	CreateVolumeStub        func(utils.ServiceClient, volumes.CreateOptsBuilder) (*volumes.Volume, error)
+	createVolumeMutex       sync.RWMutex
+	createVolumeArgsForCall []struct {
 		arg1 utils.ServiceClient
 		arg2 volumes.CreateOptsBuilder
 	}
-	createDiskReturns struct {
+	createVolumeReturns struct {
 		result1 *volumes.Volume
 		result2 error
 	}
-	createDiskReturnsOnCall map[int]struct {
+	createVolumeReturnsOnCall map[int]struct {
 		result1 *volumes.Volume
 		result2 error
+	}
+	DeleteVolumeStub        func(utils.RetryableServiceClient, string, volumes.DeleteOptsBuilder) error
+	deleteVolumeMutex       sync.RWMutex
+	deleteVolumeArgsForCall []struct {
+		arg1 utils.RetryableServiceClient
+		arg2 string
+		arg3 volumes.DeleteOptsBuilder
+	}
+	deleteVolumeReturns struct {
+		result1 error
+	}
+	deleteVolumeReturnsOnCall map[int]struct {
+		result1 error
 	}
 	GetVolumeStub        func(utils.RetryableServiceClient, string) (*volumes.Volume, error)
 	getVolumeMutex       sync.RWMutex
@@ -42,17 +55,17 @@ type FakeVolumeFacade struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeVolumeFacade) CreateDisk(arg1 utils.ServiceClient, arg2 volumes.CreateOptsBuilder) (*volumes.Volume, error) {
-	fake.createDiskMutex.Lock()
-	ret, specificReturn := fake.createDiskReturnsOnCall[len(fake.createDiskArgsForCall)]
-	fake.createDiskArgsForCall = append(fake.createDiskArgsForCall, struct {
+func (fake *FakeVolumeFacade) CreateVolume(arg1 utils.ServiceClient, arg2 volumes.CreateOptsBuilder) (*volumes.Volume, error) {
+	fake.createVolumeMutex.Lock()
+	ret, specificReturn := fake.createVolumeReturnsOnCall[len(fake.createVolumeArgsForCall)]
+	fake.createVolumeArgsForCall = append(fake.createVolumeArgsForCall, struct {
 		arg1 utils.ServiceClient
 		arg2 volumes.CreateOptsBuilder
 	}{arg1, arg2})
-	stub := fake.CreateDiskStub
-	fakeReturns := fake.createDiskReturns
-	fake.recordInvocation("CreateDisk", []interface{}{arg1, arg2})
-	fake.createDiskMutex.Unlock()
+	stub := fake.CreateVolumeStub
+	fakeReturns := fake.createVolumeReturns
+	fake.recordInvocation("CreateVolume", []interface{}{arg1, arg2})
+	fake.createVolumeMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2)
 	}
@@ -62,49 +75,112 @@ func (fake *FakeVolumeFacade) CreateDisk(arg1 utils.ServiceClient, arg2 volumes.
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *FakeVolumeFacade) CreateDiskCallCount() int {
-	fake.createDiskMutex.RLock()
-	defer fake.createDiskMutex.RUnlock()
-	return len(fake.createDiskArgsForCall)
+func (fake *FakeVolumeFacade) CreateVolumeCallCount() int {
+	fake.createVolumeMutex.RLock()
+	defer fake.createVolumeMutex.RUnlock()
+	return len(fake.createVolumeArgsForCall)
 }
 
-func (fake *FakeVolumeFacade) CreateDiskCalls(stub func(utils.ServiceClient, volumes.CreateOptsBuilder) (*volumes.Volume, error)) {
-	fake.createDiskMutex.Lock()
-	defer fake.createDiskMutex.Unlock()
-	fake.CreateDiskStub = stub
+func (fake *FakeVolumeFacade) CreateVolumeCalls(stub func(utils.ServiceClient, volumes.CreateOptsBuilder) (*volumes.Volume, error)) {
+	fake.createVolumeMutex.Lock()
+	defer fake.createVolumeMutex.Unlock()
+	fake.CreateVolumeStub = stub
 }
 
-func (fake *FakeVolumeFacade) CreateDiskArgsForCall(i int) (utils.ServiceClient, volumes.CreateOptsBuilder) {
-	fake.createDiskMutex.RLock()
-	defer fake.createDiskMutex.RUnlock()
-	argsForCall := fake.createDiskArgsForCall[i]
+func (fake *FakeVolumeFacade) CreateVolumeArgsForCall(i int) (utils.ServiceClient, volumes.CreateOptsBuilder) {
+	fake.createVolumeMutex.RLock()
+	defer fake.createVolumeMutex.RUnlock()
+	argsForCall := fake.createVolumeArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeVolumeFacade) CreateDiskReturns(result1 *volumes.Volume, result2 error) {
-	fake.createDiskMutex.Lock()
-	defer fake.createDiskMutex.Unlock()
-	fake.CreateDiskStub = nil
-	fake.createDiskReturns = struct {
+func (fake *FakeVolumeFacade) CreateVolumeReturns(result1 *volumes.Volume, result2 error) {
+	fake.createVolumeMutex.Lock()
+	defer fake.createVolumeMutex.Unlock()
+	fake.CreateVolumeStub = nil
+	fake.createVolumeReturns = struct {
 		result1 *volumes.Volume
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeVolumeFacade) CreateDiskReturnsOnCall(i int, result1 *volumes.Volume, result2 error) {
-	fake.createDiskMutex.Lock()
-	defer fake.createDiskMutex.Unlock()
-	fake.CreateDiskStub = nil
-	if fake.createDiskReturnsOnCall == nil {
-		fake.createDiskReturnsOnCall = make(map[int]struct {
+func (fake *FakeVolumeFacade) CreateVolumeReturnsOnCall(i int, result1 *volumes.Volume, result2 error) {
+	fake.createVolumeMutex.Lock()
+	defer fake.createVolumeMutex.Unlock()
+	fake.CreateVolumeStub = nil
+	if fake.createVolumeReturnsOnCall == nil {
+		fake.createVolumeReturnsOnCall = make(map[int]struct {
 			result1 *volumes.Volume
 			result2 error
 		})
 	}
-	fake.createDiskReturnsOnCall[i] = struct {
+	fake.createVolumeReturnsOnCall[i] = struct {
 		result1 *volumes.Volume
 		result2 error
 	}{result1, result2}
+}
+
+func (fake *FakeVolumeFacade) DeleteVolume(arg1 utils.RetryableServiceClient, arg2 string, arg3 volumes.DeleteOptsBuilder) error {
+	fake.deleteVolumeMutex.Lock()
+	ret, specificReturn := fake.deleteVolumeReturnsOnCall[len(fake.deleteVolumeArgsForCall)]
+	fake.deleteVolumeArgsForCall = append(fake.deleteVolumeArgsForCall, struct {
+		arg1 utils.RetryableServiceClient
+		arg2 string
+		arg3 volumes.DeleteOptsBuilder
+	}{arg1, arg2, arg3})
+	stub := fake.DeleteVolumeStub
+	fakeReturns := fake.deleteVolumeReturns
+	fake.recordInvocation("DeleteVolume", []interface{}{arg1, arg2, arg3})
+	fake.deleteVolumeMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeVolumeFacade) DeleteVolumeCallCount() int {
+	fake.deleteVolumeMutex.RLock()
+	defer fake.deleteVolumeMutex.RUnlock()
+	return len(fake.deleteVolumeArgsForCall)
+}
+
+func (fake *FakeVolumeFacade) DeleteVolumeCalls(stub func(utils.RetryableServiceClient, string, volumes.DeleteOptsBuilder) error) {
+	fake.deleteVolumeMutex.Lock()
+	defer fake.deleteVolumeMutex.Unlock()
+	fake.DeleteVolumeStub = stub
+}
+
+func (fake *FakeVolumeFacade) DeleteVolumeArgsForCall(i int) (utils.RetryableServiceClient, string, volumes.DeleteOptsBuilder) {
+	fake.deleteVolumeMutex.RLock()
+	defer fake.deleteVolumeMutex.RUnlock()
+	argsForCall := fake.deleteVolumeArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *FakeVolumeFacade) DeleteVolumeReturns(result1 error) {
+	fake.deleteVolumeMutex.Lock()
+	defer fake.deleteVolumeMutex.Unlock()
+	fake.DeleteVolumeStub = nil
+	fake.deleteVolumeReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeVolumeFacade) DeleteVolumeReturnsOnCall(i int, result1 error) {
+	fake.deleteVolumeMutex.Lock()
+	defer fake.deleteVolumeMutex.Unlock()
+	fake.DeleteVolumeStub = nil
+	if fake.deleteVolumeReturnsOnCall == nil {
+		fake.deleteVolumeReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.deleteVolumeReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
 }
 
 func (fake *FakeVolumeFacade) GetVolume(arg1 utils.RetryableServiceClient, arg2 string) (*volumes.Volume, error) {
@@ -175,8 +251,10 @@ func (fake *FakeVolumeFacade) GetVolumeReturnsOnCall(i int, result1 *volumes.Vol
 func (fake *FakeVolumeFacade) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.createDiskMutex.RLock()
-	defer fake.createDiskMutex.RUnlock()
+	fake.createVolumeMutex.RLock()
+	defer fake.createVolumeMutex.RUnlock()
+	fake.deleteVolumeMutex.RLock()
+	defer fake.deleteVolumeMutex.RUnlock()
 	fake.getVolumeMutex.RLock()
 	defer fake.getVolumeMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

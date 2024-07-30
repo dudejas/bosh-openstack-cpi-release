@@ -26,19 +26,42 @@ type FakeVolumeService struct {
 		result1 *volumes.Volume
 		result2 error
 	}
-	WaitForVolumeToBecomeAvailableStub        func(string, time.Duration) (*volumes.Volume, error)
-	waitForVolumeToBecomeAvailableMutex       sync.RWMutex
-	waitForVolumeToBecomeAvailableArgsForCall []struct {
+	DeleteVolumeStub        func(string) error
+	deleteVolumeMutex       sync.RWMutex
+	deleteVolumeArgsForCall []struct {
+		arg1 string
+	}
+	deleteVolumeReturns struct {
+		result1 error
+	}
+	deleteVolumeReturnsOnCall map[int]struct {
+		result1 error
+	}
+	GetVolumeStub        func(string) (*volumes.Volume, error)
+	getVolumeMutex       sync.RWMutex
+	getVolumeArgsForCall []struct {
+		arg1 string
+	}
+	getVolumeReturns struct {
+		result1 *volumes.Volume
+		result2 error
+	}
+	getVolumeReturnsOnCall map[int]struct {
+		result1 *volumes.Volume
+		result2 error
+	}
+	WaitForVolumeToBecomeStatusStub        func(string, time.Duration, string) error
+	waitForVolumeToBecomeStatusMutex       sync.RWMutex
+	waitForVolumeToBecomeStatusArgsForCall []struct {
 		arg1 string
 		arg2 time.Duration
+		arg3 string
 	}
-	waitForVolumeToBecomeAvailableReturns struct {
-		result1 *volumes.Volume
-		result2 error
+	waitForVolumeToBecomeStatusReturns struct {
+		result1 error
 	}
-	waitForVolumeToBecomeAvailableReturnsOnCall map[int]struct {
-		result1 *volumes.Volume
-		result2 error
+	waitForVolumeToBecomeStatusReturnsOnCall map[int]struct {
+		result1 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -110,19 +133,79 @@ func (fake *FakeVolumeService) CreateVolumeReturnsOnCall(i int, result1 *volumes
 	}{result1, result2}
 }
 
-func (fake *FakeVolumeService) WaitForVolumeToBecomeAvailable(arg1 string, arg2 time.Duration) (*volumes.Volume, error) {
-	fake.waitForVolumeToBecomeAvailableMutex.Lock()
-	ret, specificReturn := fake.waitForVolumeToBecomeAvailableReturnsOnCall[len(fake.waitForVolumeToBecomeAvailableArgsForCall)]
-	fake.waitForVolumeToBecomeAvailableArgsForCall = append(fake.waitForVolumeToBecomeAvailableArgsForCall, struct {
+func (fake *FakeVolumeService) DeleteVolume(arg1 string) error {
+	fake.deleteVolumeMutex.Lock()
+	ret, specificReturn := fake.deleteVolumeReturnsOnCall[len(fake.deleteVolumeArgsForCall)]
+	fake.deleteVolumeArgsForCall = append(fake.deleteVolumeArgsForCall, struct {
 		arg1 string
-		arg2 time.Duration
-	}{arg1, arg2})
-	stub := fake.WaitForVolumeToBecomeAvailableStub
-	fakeReturns := fake.waitForVolumeToBecomeAvailableReturns
-	fake.recordInvocation("WaitForVolumeToBecomeAvailable", []interface{}{arg1, arg2})
-	fake.waitForVolumeToBecomeAvailableMutex.Unlock()
+	}{arg1})
+	stub := fake.DeleteVolumeStub
+	fakeReturns := fake.deleteVolumeReturns
+	fake.recordInvocation("DeleteVolume", []interface{}{arg1})
+	fake.deleteVolumeMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeVolumeService) DeleteVolumeCallCount() int {
+	fake.deleteVolumeMutex.RLock()
+	defer fake.deleteVolumeMutex.RUnlock()
+	return len(fake.deleteVolumeArgsForCall)
+}
+
+func (fake *FakeVolumeService) DeleteVolumeCalls(stub func(string) error) {
+	fake.deleteVolumeMutex.Lock()
+	defer fake.deleteVolumeMutex.Unlock()
+	fake.DeleteVolumeStub = stub
+}
+
+func (fake *FakeVolumeService) DeleteVolumeArgsForCall(i int) string {
+	fake.deleteVolumeMutex.RLock()
+	defer fake.deleteVolumeMutex.RUnlock()
+	argsForCall := fake.deleteVolumeArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeVolumeService) DeleteVolumeReturns(result1 error) {
+	fake.deleteVolumeMutex.Lock()
+	defer fake.deleteVolumeMutex.Unlock()
+	fake.DeleteVolumeStub = nil
+	fake.deleteVolumeReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeVolumeService) DeleteVolumeReturnsOnCall(i int, result1 error) {
+	fake.deleteVolumeMutex.Lock()
+	defer fake.deleteVolumeMutex.Unlock()
+	fake.DeleteVolumeStub = nil
+	if fake.deleteVolumeReturnsOnCall == nil {
+		fake.deleteVolumeReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.deleteVolumeReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeVolumeService) GetVolume(arg1 string) (*volumes.Volume, error) {
+	fake.getVolumeMutex.Lock()
+	ret, specificReturn := fake.getVolumeReturnsOnCall[len(fake.getVolumeArgsForCall)]
+	fake.getVolumeArgsForCall = append(fake.getVolumeArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.GetVolumeStub
+	fakeReturns := fake.getVolumeReturns
+	fake.recordInvocation("GetVolume", []interface{}{arg1})
+	fake.getVolumeMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -130,49 +213,112 @@ func (fake *FakeVolumeService) WaitForVolumeToBecomeAvailable(arg1 string, arg2 
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *FakeVolumeService) WaitForVolumeToBecomeAvailableCallCount() int {
-	fake.waitForVolumeToBecomeAvailableMutex.RLock()
-	defer fake.waitForVolumeToBecomeAvailableMutex.RUnlock()
-	return len(fake.waitForVolumeToBecomeAvailableArgsForCall)
+func (fake *FakeVolumeService) GetVolumeCallCount() int {
+	fake.getVolumeMutex.RLock()
+	defer fake.getVolumeMutex.RUnlock()
+	return len(fake.getVolumeArgsForCall)
 }
 
-func (fake *FakeVolumeService) WaitForVolumeToBecomeAvailableCalls(stub func(string, time.Duration) (*volumes.Volume, error)) {
-	fake.waitForVolumeToBecomeAvailableMutex.Lock()
-	defer fake.waitForVolumeToBecomeAvailableMutex.Unlock()
-	fake.WaitForVolumeToBecomeAvailableStub = stub
+func (fake *FakeVolumeService) GetVolumeCalls(stub func(string) (*volumes.Volume, error)) {
+	fake.getVolumeMutex.Lock()
+	defer fake.getVolumeMutex.Unlock()
+	fake.GetVolumeStub = stub
 }
 
-func (fake *FakeVolumeService) WaitForVolumeToBecomeAvailableArgsForCall(i int) (string, time.Duration) {
-	fake.waitForVolumeToBecomeAvailableMutex.RLock()
-	defer fake.waitForVolumeToBecomeAvailableMutex.RUnlock()
-	argsForCall := fake.waitForVolumeToBecomeAvailableArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+func (fake *FakeVolumeService) GetVolumeArgsForCall(i int) string {
+	fake.getVolumeMutex.RLock()
+	defer fake.getVolumeMutex.RUnlock()
+	argsForCall := fake.getVolumeArgsForCall[i]
+	return argsForCall.arg1
 }
 
-func (fake *FakeVolumeService) WaitForVolumeToBecomeAvailableReturns(result1 *volumes.Volume, result2 error) {
-	fake.waitForVolumeToBecomeAvailableMutex.Lock()
-	defer fake.waitForVolumeToBecomeAvailableMutex.Unlock()
-	fake.WaitForVolumeToBecomeAvailableStub = nil
-	fake.waitForVolumeToBecomeAvailableReturns = struct {
+func (fake *FakeVolumeService) GetVolumeReturns(result1 *volumes.Volume, result2 error) {
+	fake.getVolumeMutex.Lock()
+	defer fake.getVolumeMutex.Unlock()
+	fake.GetVolumeStub = nil
+	fake.getVolumeReturns = struct {
 		result1 *volumes.Volume
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeVolumeService) WaitForVolumeToBecomeAvailableReturnsOnCall(i int, result1 *volumes.Volume, result2 error) {
-	fake.waitForVolumeToBecomeAvailableMutex.Lock()
-	defer fake.waitForVolumeToBecomeAvailableMutex.Unlock()
-	fake.WaitForVolumeToBecomeAvailableStub = nil
-	if fake.waitForVolumeToBecomeAvailableReturnsOnCall == nil {
-		fake.waitForVolumeToBecomeAvailableReturnsOnCall = make(map[int]struct {
+func (fake *FakeVolumeService) GetVolumeReturnsOnCall(i int, result1 *volumes.Volume, result2 error) {
+	fake.getVolumeMutex.Lock()
+	defer fake.getVolumeMutex.Unlock()
+	fake.GetVolumeStub = nil
+	if fake.getVolumeReturnsOnCall == nil {
+		fake.getVolumeReturnsOnCall = make(map[int]struct {
 			result1 *volumes.Volume
 			result2 error
 		})
 	}
-	fake.waitForVolumeToBecomeAvailableReturnsOnCall[i] = struct {
+	fake.getVolumeReturnsOnCall[i] = struct {
 		result1 *volumes.Volume
 		result2 error
 	}{result1, result2}
+}
+
+func (fake *FakeVolumeService) WaitForVolumeToBecomeStatus(arg1 string, arg2 time.Duration, arg3 string) error {
+	fake.waitForVolumeToBecomeStatusMutex.Lock()
+	ret, specificReturn := fake.waitForVolumeToBecomeStatusReturnsOnCall[len(fake.waitForVolumeToBecomeStatusArgsForCall)]
+	fake.waitForVolumeToBecomeStatusArgsForCall = append(fake.waitForVolumeToBecomeStatusArgsForCall, struct {
+		arg1 string
+		arg2 time.Duration
+		arg3 string
+	}{arg1, arg2, arg3})
+	stub := fake.WaitForVolumeToBecomeStatusStub
+	fakeReturns := fake.waitForVolumeToBecomeStatusReturns
+	fake.recordInvocation("WaitForVolumeToBecomeStatus", []interface{}{arg1, arg2, arg3})
+	fake.waitForVolumeToBecomeStatusMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeVolumeService) WaitForVolumeToBecomeStatusCallCount() int {
+	fake.waitForVolumeToBecomeStatusMutex.RLock()
+	defer fake.waitForVolumeToBecomeStatusMutex.RUnlock()
+	return len(fake.waitForVolumeToBecomeStatusArgsForCall)
+}
+
+func (fake *FakeVolumeService) WaitForVolumeToBecomeStatusCalls(stub func(string, time.Duration, string) error) {
+	fake.waitForVolumeToBecomeStatusMutex.Lock()
+	defer fake.waitForVolumeToBecomeStatusMutex.Unlock()
+	fake.WaitForVolumeToBecomeStatusStub = stub
+}
+
+func (fake *FakeVolumeService) WaitForVolumeToBecomeStatusArgsForCall(i int) (string, time.Duration, string) {
+	fake.waitForVolumeToBecomeStatusMutex.RLock()
+	defer fake.waitForVolumeToBecomeStatusMutex.RUnlock()
+	argsForCall := fake.waitForVolumeToBecomeStatusArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *FakeVolumeService) WaitForVolumeToBecomeStatusReturns(result1 error) {
+	fake.waitForVolumeToBecomeStatusMutex.Lock()
+	defer fake.waitForVolumeToBecomeStatusMutex.Unlock()
+	fake.WaitForVolumeToBecomeStatusStub = nil
+	fake.waitForVolumeToBecomeStatusReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeVolumeService) WaitForVolumeToBecomeStatusReturnsOnCall(i int, result1 error) {
+	fake.waitForVolumeToBecomeStatusMutex.Lock()
+	defer fake.waitForVolumeToBecomeStatusMutex.Unlock()
+	fake.WaitForVolumeToBecomeStatusStub = nil
+	if fake.waitForVolumeToBecomeStatusReturnsOnCall == nil {
+		fake.waitForVolumeToBecomeStatusReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.waitForVolumeToBecomeStatusReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
 }
 
 func (fake *FakeVolumeService) Invocations() map[string][][]interface{} {
@@ -180,8 +326,12 @@ func (fake *FakeVolumeService) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.createVolumeMutex.RLock()
 	defer fake.createVolumeMutex.RUnlock()
-	fake.waitForVolumeToBecomeAvailableMutex.RLock()
-	defer fake.waitForVolumeToBecomeAvailableMutex.RUnlock()
+	fake.deleteVolumeMutex.RLock()
+	defer fake.deleteVolumeMutex.RUnlock()
+	fake.getVolumeMutex.RLock()
+	defer fake.getVolumeMutex.RUnlock()
+	fake.waitForVolumeToBecomeStatusMutex.RLock()
+	defer fake.waitForVolumeToBecomeStatusMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

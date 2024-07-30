@@ -113,7 +113,7 @@ var _ = Describe("Create Disk", func() {
 
 			stdOutWriter.Close()
 			actual := <-outChannel
-			Expect(actual).To(ContainSubstring(`failed while waiting on the volume creation`))
+			Expect(actual).To(ContainSubstring(`create disk: volume became error state while waiting to become available`))
 		})
 	})
 })

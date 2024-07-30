@@ -1,10 +1,12 @@
 package volume
 
 import (
+	"errors"
 	"fmt"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/google/uuid"
+	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/volumes"
 	"time"
 )
@@ -18,10 +20,13 @@ type VolumeService interface {
 		cloudProps properties.CreateDisk,
 		az string,
 	) (*volumes.Volume, error)
-	WaitForVolumeToBecomeAvailable(
+	WaitForVolumeToBecomeStatus(
 		volumeID string,
 		timeout time.Duration,
-	) (*volumes.Volume, error)
+		status string,
+	) error
+	GetVolume(volumeID string) (*volumes.Volume, error)
+	DeleteVolume(volumeId string) error
 }
 
 type volumeService struct {
@@ -46,7 +51,7 @@ func (v volumeService) CreateVolume(
 	uuid, _ := uuid.NewRandom()
 	name := fmt.Sprintf("volume-%s", uuid)
 	createOpts := v.getVolumeCreateOpts(size, az, volumeType, name)
-	volume, err := v.volumeFacade.CreateDisk(v.serviceClients.ServiceClient, createOpts)
+	volume, err := v.volumeFacade.CreateVolume(v.serviceClients.ServiceClient, createOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create volume: %w", err)
 	}
@@ -54,24 +59,28 @@ func (v volumeService) CreateVolume(
 	return volume, nil
 }
 
-func (v volumeService) WaitForVolumeToBecomeAvailable(volumeID string, timeout time.Duration) (*volumes.Volume, error) {
+func (v volumeService) WaitForVolumeToBecomeStatus(volumeID string, timeout time.Duration, status string) error {
 	timeoutTimer := time.NewTimer(timeout)
+	var errDefault404 gophercloud.ErrDefault404
 
 	for {
 		select {
 		case <-timeoutTimer.C:
-			return nil, fmt.Errorf("timeout while waiting for volume to become available")
+			return fmt.Errorf("timeout while waiting for volume to become %s", status)
 		default:
-			volume, err := v.getVolume(volumeID)
+			volume, err := v.GetVolume(volumeID)
 			if err != nil {
-				return nil, err
+				if errors.As(err, &errDefault404) && status == "deleted" {
+					return nil
+				}
+				return err
 			}
 
 			switch volume.Status {
-			case "available":
-				return volume, nil
+			case status:
+				return nil
 			case "error":
-				return nil, fmt.Errorf("volume became error state while waiting to become available")
+				return fmt.Errorf("volume became error state while waiting to become %s", status)
 			}
 
 			time.Sleep(VolumeServicePollingInterval)
@@ -79,8 +88,18 @@ func (v volumeService) WaitForVolumeToBecomeAvailable(volumeID string, timeout t
 	}
 }
 
-func (v volumeService) getVolume(volumeID string) (*volumes.Volume, error) {
+func (v volumeService) GetVolume(volumeID string) (*volumes.Volume, error) {
 	return v.volumeFacade.GetVolume(v.serviceClients.RetryableServiceClient, volumeID)
+}
+
+func (v volumeService) DeleteVolume(volumeID string) error {
+	deleteOpts := v.getVolumeDeleteOpts()
+
+	err := v.volumeFacade.DeleteVolume(v.serviceClients.RetryableServiceClient, volumeID, deleteOpts)
+	if err != nil {
+		return fmt.Errorf("failed to delete volume: %w", err)
+	}
+	return nil
 }
 
 func (v volumeService) getVolumeCreateOpts(size int, availabilityZone string, volumeType string, name string) volumes.CreateOptsBuilder {
@@ -92,4 +111,10 @@ func (v volumeService) getVolumeCreateOpts(size int, availabilityZone string, vo
 		Name:             name,
 	}
 	return createOpts
+}
+
+func (v volumeService) getVolumeDeleteOpts() volumes.DeleteOptsBuilder {
+	var deleteOpts volumes.DeleteOptsBuilder
+	deleteOpts = volumes.DeleteOpts{}
+	return deleteOpts
 }

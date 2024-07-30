@@ -37,7 +37,7 @@ var _ = Describe("CreateDisk", func() {
 			volumeServiceBuilder.BuildReturns(&volumeService, nil)
 			computeService.GetServerReturns(&servers.Server{ID: "123-456"}, nil)
 			volumeService.CreateVolumeReturns(&volumes.Volume{ID: "789-size12"}, nil)
-			volumeService.WaitForVolumeToBecomeAvailableReturns(&volumes.Volume{ID: "789-size12"}, nil)
+			volumeService.WaitForVolumeToBecomeStatusReturns(nil)
 			cpiConfig = config.CpiConfig{}
 			cpiConfig.Cloud.Properties.Openstack = config.OpenstackConfig{IgnoreServerAvailabilityZone: true}
 
@@ -260,6 +260,25 @@ var _ = Describe("CreateDisk", func() {
 			)
 
 			Expect(err).To(BeNil())
+			Expect(diskCID).To(Equal(apiv1.DiskCID{}))
+		})
+
+		It("fails while waiting for the volume to become available", func() {
+			volumeService.WaitForVolumeToBecomeStatusReturns(errors.New("some_error_while_waiting_for_volume"))
+
+			diskCID, err := methods.NewCreateDiskMethod(
+				&computeServiceBuilder,
+				&volumeServiceBuilder,
+				cpiConfig,
+				&logger,
+			).CreateDisk(
+				size,
+				apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
+				&apiv1.VMCID{},
+			)
+
+			Expect(volumeService.WaitForVolumeToBecomeStatusCallCount()).To(Equal(1))
+			Expect(err.Error()).To(Equal("create disk: some_error_while_waiting_for_volume"))
 			Expect(diskCID).To(Equal(apiv1.DiskCID{}))
 		})
 	})
