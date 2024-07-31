@@ -83,6 +83,11 @@ func (s SetVMMetadataMethod) metadataToMap(meta apiv1.VMMeta) (map[string]interf
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert json to map: %w", err)
 	}
+	for k, v := range intermediateMap {
+		if v == nil || k == "" {
+			delete(intermediateMap, k)
+		}
+	}
 	return intermediateMap, nil
 }
 

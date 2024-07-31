@@ -199,7 +199,6 @@ var _ = Describe("SET VM METADATA", func() {
 		})
 
 		It("sets a new servername successfully base on importing parameter 'job/index'", func() {
-			Skip("Skipping this test for now")
 			writeJsonParamToStdIn(`{
 				"method":"set_vm_metadata",
 				"arguments": [
@@ -225,7 +224,6 @@ var _ = Describe("SET VM METADATA", func() {
 		})
 
 		It("sets a new servername successfully base on importing parameter 'compiling'", func() {
-			Skip("Skipping this test for now")
 			writeJsonParamToStdIn(`{
 				"method":"set_vm_metadata",
 				"arguments": [
@@ -250,7 +248,6 @@ var _ = Describe("SET VM METADATA", func() {
 		})
 
 		It("sets a new servername successfully base on importing parameter 'name' regardless of job/index/compiling", func() {
-			Skip("Skipping this test for now")
 			writeJsonParamToStdIn(`{
 				"method":"set_vm_metadata",
 				"arguments": [
@@ -276,6 +273,30 @@ var _ = Describe("SET VM METADATA", func() {
 			Expect(<-outChannel).To(ContainSubstring(`"result":null,"error":null`))
 		})
 
+		It("removes a key when one key map has null value", func() {
+			writeJsonParamToStdIn(`{
+				"method":"set_vm_metadata",
+				"arguments": [
+					"server-id",
+					{
+					"name": "new-name",
+					"test": null
+					}
+				],
+				"api_version": 2
+
+			}`)
+
+			config := getDefaultConfig(Endpoint())
+			config.Cloud.Properties.Openstack.HumanReadableVMNames = true
+			config.Cloud.Properties.Openstack.VM.Stemcell.APIVersion = 2
+
+			err := cpi.Execute(config, logger)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			stdOutWriter.Close()
+			Expect(<-outChannel).To(ContainSubstring(`"result":null,"error":null`))
+		})
 	})
 
 	Context("Failure in GetMetadata: ", func() {

@@ -31,6 +31,11 @@ var _ = Describe("NewSetVMMetadataMethod", func() {
 			"name": "new-name",
 		})
 
+		metaDataWithNil := apiv1.NewVMMeta(map[string]interface{}{
+			"name": "new-name",
+			"test": nil,
+		})
+
 		metaDataJobIndex := apiv1.NewVMMeta(map[string]interface{}{
 			"job":   "new-job",
 			"index": "1",
@@ -83,6 +88,23 @@ var _ = Describe("NewSetVMMetadataMethod", func() {
 			)
 
 			Expect(err.Error()).To(Equal("failed to create compute service: boom"))
+		})
+
+		It("deletes nil value out importet metadata map", func() {
+			methods.NewSetVMMetadataMethod(
+				computeServiceBuilder,
+				logger,
+				cpiConfig,
+			).SetVMMetadata(
+				id,
+				metaDataWithNil,
+			)
+
+			updateMetaExp := map[string]interface{}{
+				"name": "new-name",
+			}
+			_, _, updateMetaAct := computeService.DeleteServerMetaDataArgsForCall(0)
+			Expect(updateMetaAct).To(Equal(updateMetaExp))
 		})
 
 		It("fails on get MetaData", func() {
