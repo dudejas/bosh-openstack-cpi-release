@@ -35,8 +35,6 @@ type ComputeFacade interface {
 
 	GetServerMetadata(client utils.RetryableServiceClient, serverID string) (map[string]string, error)
 
-	SetServerMetadata(client utils.ServiceClient, serverID string, opts servers.MetadatumOpts) (map[string]string, error)
-
 	UpdateServer(client utils.ServiceClient, serverID string, opt servers.UpdateOptsBuilder) (*servers.Server, error)
 
 	UpdateServerMetadata(client utils.ServiceClient, serverID string, opts servers.UpdateMetadataOptsBuilder) (map[string]string, error)
@@ -87,10 +85,6 @@ func (c computeFacade) GetOSKeyPair(client utils.RetryableServiceClient, keyPair
 
 func (c computeFacade) GetServerMetadata(client utils.RetryableServiceClient, serverID string) (map[string]string, error) {
 	return servers.Metadata(client, serverID).Extract()
-}
-
-func (c computeFacade) SetServerMetadata(client utils.ServiceClient, serverID string, opts servers.MetadatumOpts) (map[string]string, error) {
-	return servers.CreateMetadatum(client, serverID, opts).Extract()
 }
 
 func (c computeFacade) UpdateServer(client utils.ServiceClient, serverID string, opts servers.UpdateOptsBuilder) (*servers.Server, error) {

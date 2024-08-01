@@ -23,7 +23,7 @@ var ComputeServicePollingInterval = 10 * time.Second
 //counterfeiter:generate . ComputeService
 type ComputeService interface {
 	GetServer(
-		vmcid string,
+		serverID string,
 	) (*servers.Server, error)
 
 	CreateServer(
@@ -36,18 +36,13 @@ type ComputeService interface {
 	) (*servers.Server, error)
 
 	DeleteServer(
-		vmcid string,
+		serverID string,
 		cpiConfig config.CpiConfig,
 	) error
 
 	RebootServer(
-		vmcid string,
+		serverID string,
 		cpiConfig config.CpiConfig,
-	) error
-
-	SetMetadata(
-		server servers.Server,
-		tags properties.ServerTags,
 	) error
 
 	GetMetadata(
@@ -61,13 +56,13 @@ type ComputeService interface {
 
 	UpdateServerMetadata(
 		serverID string,
-		metaMap map[string]interface{},
+		serverMetadata properties.ServerMetadata,
 	) error
 
 	DeleteServerMetaData(
 		serverID string,
 		oldMetaDataMap map[string]string,
-		updateMetaDataMap map[string]interface{},
+		updateMetaDataMap properties.ServerMetadata,
 	) error
 
 	GetMatchingFlavor(
@@ -263,23 +258,6 @@ func (c computeService) RebootServer(
 	return nil
 }
 
-func (c computeService) SetMetadata(server servers.Server, tags properties.ServerTags) error {
-
-	if len(tags) > 0 {
-		metadatumOpts := servers.MetadatumOpts{}
-		for k, v := range tags {
-			metadatumOpts[k] = v
-		}
-
-		_, err := c.computeFacade.SetServerMetadata(c.serviceClients.ServiceClient, server.ID, metadatumOpts)
-		if err != nil {
-			return fmt.Errorf("failed to set VM Metadata: %w", err)
-		}
-	}
-
-	return nil
-}
-
 func (c computeService) GetMetadata(serverID string) (map[string]string, error) {
 	var errDefault404 gophercloud.ErrDefault404
 
@@ -309,18 +287,13 @@ func (c computeService) UpdateServer(serverID string, serverName string) (*serve
 
 }
 
-func (c computeService) UpdateServerMetadata(serverID string, updateMetaDataMap map[string]interface{}) error {
-	if length := len(updateMetaDataMap); length == 0 {
-		c.logger.Info("compute_service", fmt.Sprintf("SKIPPING: No Metadata was found to be updated for server with id '%s'", serverID))
-		return nil
-	}
-
+func (c computeService) UpdateServerMetadata(serverID string, serverMetadata properties.ServerMetadata) error {
 	var blacklistedMetadataKeys = []string{
 		"id",
 	}
 
 	updateMetadataOpts := servers.MetadataOpts{}
-	for k, v := range updateMetaDataMap {
+	for k, v := range serverMetadata {
 		updateMetadataOpts[k] = v.(string)
 	}
 
@@ -328,7 +301,7 @@ func (c computeService) UpdateServerMetadata(serverID string, updateMetaDataMap 
 		delete(updateMetadataOpts, key)
 	}
 
-	if length := len(updateMetadataOpts); length == 0 {
+	if len(updateMetadataOpts) == 0 {
 		c.logger.Info("compute_service", fmt.Sprintf("SKIPPING: No Metadata was found to be updated for server with id '%s'", serverID))
 		return nil
 	}
@@ -337,14 +310,14 @@ func (c computeService) UpdateServerMetadata(serverID string, updateMetaDataMap 
 	if err != nil {
 		return fmt.Errorf("failed to update server metadata: %w", err)
 	}
-	return nil
 
+	return nil
 }
 
 func (c computeService) DeleteServerMetaData(
 	serverID string,
 	oldMetaDataMap map[string]string,
-	updateMetaDataMap map[string]interface{},
+	updateMetaDataMap properties.ServerMetadata,
 ) error {
 	if length := len(updateMetaDataMap); length == 0 {
 		c.logger.Info("compute_service", fmt.Sprintf("SKIPPING: No metadata was provided to be deleted for server with id '%s'", serverID))

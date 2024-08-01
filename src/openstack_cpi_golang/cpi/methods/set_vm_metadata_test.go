@@ -2,6 +2,7 @@ package methods_test
 
 import (
 	"errors"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/compute/computefakes"
@@ -90,7 +91,7 @@ var _ = Describe("NewSetVMMetadataMethod", func() {
 			Expect(err.Error()).To(Equal("failed to create compute service: boom"))
 		})
 
-		It("deletes nil value out importet metadata map", func() {
+		It("deletes nil value out imported metadata map", func() {
 			methods.NewSetVMMetadataMethod(
 				computeServiceBuilder,
 				logger,
@@ -100,7 +101,7 @@ var _ = Describe("NewSetVMMetadataMethod", func() {
 				metaDataWithNil,
 			)
 
-			updateMetaExp := map[string]interface{}{
+			updateMetaExp := properties.ServerMetadata{
 				"name": "new-name",
 			}
 			_, _, updateMetaAct := computeService.DeleteServerMetaDataArgsForCall(0)

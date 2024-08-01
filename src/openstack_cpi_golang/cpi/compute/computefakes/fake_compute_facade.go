@@ -150,21 +150,6 @@ type FakeComputeFacade struct {
 	rebootServerReturnsOnCall map[int]struct {
 		result1 error
 	}
-	SetServerMetadataStub        func(utils.ServiceClient, string, servers.MetadatumOpts) (map[string]string, error)
-	setServerMetadataMutex       sync.RWMutex
-	setServerMetadataArgsForCall []struct {
-		arg1 utils.ServiceClient
-		arg2 string
-		arg3 servers.MetadatumOpts
-	}
-	setServerMetadataReturns struct {
-		result1 map[string]string
-		result2 error
-	}
-	setServerMetadataReturnsOnCall map[int]struct {
-		result1 map[string]string
-		result2 error
-	}
 	UpdateServerStub        func(utils.ServiceClient, string, servers.UpdateOptsBuilder) (*servers.Server, error)
 	updateServerMutex       sync.RWMutex
 	updateServerArgsForCall []struct {
@@ -842,72 +827,6 @@ func (fake *FakeComputeFacade) RebootServerReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeComputeFacade) SetServerMetadata(arg1 utils.ServiceClient, arg2 string, arg3 servers.MetadatumOpts) (map[string]string, error) {
-	fake.setServerMetadataMutex.Lock()
-	ret, specificReturn := fake.setServerMetadataReturnsOnCall[len(fake.setServerMetadataArgsForCall)]
-	fake.setServerMetadataArgsForCall = append(fake.setServerMetadataArgsForCall, struct {
-		arg1 utils.ServiceClient
-		arg2 string
-		arg3 servers.MetadatumOpts
-	}{arg1, arg2, arg3})
-	stub := fake.SetServerMetadataStub
-	fakeReturns := fake.setServerMetadataReturns
-	fake.recordInvocation("SetServerMetadata", []interface{}{arg1, arg2, arg3})
-	fake.setServerMetadataMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2, arg3)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fakeReturns.result1, fakeReturns.result2
-}
-
-func (fake *FakeComputeFacade) SetServerMetadataCallCount() int {
-	fake.setServerMetadataMutex.RLock()
-	defer fake.setServerMetadataMutex.RUnlock()
-	return len(fake.setServerMetadataArgsForCall)
-}
-
-func (fake *FakeComputeFacade) SetServerMetadataCalls(stub func(utils.ServiceClient, string, servers.MetadatumOpts) (map[string]string, error)) {
-	fake.setServerMetadataMutex.Lock()
-	defer fake.setServerMetadataMutex.Unlock()
-	fake.SetServerMetadataStub = stub
-}
-
-func (fake *FakeComputeFacade) SetServerMetadataArgsForCall(i int) (utils.ServiceClient, string, servers.MetadatumOpts) {
-	fake.setServerMetadataMutex.RLock()
-	defer fake.setServerMetadataMutex.RUnlock()
-	argsForCall := fake.setServerMetadataArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
-}
-
-func (fake *FakeComputeFacade) SetServerMetadataReturns(result1 map[string]string, result2 error) {
-	fake.setServerMetadataMutex.Lock()
-	defer fake.setServerMetadataMutex.Unlock()
-	fake.SetServerMetadataStub = nil
-	fake.setServerMetadataReturns = struct {
-		result1 map[string]string
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeComputeFacade) SetServerMetadataReturnsOnCall(i int, result1 map[string]string, result2 error) {
-	fake.setServerMetadataMutex.Lock()
-	defer fake.setServerMetadataMutex.Unlock()
-	fake.SetServerMetadataStub = nil
-	if fake.setServerMetadataReturnsOnCall == nil {
-		fake.setServerMetadataReturnsOnCall = make(map[int]struct {
-			result1 map[string]string
-			result2 error
-		})
-	}
-	fake.setServerMetadataReturnsOnCall[i] = struct {
-		result1 map[string]string
-		result2 error
-	}{result1, result2}
-}
-
 func (fake *FakeComputeFacade) UpdateServer(arg1 utils.ServiceClient, arg2 string, arg3 servers.UpdateOptsBuilder) (*servers.Server, error) {
 	fake.updateServerMutex.Lock()
 	ret, specificReturn := fake.updateServerReturnsOnCall[len(fake.updateServerArgsForCall)]
@@ -1063,8 +982,6 @@ func (fake *FakeComputeFacade) Invocations() map[string][][]interface{} {
 	defer fake.listFlavorsMutex.RUnlock()
 	fake.rebootServerMutex.RLock()
 	defer fake.rebootServerMutex.RUnlock()
-	fake.setServerMetadataMutex.RLock()
-	defer fake.setServerMetadataMutex.RUnlock()
 	fake.updateServerMutex.RLock()
 	defer fake.updateServerMutex.RUnlock()
 	fake.updateServerMetadataMutex.RLock()

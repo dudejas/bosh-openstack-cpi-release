@@ -107,7 +107,7 @@ func (m CreateVMMethod) CreateVMV2(
 
 	err = networkService.ConfigureVIPNetwork(server.ID, networkConfig)
 	if err != nil {
-		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to configure network for server '%s': %w", server.ID, err)
+		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to configure vip network for server '%s': %w", server.ID, err)
 	}
 
 	poolMembers, err := m.configureLoadbalancerPools(loadbalancerService, networkService, cloudProps, networkConfig)
@@ -115,9 +115,9 @@ func (m CreateVMMethod) CreateVMV2(
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to configure loadbalancer pools: %w", err)
 	}
 
-	err = computeService.SetMetadata(*server, m.getServerTags(poolMembers))
+	err = computeService.UpdateServerMetadata(server.ID, m.getServerMetadata(poolMembers))
 	if err != nil {
-		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("create_vm: %w", err)
+		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to update metadata for server with key %s: %w", server.ID, err)
 	}
 
 	return apiv1.NewVMCID(server.ID), networks, nil
@@ -161,8 +161,8 @@ func (m CreateVMMethod) configureLoadbalancerPools(
 	return poolMemberships, nil
 }
 
-func (m CreateVMMethod) getServerTags(members []pools.Member) properties.ServerTags {
-	tags := properties.ServerTags{}
+func (m CreateVMMethod) getServerMetadata(members []pools.Member) properties.ServerMetadata {
+	tags := properties.ServerMetadata{}
 
 	var index = 1
 	for _, member := range members {

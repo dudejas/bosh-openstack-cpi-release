@@ -455,7 +455,7 @@ var _ = Describe("CreateVMMethod", func() {
 			Expect(serverID).To(Equal("123-456"))
 		})
 
-		It("returns an error if the network configuration fails", func() {
+		It("returns an error if the vip network configuration fails", func() {
 			networkService.ConfigureVIPNetworkReturns(errors.New("boom"))
 
 			stemcellCID, networks, err := methods.NewCreateVMMethod(
@@ -474,7 +474,7 @@ var _ = Describe("CreateVMMethod", func() {
 				env,
 			)
 
-			Expect(err.Error()).To(Equal("failed to configure network for server '123-456': boom"))
+			Expect(err.Error()).To(Equal("failed to configure vip network for server '123-456': boom"))
 			Expect(stemcellCID).To(Equal(apiv1.VMCID{}))
 			Expect(networks).To(Equal(apiv1.Networks{}))
 		})
@@ -690,7 +690,7 @@ var _ = Describe("CreateVMMethod", func() {
 				env,
 			)
 
-			_, tags := computeService.SetMetadataArgsForCall(0)
+			_, tags := computeService.UpdateServerMetadataArgsForCall(0)
 			Expect(tags["lbaas_pool_1"]).To(Equal("the-pool-id-1/the-member-id"))
 			Expect(tags["lbaas_pool_2"]).To(Equal("the-pool-id-2/the-member-id-1"))
 		})

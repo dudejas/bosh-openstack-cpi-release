@@ -1338,8 +1338,8 @@ var _ = Describe("Create VM", func() {
 						}`)
 					})
 
-					Mux.HandleFunc("/v2.1/servers/f5dc173b-6804-445a-a6d8-c705dad5b5eb/metadata/lbaas_pool_1", func(w http.ResponseWriter, r *http.Request) {
-						if r.Method != http.MethodPut {
+					Mux.HandleFunc("/v2.1/servers/f5dc173b-6804-445a-a6d8-c705dad5b5eb/metadata", func(w http.ResponseWriter, r *http.Request) {
+						if r.Method != http.MethodPost {
 							w.WriteHeader(http.StatusNotFound)
 							return
 						}
@@ -2005,7 +2005,7 @@ var _ = Describe("Create VM", func() {
 					Expect(err).ShouldNot(HaveOccurred())
 
 					stdOutWriter.Close()
-					Expect(<-outChannel).To(ContainSubstring(`create_vm: failed to set VM Metadata`))
+					Expect(<-outChannel).To(ContainSubstring(`failed to update metadata for server with key f5dc173b-6804-445a-a6d8-c705dad5b5eb`))
 				})
 			})
 

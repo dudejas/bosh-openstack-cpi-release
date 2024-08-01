@@ -1,3 +1,3 @@
 package properties
 
-type ServerTags map[string]string
+type ServerMetadata map[string]interface{}
