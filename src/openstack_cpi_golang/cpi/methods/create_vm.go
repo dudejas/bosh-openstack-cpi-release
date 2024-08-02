@@ -10,7 +10,9 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/network"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/pools"
+	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 	"strconv"
 )
 
@@ -55,6 +57,8 @@ func (m CreateVMMethod) CreateVMV2(
 	cloudProps := properties.CreateVM{}
 	props.As(&cloudProps)
 
+	createdPortsIds := []ports.Port{}
+
 	err := cloudProps.Validate(m.cpiConfig.Cloud.Properties.Openstack)
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to validate cloud properties: %w", err)
@@ -98,26 +102,59 @@ func (m CreateVMMethod) CreateVMV2(
 			return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to create port: %w", err)
 		}
 		manualNetwork.ConfigurePort(port)
+		createdPortsIds = append(createdPortsIds, port)
 	}
 
 	server, err := computeService.CreateServer(stemcellCID, cloudProps, networkConfig, agentID, env, m.cpiConfig)
 	if err != nil {
-		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to create server: %w", err)
+		return m.cleanupServerResources(
+			server,
+			createdPortsIds,
+			[]pools.Member{},
+			computeService,
+			loadbalancerService,
+			networkService,
+			fmt.Errorf("failed to create server: %w", err),
+		)
 	}
 
 	err = networkService.ConfigureVIPNetwork(server.ID, networkConfig)
 	if err != nil {
-		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to configure vip network for server '%s': %w", server.ID, err)
+		return m.cleanupServerResources(
+			server,
+			createdPortsIds,
+			[]pools.Member{},
+			computeService,
+			loadbalancerService,
+			networkService,
+			fmt.Errorf("failed to configure vip network for server '%s' with error: %w", server.ID, err),
+		)
 	}
 
 	poolMembers, err := m.configureLoadbalancerPools(loadbalancerService, networkService, cloudProps, networkConfig)
 	if err != nil {
-		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to configure loadbalancer pools: %w", err)
+		return m.cleanupServerResources(
+			server,
+			createdPortsIds,
+			poolMembers,
+			computeService,
+			loadbalancerService,
+			networkService,
+			fmt.Errorf("failed to configure loadbalancer pools: %w", err),
+		)
 	}
 
 	err = computeService.UpdateServerMetadata(server.ID, m.getServerMetadata(poolMembers))
 	if err != nil {
-		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to update metadata for server with key %s: %w", server.ID, err)
+		return m.cleanupServerResources(
+			server,
+			createdPortsIds,
+			poolMembers,
+			computeService,
+			loadbalancerService,
+			networkService,
+			fmt.Errorf("failed to update metadata for server '%s' with error: %w", server.ID, err),
+		)
 	}
 
 	return apiv1.NewVMCID(server.ID), networks, nil
@@ -129,12 +166,12 @@ func (m CreateVMMethod) configureLoadbalancerPools(
 	cloudProps properties.CreateVM,
 	networkConfig properties.NetworkConfig,
 ) ([]pools.Member, error) {
-	poolMemberships := []pools.Member{}
+	var poolMemberships []pools.Member
 
 	for _, loadbalancerPool := range cloudProps.LoadbalancerPools {
 		pool, err := loadbalancerService.GetPool(loadbalancerPool.Name)
 		if err != nil {
-			return []pools.Member{}, fmt.Errorf("failed to get pool ID of pool '%s': %w", loadbalancerPool.Name, err)
+			return poolMemberships, fmt.Errorf("failed to get pool ID of pool '%s': %w", loadbalancerPool.Name, err)
 		}
 		m.logger.Info("create_vm_method", fmt.Sprintf("Resolved pool id '%s' for pool '%s'", pool.ID, loadbalancerPool.Name))
 
@@ -144,18 +181,18 @@ func (m CreateVMMethod) configureLoadbalancerPools(
 
 		subnetID, err := networkService.GetSubnetID(defaultNetworkID, ip)
 		if err != nil {
-			return []pools.Member{}, fmt.Errorf("failed to get subnet: %w", err)
+			return poolMemberships, fmt.Errorf("failed to get subnet: %w", err)
 		}
 
 		poolMember, err := loadbalancerService.CreatePoolMember(pool.ID, ip, loadbalancerPool, subnetID, m.cpiConfig.Cloud.Properties.Openstack.StateTimeOut)
 		if err != nil {
-			return []pools.Member{}, fmt.Errorf("failed to create pool membership of IP '%s' in pool '%s': %w", ip, loadbalancerPool.Name, err)
+			return poolMemberships, fmt.Errorf("failed to create pool membership of IP '%s' in pool '%s': %w", ip, pool.ID, err)
 		}
 
 		poolMember.PoolID = pool.ID
 		poolMemberships = append(poolMemberships, *poolMember)
 
-		m.logger.Info("create_vm_method", fmt.Sprintf("Created pool member '%+v' in pool '%s'", *poolMember, loadbalancerPool.Name))
+		m.logger.Info("create_vm_method", fmt.Sprintf("created pool member '%+v' in pool '%s'", *poolMember, pool.ID))
 	}
 
 	return poolMemberships, nil
@@ -172,4 +209,36 @@ func (m CreateVMMethod) getServerMetadata(members []pools.Member) properties.Ser
 	}
 
 	return tags
+}
+
+func (m CreateVMMethod) cleanupServerResources(
+	server *servers.Server, ports []ports.Port, poolMembers []pools.Member, computeService compute.ComputeService,
+	loadbalancerService loadbalancer.LoadbalancerService, networkService network.NetworkService, errorMsg error) (
+	apiv1.VMCID, apiv1.Networks, error) {
+
+	for _, poolMember := range poolMembers {
+		err := loadbalancerService.DeletePoolMember(poolMember.PoolID, poolMember.ID, m.cpiConfig.Cloud.Properties.Openstack.StateTimeOut)
+		if err != nil {
+			m.logger.Warn("create_vm_method",
+				fmt.Sprintf("failed while cleaning up pool member: '%s' in pool '%s' with error: %s",
+					poolMember.ID, poolMember.PoolID, err.Error()))
+			continue
+		}
+	}
+
+	if server != nil {
+		err := computeService.DeleteServer(server.ID, m.cpiConfig)
+		if err != nil {
+			m.logger.Warn("create_vm_method",
+				fmt.Sprintf("failed while cleaning up server '%s' with error: %s", server.ID, err.Error()))
+		}
+	}
+
+	err := networkService.DeletePorts(ports)
+	if err != nil {
+		m.logger.Warn("create_vm_method",
+			fmt.Sprintf("failed while cleaning up ports: '%+v' with error: %s", ports, err.Error()))
+	}
+
+	return apiv1.VMCID{}, apiv1.Networks{}, errorMsg
 }

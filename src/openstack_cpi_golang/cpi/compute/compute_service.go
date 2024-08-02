@@ -180,7 +180,7 @@ func (c computeService) CreateServer(
 		server, err = c.waitForServerToBecomeActive(server.ID, time.Duration(openstackConfig.StateTimeOut)*time.Second)
 		if err != nil {
 			if availabilityZone == availabilityZones[len(availabilityZones)-1] {
-				return nil, fmt.Errorf("failed while waiting on the server creation in availability zone '%s': %w", availabilityZone, err)
+				return server, fmt.Errorf("failed while waiting on the server creation in availability zone '%s': %w", availabilityZone, err)
 			}
 			c.logger.Warn("failed while waiting on the server creation in availability zone '%s': %v, "+
 				"retrying in a different availability zone", availabilityZone, err)

@@ -622,38 +622,38 @@ var _ = Describe("Create VM", func() {
 					})
 
 					writeJsonParamToStdIn(`{
-				"method": "create_vm",
-				"arguments": [
-					"a694d798-0b41-4255-9c8e-b282cd504a52",
-					"5bba0da5-dfb3-49d8-a005-d799507518f7",
-					{
-						"instance_type": "m1.tiny",
-						"availability_zones": ["z1"]
-					},
-					{
-						"bosh": {
-							"type": "manual",
-							"ip": "10.0.11.16",
-							"netmask": "255.255.255.0",
-							"cloud_properties": {
-								"availability_zone":"z1",
-								"net_id": "fbe64fb7-b47c-4fd1-b158-9411d5c3ebf3",
-								"security_groups": [
-									"0c8a5d1a-8922-4d65-a0b2-dd78ab869e04"
-								]
+						"method": "create_vm",
+						"arguments": [
+							"a694d798-0b41-4255-9c8e-b282cd504a52",
+							"5bba0da5-dfb3-49d8-a005-d799507518f7",
+							{
+								"instance_type": "m1.tiny",
+								"availability_zones": ["z1"]
 							},
-							"default": [
-								"dns",
-								"gateway"
-							],
-							"gateway": "10.0.11.1"
-						}
-					},
-					[],
-					{}
-				],
-				"api_version": 2
-			}`)
+							{
+								"bosh": {
+									"type": "manual",
+									"ip": "10.0.11.16",
+									"netmask": "255.255.255.0",
+									"cloud_properties": {
+										"availability_zone":"z1",
+										"net_id": "fbe64fb7-b47c-4fd1-b158-9411d5c3ebf3",
+										"security_groups": [
+											"0c8a5d1a-8922-4d65-a0b2-dd78ab869e04"
+										]
+									},
+									"default": [
+										"dns",
+										"gateway"
+									],
+									"gateway": "10.0.11.1"
+								}
+							},
+							[],
+							{}
+						],
+						"api_version": 2
+					}`)
 
 					defaultConfig = getDefaultConfig(Endpoint())
 					defaultConfig.Cloud.Properties.Openstack.DefaultKeyName = "unknown_key_name"
@@ -2005,7 +2005,7 @@ var _ = Describe("Create VM", func() {
 					Expect(err).ShouldNot(HaveOccurred())
 
 					stdOutWriter.Close()
-					Expect(<-outChannel).To(ContainSubstring(`failed to update metadata for server with key f5dc173b-6804-445a-a6d8-c705dad5b5eb`))
+					Expect(<-outChannel).To(ContainSubstring(`failed to update metadata for server 'f5dc173b-6804-445a-a6d8-c705dad5b5eb' with error:`))
 				})
 			})
 
