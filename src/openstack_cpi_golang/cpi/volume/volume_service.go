@@ -7,6 +7,7 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/google/uuid"
 	"github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/gophercloud/openstack/blockstorage/extensions/volumeactions"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/volumes"
 	"time"
 )
@@ -27,6 +28,10 @@ type VolumeService interface {
 	) error
 	GetVolume(volumeID string) (*volumes.Volume, error)
 	DeleteVolume(volumeId string) error
+	ExtendVolumeSize(
+		volumeID string,
+		size int,
+	) error
 }
 
 type volumeService struct {
@@ -89,7 +94,24 @@ func (v volumeService) WaitForVolumeToBecomeStatus(volumeID string, timeout time
 }
 
 func (v volumeService) GetVolume(volumeID string) (*volumes.Volume, error) {
-	return v.volumeFacade.GetVolume(v.serviceClients.RetryableServiceClient, volumeID)
+	volume, err := v.volumeFacade.GetVolume(v.serviceClients.RetryableServiceClient, volumeID)
+	if err != nil {
+		return nil, fmt.Errorf("cannot find a volume for id %w, error: %s", volumeID, err)
+	}
+	return volume, nil
+}
+
+func (v volumeService) ExtendVolumeSize(volumeID string, size int) error {
+	var extendOpts volumeactions.ExtendSizeOptsBuilder
+	extendOpts = volumeactions.ExtendSizeOpts{
+		NewSize: size,
+	}
+
+	err := v.volumeFacade.ExtendVolumeSize(v.serviceClients.ServiceClient, volumeID, extendOpts)
+	if err != nil {
+		return fmt.Errorf("failed to extend volume size: %w", err)
+	}
+	return nil
 }
 
 func (v volumeService) DeleteVolume(volumeID string) error {

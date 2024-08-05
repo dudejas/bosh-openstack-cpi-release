@@ -37,6 +37,18 @@ type FakeVolumeService struct {
 	deleteVolumeReturnsOnCall map[int]struct {
 		result1 error
 	}
+	ExtendVolumeSizeStub        func(string, int) error
+	extendVolumeSizeMutex       sync.RWMutex
+	extendVolumeSizeArgsForCall []struct {
+		arg1 string
+		arg2 int
+	}
+	extendVolumeSizeReturns struct {
+		result1 error
+	}
+	extendVolumeSizeReturnsOnCall map[int]struct {
+		result1 error
+	}
 	GetVolumeStub        func(string) (*volumes.Volume, error)
 	getVolumeMutex       sync.RWMutex
 	getVolumeArgsForCall []struct {
@@ -194,6 +206,68 @@ func (fake *FakeVolumeService) DeleteVolumeReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
+func (fake *FakeVolumeService) ExtendVolumeSize(arg1 string, arg2 int) error {
+	fake.extendVolumeSizeMutex.Lock()
+	ret, specificReturn := fake.extendVolumeSizeReturnsOnCall[len(fake.extendVolumeSizeArgsForCall)]
+	fake.extendVolumeSizeArgsForCall = append(fake.extendVolumeSizeArgsForCall, struct {
+		arg1 string
+		arg2 int
+	}{arg1, arg2})
+	stub := fake.ExtendVolumeSizeStub
+	fakeReturns := fake.extendVolumeSizeReturns
+	fake.recordInvocation("ExtendVolumeSize", []interface{}{arg1, arg2})
+	fake.extendVolumeSizeMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeVolumeService) ExtendVolumeSizeCallCount() int {
+	fake.extendVolumeSizeMutex.RLock()
+	defer fake.extendVolumeSizeMutex.RUnlock()
+	return len(fake.extendVolumeSizeArgsForCall)
+}
+
+func (fake *FakeVolumeService) ExtendVolumeSizeCalls(stub func(string, int) error) {
+	fake.extendVolumeSizeMutex.Lock()
+	defer fake.extendVolumeSizeMutex.Unlock()
+	fake.ExtendVolumeSizeStub = stub
+}
+
+func (fake *FakeVolumeService) ExtendVolumeSizeArgsForCall(i int) (string, int) {
+	fake.extendVolumeSizeMutex.RLock()
+	defer fake.extendVolumeSizeMutex.RUnlock()
+	argsForCall := fake.extendVolumeSizeArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeVolumeService) ExtendVolumeSizeReturns(result1 error) {
+	fake.extendVolumeSizeMutex.Lock()
+	defer fake.extendVolumeSizeMutex.Unlock()
+	fake.ExtendVolumeSizeStub = nil
+	fake.extendVolumeSizeReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeVolumeService) ExtendVolumeSizeReturnsOnCall(i int, result1 error) {
+	fake.extendVolumeSizeMutex.Lock()
+	defer fake.extendVolumeSizeMutex.Unlock()
+	fake.ExtendVolumeSizeStub = nil
+	if fake.extendVolumeSizeReturnsOnCall == nil {
+		fake.extendVolumeSizeReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.extendVolumeSizeReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeVolumeService) GetVolume(arg1 string) (*volumes.Volume, error) {
 	fake.getVolumeMutex.Lock()
 	ret, specificReturn := fake.getVolumeReturnsOnCall[len(fake.getVolumeArgsForCall)]
@@ -328,6 +402,8 @@ func (fake *FakeVolumeService) Invocations() map[string][][]interface{} {
 	defer fake.createVolumeMutex.RUnlock()
 	fake.deleteVolumeMutex.RLock()
 	defer fake.deleteVolumeMutex.RUnlock()
+	fake.extendVolumeSizeMutex.RLock()
+	defer fake.extendVolumeSizeMutex.RUnlock()
 	fake.getVolumeMutex.RLock()
 	defer fake.getVolumeMutex.RUnlock()
 	fake.waitForVolumeToBecomeStatusMutex.RLock()

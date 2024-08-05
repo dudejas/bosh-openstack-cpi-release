@@ -6,6 +6,7 @@ import (
 
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/volume"
+	"github.com/gophercloud/gophercloud/openstack/blockstorage/extensions/volumeactions"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/volumes"
 )
 
@@ -35,6 +36,19 @@ type FakeVolumeFacade struct {
 		result1 error
 	}
 	deleteVolumeReturnsOnCall map[int]struct {
+		result1 error
+	}
+	ExtendVolumeSizeStub        func(utils.ServiceClient, string, volumeactions.ExtendSizeOptsBuilder) error
+	extendVolumeSizeMutex       sync.RWMutex
+	extendVolumeSizeArgsForCall []struct {
+		arg1 utils.ServiceClient
+		arg2 string
+		arg3 volumeactions.ExtendSizeOptsBuilder
+	}
+	extendVolumeSizeReturns struct {
+		result1 error
+	}
+	extendVolumeSizeReturnsOnCall map[int]struct {
 		result1 error
 	}
 	GetVolumeStub        func(utils.RetryableServiceClient, string) (*volumes.Volume, error)
@@ -183,6 +197,69 @@ func (fake *FakeVolumeFacade) DeleteVolumeReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
+func (fake *FakeVolumeFacade) ExtendVolumeSize(arg1 utils.ServiceClient, arg2 string, arg3 volumeactions.ExtendSizeOptsBuilder) error {
+	fake.extendVolumeSizeMutex.Lock()
+	ret, specificReturn := fake.extendVolumeSizeReturnsOnCall[len(fake.extendVolumeSizeArgsForCall)]
+	fake.extendVolumeSizeArgsForCall = append(fake.extendVolumeSizeArgsForCall, struct {
+		arg1 utils.ServiceClient
+		arg2 string
+		arg3 volumeactions.ExtendSizeOptsBuilder
+	}{arg1, arg2, arg3})
+	stub := fake.ExtendVolumeSizeStub
+	fakeReturns := fake.extendVolumeSizeReturns
+	fake.recordInvocation("ExtendVolumeSize", []interface{}{arg1, arg2, arg3})
+	fake.extendVolumeSizeMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeVolumeFacade) ExtendVolumeSizeCallCount() int {
+	fake.extendVolumeSizeMutex.RLock()
+	defer fake.extendVolumeSizeMutex.RUnlock()
+	return len(fake.extendVolumeSizeArgsForCall)
+}
+
+func (fake *FakeVolumeFacade) ExtendVolumeSizeCalls(stub func(utils.ServiceClient, string, volumeactions.ExtendSizeOptsBuilder) error) {
+	fake.extendVolumeSizeMutex.Lock()
+	defer fake.extendVolumeSizeMutex.Unlock()
+	fake.ExtendVolumeSizeStub = stub
+}
+
+func (fake *FakeVolumeFacade) ExtendVolumeSizeArgsForCall(i int) (utils.ServiceClient, string, volumeactions.ExtendSizeOptsBuilder) {
+	fake.extendVolumeSizeMutex.RLock()
+	defer fake.extendVolumeSizeMutex.RUnlock()
+	argsForCall := fake.extendVolumeSizeArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *FakeVolumeFacade) ExtendVolumeSizeReturns(result1 error) {
+	fake.extendVolumeSizeMutex.Lock()
+	defer fake.extendVolumeSizeMutex.Unlock()
+	fake.ExtendVolumeSizeStub = nil
+	fake.extendVolumeSizeReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeVolumeFacade) ExtendVolumeSizeReturnsOnCall(i int, result1 error) {
+	fake.extendVolumeSizeMutex.Lock()
+	defer fake.extendVolumeSizeMutex.Unlock()
+	fake.ExtendVolumeSizeStub = nil
+	if fake.extendVolumeSizeReturnsOnCall == nil {
+		fake.extendVolumeSizeReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.extendVolumeSizeReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeVolumeFacade) GetVolume(arg1 utils.RetryableServiceClient, arg2 string) (*volumes.Volume, error) {
 	fake.getVolumeMutex.Lock()
 	ret, specificReturn := fake.getVolumeReturnsOnCall[len(fake.getVolumeArgsForCall)]
@@ -255,6 +332,8 @@ func (fake *FakeVolumeFacade) Invocations() map[string][][]interface{} {
 	defer fake.createVolumeMutex.RUnlock()
 	fake.deleteVolumeMutex.RLock()
 	defer fake.deleteVolumeMutex.RUnlock()
+	fake.extendVolumeSizeMutex.RLock()
+	defer fake.extendVolumeSizeMutex.RUnlock()
 	fake.getVolumeMutex.RLock()
 	defer fake.getVolumeMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
