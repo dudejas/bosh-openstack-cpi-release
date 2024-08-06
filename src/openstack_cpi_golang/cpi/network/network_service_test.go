@@ -208,6 +208,16 @@ var _ = Describe("NetworkService", func() {
 			Expect(err.Error()).To(ContainSubstring("found more than one matching subnet for the ip"))
 		})
 
+		It("returns an error if no subnet CIDRs match the offered IP", func() {
+			networkingFacade.ExtractSubnetsReturns([]subnets.Subnet{
+				{ID: "the-subnet-id-1", CIDR: "1.1.1.0/24"}, {ID: "the-subnet-id-2", CIDR: "1.1.1.0/24"},
+			}, nil)
+
+			_, err := network.NewNetworkService(serviceClients, &networkingFacade, &logger).GetSubnetID("the-net-id", "2.1.1.1")
+
+			Expect(err.Error()).To(ContainSubstring("no matching subnet found for the ip '2.1.1.1'"))
+		})
+
 		It("returns the subnet ID of the matching subnet", func() {
 			subnetID, err := network.NewNetworkService(serviceClients, &networkingFacade, &logger).GetSubnetID("the-net-id", "1.1.1.1")
 
