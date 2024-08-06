@@ -137,6 +137,8 @@ func (c networkService) GetSubnetID(networkID string, ip string) (string, error)
 
 	if len(matchingSubnets) > 1 {
 		return "", fmt.Errorf("found more than one matching subnet for the ip '%s' in '%v'", ipAddress, matchingSubnets)
+	} else if len(matchingSubnets) == 0 {
+		return "", fmt.Errorf("no matching subnet found for the ip '%s'", ipAddress)
 	}
 
 	return matchingSubnets[0], nil
