@@ -96,7 +96,7 @@ func (v volumeService) WaitForVolumeToBecomeStatus(volumeID string, timeout time
 func (v volumeService) GetVolume(volumeID string) (*volumes.Volume, error) {
 	volume, err := v.volumeFacade.GetVolume(v.serviceClients.RetryableServiceClient, volumeID)
 	if err != nil {
-		return nil, fmt.Errorf("cannot find a volume for id %w, error: %s", volumeID, err)
+		return nil, fmt.Errorf("failed to retrieve volume information %w", err)
 	}
 	return volume, nil
 }
