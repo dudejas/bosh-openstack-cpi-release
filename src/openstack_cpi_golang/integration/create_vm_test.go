@@ -1280,14 +1280,15 @@ var _ = Describe("Create VM", func() {
 							"pools": [
 								{
 									"id": "pool_id_1",
-									"name": "myPool"
+									"name": "myPool",
+									"loadbalancers": [{"id": "the-lb-id"}]
 								}
 							]
 						}`)
 
 					})
 
-					Mux.HandleFunc("/v2.0/lbaas/pools/pool_id_1", func(w http.ResponseWriter, r *http.Request) {
+					Mux.HandleFunc("/v2.0/lbaas/loadbalancers/the-lb-id", func(w http.ResponseWriter, r *http.Request) {
 						if r.Method != http.MethodGet {
 							w.WriteHeader(http.StatusNotFound)
 							return
@@ -1296,9 +1297,8 @@ var _ = Describe("Create VM", func() {
 						w.WriteHeader(http.StatusOK)
 
 						fmt.Fprintf(w, `{
-							"pool": {
-								"id": "pool_id_1",
-								"name": "myPool",
+							"loadbalancer": {
+								"id": "the-lb-id",
 								"provisioning_status": "ACTIVE"
 							}
 						}`)
@@ -1317,23 +1317,6 @@ var _ = Describe("Create VM", func() {
 								"id": "member_id_1",
 								"name": "myPoolMember",
 								"provisioning_status": "PENDING_CREATE"
-							}
-						}`)
-					})
-
-					Mux.HandleFunc("/v2.0/lbaas/pools/pool_id_1/members/member_id_1", func(w http.ResponseWriter, r *http.Request) {
-						if r.Method != http.MethodGet {
-							w.WriteHeader(http.StatusNotFound)
-							return
-						}
-
-						w.WriteHeader(http.StatusOK)
-
-						fmt.Fprintf(w, `{
-							"member": {
-								"id": "member_id_1",
-								"name": "myPoolMember",
-								"provisioning_status": "ACTIVE"
 							}
 						}`)
 					})
@@ -1573,7 +1556,7 @@ var _ = Describe("Create VM", func() {
 					Expect(err).ShouldNot(HaveOccurred())
 
 					stdOutWriter.Close()
-					Expect(<-outChannel).To(ContainSubstring(`failed while waiting for pool to become active: failed to retrieve pool 'pool_id_1'`))
+					Expect(<-outChannel).To(ContainSubstring(`no load balancers or listeners associated with pool 'pool_id_1'`))
 				})
 
 				It("times out if pool does not become ACTIVE", func() {
@@ -1590,98 +1573,15 @@ var _ = Describe("Create VM", func() {
 							"pools": [
 								{
 									"id": "pool_id_1",
-									"name": "myPool"
+									"name": "myPool",
+									"loadbalancers": [{"id": "the-lb-id"}]
 								}
 							]
 						}`)
 
 					})
 
-					Mux.HandleFunc("/v2.0/lbaas/pools/pool_id_1", func(w http.ResponseWriter, r *http.Request) {
-						if r.Method != http.MethodGet {
-							w.WriteHeader(http.StatusNotFound)
-							return
-						}
-						w.WriteHeader(http.StatusOK)
-
-						fmt.Fprintf(w, `{
-							"pool": {
-								"id": "pool_id_1",
-								"name": "myPool",
-								"provisioning_status": "PENDING_CREATE"
-							}
-						}`)
-
-					})
-
-					writeJsonParamToStdIn(`{
-						"method": "create_vm",
-						"arguments": [
-							"a694d798-0b41-4255-9c8e-b282cd504a52",
-							"5bba0da5-dfb3-49d8-a005-d799507518f7",
-							{
-								"instance_type": "m1.tiny",
-								"key_name": "default_key_name",
-								"availability_zones": ["z1"],
-								"loadbalancer_pools": [
-									{  "name": "myPool", "port": 80 }
-								]
-							},
-							{
-								"bosh": {
-									"type": "manual",
-									"ip": "10.0.11.16",
-									"netmask": "255.255.255.0",
-									"cloud_properties": {
-										"availability_zone": "z1",
-										"net_id": "fbe64fb7-b47c-4fd1-b158-9411d5c3ebf3",
-										"security_groups": [
-											"0c8a5d1a-8922-4d65-a0b2-dd78ab869e04",
-											"bosh_acceptance_tests"
-										]
-									},
-									"default": [
-										"dns",
-										"gateway"
-									],
-									"gateway": "10.0.11.1"
-								}
-							},
-							[],
-							{}
-						],
-						"api_version": 2
-					}`)
-
-					err := cpi.Execute(getDefaultConfig(Endpoint()), logger)
-					Expect(err).ShouldNot(HaveOccurred())
-
-					stdOutWriter.Close()
-					Expect(<-outChannel).To(ContainSubstring(`failed while waiting for pool to become active: timeout while waiting for pool 'pool_id_1' to become active`))
-				})
-
-				It("fails if it can not retrieve pool member", func() {
-					Mux.HandleFunc("/v2.0/lbaas/pools", func(w http.ResponseWriter, r *http.Request) {
-						if r.Method != http.MethodGet || r.URL.Query().Get("name") != "myPool" {
-							w.WriteHeader(http.StatusNotFound)
-							return
-						}
-
-						w.Header().Add("Content-Type", "application/json")
-						w.WriteHeader(http.StatusOK)
-
-						fmt.Fprintf(w, `{
-							"pools": [
-								{
-									"id": "pool_id_1",
-									"name": "myPool"
-								}
-							]
-						}`)
-
-					})
-
-					Mux.HandleFunc("/v2.0/lbaas/pools/pool_id_1", func(w http.ResponseWriter, r *http.Request) {
+					Mux.HandleFunc("/v2.0/lbaas/loadbalancers/the-lb-id", func(w http.ResponseWriter, r *http.Request) {
 						if r.Method != http.MethodGet {
 							w.WriteHeader(http.StatusNotFound)
 							return
@@ -1690,27 +1590,9 @@ var _ = Describe("Create VM", func() {
 						w.WriteHeader(http.StatusOK)
 
 						fmt.Fprintf(w, `{
-							"pool": {
-								"id": "pool_id_1",
-								"name": "myPool",
-								"provisioning_status": "ACTIVE"
-							}
-						}`)
-					})
-
-					Mux.HandleFunc("/v2.0/lbaas/pools/pool_id_1/members", func(w http.ResponseWriter, r *http.Request) {
-						if r.Method != http.MethodPost {
-							w.WriteHeader(http.StatusNotFound)
-							return
-						}
-
-						w.WriteHeader(http.StatusCreated)
-
-						fmt.Fprintf(w, `{
-							"member": {
-								"id": "member_id_1",
-								"name": "myPoolMember",
-								"provisioning_status": "ACTIVE"
+							"loadbalancer": {
+								"id": "the-lb-id",
+								"provisioning_status": "PENDING_UPDATE"
 							}
 						}`)
 					})
@@ -1758,125 +1640,7 @@ var _ = Describe("Create VM", func() {
 					Expect(err).ShouldNot(HaveOccurred())
 
 					stdOutWriter.Close()
-					Expect(<-outChannel).To(ContainSubstring(`failed while waiting for pool member to become active: failed to retrieve pool member 'member_id_1'`))
-				})
-
-				It("times out if pool member does not become ACTIVE", func() {
-					Mux.HandleFunc("/v2.0/lbaas/pools", func(w http.ResponseWriter, r *http.Request) {
-						if r.Method != http.MethodGet || r.URL.Query().Get("name") != "myPool" {
-							w.WriteHeader(http.StatusNotFound)
-							return
-						}
-
-						w.Header().Add("Content-Type", "application/json")
-						w.WriteHeader(http.StatusOK)
-
-						fmt.Fprintf(w, `{
-							"pools": [
-								{
-									"id": "pool_id_1",
-									"name": "myPool"
-								}
-							]
-						}`)
-
-					})
-
-					Mux.HandleFunc("/v2.0/lbaas/pools/pool_id_1", func(w http.ResponseWriter, r *http.Request) {
-						if r.Method != http.MethodGet {
-							w.WriteHeader(http.StatusNotFound)
-							return
-						}
-
-						w.WriteHeader(http.StatusOK)
-
-						fmt.Fprintf(w, `{
-							"pool": {
-								"id": "pool_id_1",
-								"name": "myPool",
-								"provisioning_status": "ACTIVE"
-							}
-						}`)
-					})
-
-					Mux.HandleFunc("/v2.0/lbaas/pools/pool_id_1/members", func(w http.ResponseWriter, r *http.Request) {
-						if r.Method != http.MethodPost {
-							w.WriteHeader(http.StatusNotFound)
-							return
-						}
-
-						w.WriteHeader(http.StatusCreated)
-
-						fmt.Fprintf(w, `{
-							"member": {
-								"id": "member_id_1",
-								"name": "myPoolMember",
-								"provisioning_status": "PENDING_CREATE"
-							}
-						}`)
-					})
-
-					Mux.HandleFunc("/v2.0/lbaas/pools/pool_id_1/members/member_id_1", func(w http.ResponseWriter, r *http.Request) {
-						if r.Method != http.MethodGet {
-							w.WriteHeader(http.StatusNotFound)
-							return
-						}
-
-						w.WriteHeader(http.StatusOK)
-
-						fmt.Fprintf(w, `{
-							"member": {
-								"id": "member_id_1",
-								"name": "myPoolMember",
-								"provisioning_status": "PENDING_CREATE"
-							}
-						}`)
-					})
-
-					writeJsonParamToStdIn(`{
-						"method": "create_vm",
-						"arguments": [
-							"a694d798-0b41-4255-9c8e-b282cd504a52",
-							"5bba0da5-dfb3-49d8-a005-d799507518f7",
-							{
-								"instance_type": "m1.tiny",
-								"key_name": "default_key_name",
-								"availability_zones": ["z1"],
-								"loadbalancer_pools": [
-									{  "name": "myPool", "port": 80 }
-								]
-							},
-							{
-								"bosh": {
-									"type": "manual",
-									"ip": "10.0.11.16",
-									"netmask": "255.255.255.0",
-									"cloud_properties": {
-										"availability_zone": "z1",
-										"net_id": "fbe64fb7-b47c-4fd1-b158-9411d5c3ebf3",
-										"security_groups": [
-											"0c8a5d1a-8922-4d65-a0b2-dd78ab869e04",
-											"bosh_acceptance_tests"
-										]
-									},
-									"default": [
-										"dns",
-										"gateway"
-									],
-									"gateway": "10.0.11.1"
-								}
-							},
-							[],
-							{}
-						],
-						"api_version": 2
-					}`)
-
-					err := cpi.Execute(getDefaultConfig(Endpoint()), logger)
-					Expect(err).ShouldNot(HaveOccurred())
-
-					stdOutWriter.Close()
-					Expect(<-outChannel).To(ContainSubstring(`failed while waiting for pool member to become active: timeout while waiting for pool member 'member_id_1' to become active`))
+					Expect(<-outChannel).To(ContainSubstring(`timeout while waiting for loadbalancer 'the-lb-id' to become active`))
 				})
 
 				It("fails if it can not set server metadata", func() {
@@ -1893,11 +1657,28 @@ var _ = Describe("Create VM", func() {
 							"pools": [
 								{
 									"id": "pool_id_1",
-									"name": "myPool"
+									"name": "myPool",
+									"loadbalancers": [{"id": "the-lb-id"}]
 								}
 							]
 						}`)
 
+					})
+
+					Mux.HandleFunc("/v2.0/lbaas/loadbalancers/the-lb-id", func(w http.ResponseWriter, r *http.Request) {
+						if r.Method != http.MethodGet {
+							w.WriteHeader(http.StatusNotFound)
+							return
+						}
+
+						w.WriteHeader(http.StatusOK)
+
+						fmt.Fprintf(w, `{
+							"loadbalancer": {
+								"id": "the-lb-id",
+								"provisioning_status": "ACTIVE"
+							}
+						}`)
 					})
 
 					Mux.HandleFunc("/v2.0/lbaas/pools/pool_id_1", func(w http.ResponseWriter, r *http.Request) {
@@ -1930,23 +1711,6 @@ var _ = Describe("Create VM", func() {
 								"id": "member_id_1",
 								"name": "myPoolMember",
 								"provisioning_status": "PENDING_CREATE"
-							}
-						}`)
-					})
-
-					Mux.HandleFunc("/v2.0/lbaas/pools/pool_id_1/members/member_id_1", func(w http.ResponseWriter, r *http.Request) {
-						if r.Method != http.MethodGet {
-							w.WriteHeader(http.StatusNotFound)
-							return
-						}
-
-						w.WriteHeader(http.StatusOK)
-
-						fmt.Fprintf(w, `{
-							"member": {
-								"id": "member_id_1",
-								"name": "myPoolMember",
-								"provisioning_status": "ACTIVE"
 							}
 						}`)
 					})

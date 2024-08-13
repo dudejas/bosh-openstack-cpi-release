@@ -86,7 +86,7 @@ var _ = Describe("VolumeService", func() {
 			err := volumeService.WaitForVolumeToBecomeStatus("123-456", 1, "some_target_status")
 
 			Expect(volumeFacade.GetVolumeCallCount()).To(Equal(1))
-			Expect(err.Error()).To(Equal("boom"))
+			Expect(err.Error()).To(Equal("failed to retrieve volume information: boom"))
 		})
 	})
 

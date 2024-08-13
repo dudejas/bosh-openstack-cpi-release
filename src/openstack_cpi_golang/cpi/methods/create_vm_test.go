@@ -619,10 +619,10 @@ var _ = Describe("CreateVMMethod", func() {
 					env,
 				)
 
-				poolID, ip, pool, subnetID, stateTimeOut := loadbalancerService.CreatePoolMemberArgsForCall(0)
-				Expect(poolID).To(Equal("the-pool-id-1"))
+				pool, ip, poolProps, subnetID, stateTimeOut := loadbalancerService.CreatePoolMemberArgsForCall(0)
+				Expect(pool.ID).To(Equal("the-pool-id-1"))
 				Expect(ip).To(Equal("1.1.1.1"))
-				Expect(pool.Name).To(Equal("the-pool-name-1"))
+				Expect(poolProps.Name).To(Equal("the-pool-name-1"))
 				Expect(subnetID).To(Equal("the-subnet-id"))
 				Expect(stateTimeOut).To(Equal(1))
 			})
@@ -653,17 +653,17 @@ var _ = Describe("CreateVMMethod", func() {
 					env,
 				)
 
-				poolID, ip, pool, subnetID, stateTimeOut := loadbalancerService.CreatePoolMemberArgsForCall(0)
-				Expect(poolID).To(Equal("the-pool-id-1"))
+				pool, ip, poolProps, subnetID, stateTimeOut := loadbalancerService.CreatePoolMemberArgsForCall(0)
+				Expect(pool.ID).To(Equal("the-pool-id-1"))
 				Expect(ip).To(Equal("1.1.1.1"))
-				Expect(pool.Name).To(Equal("the-pool-name-1"))
+				Expect(poolProps.Name).To(Equal("the-pool-name-1"))
 				Expect(subnetID).To(Equal("the-subnet-id"))
 				Expect(stateTimeOut).To(Equal(1))
 
-				poolID, ip, pool, subnetID, stateTimeOut = loadbalancerService.CreatePoolMemberArgsForCall(1)
-				Expect(poolID).To(Equal("the-pool-id-2"))
+				pool, ip, poolProps, subnetID, stateTimeOut = loadbalancerService.CreatePoolMemberArgsForCall(1)
+				Expect(pool.ID).To(Equal("the-pool-id-2"))
 				Expect(ip).To(Equal("1.1.1.1"))
-				Expect(pool.Name).To(Equal("the-pool-name-2"))
+				Expect(poolProps.Name).To(Equal("the-pool-name-2"))
 				Expect(subnetID).To(Equal("the-subnet-id"))
 				Expect(stateTimeOut).To(Equal(1))
 			})

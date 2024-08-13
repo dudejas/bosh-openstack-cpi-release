@@ -168,12 +168,12 @@ func (m CreateVMMethod) configureLoadbalancerPools(
 ) ([]pools.Member, error) {
 	var poolMemberships []pools.Member
 
-	for _, loadbalancerPool := range cloudProps.LoadbalancerPools {
-		pool, err := loadbalancerService.GetPool(loadbalancerPool.Name)
+	for _, poolProperties := range cloudProps.LoadbalancerPools {
+		pool, err := loadbalancerService.GetPool(poolProperties.Name)
 		if err != nil {
-			return poolMemberships, fmt.Errorf("failed to get pool ID of pool '%s': %w", loadbalancerPool.Name, err)
+			return poolMemberships, fmt.Errorf("failed to get pool ID of pool '%s': %w", poolProperties.Name, err)
 		}
-		m.logger.Info("create_vm_method", fmt.Sprintf("Resolved pool id '%s' for pool '%s'", pool.ID, loadbalancerPool.Name))
+		m.logger.Info("create_vm_method", fmt.Sprintf("Resolved pool id '%s' for pool '%s'", pool.ID, poolProperties.Name))
 
 		ip := networkConfig.DefaultNetwork.IP
 
@@ -184,7 +184,7 @@ func (m CreateVMMethod) configureLoadbalancerPools(
 			return poolMemberships, fmt.Errorf("failed to get subnet: %w", err)
 		}
 
-		poolMember, err := loadbalancerService.CreatePoolMember(pool.ID, ip, loadbalancerPool, subnetID, m.cpiConfig.Cloud.Properties.Openstack.StateTimeOut)
+		poolMember, err := loadbalancerService.CreatePoolMember(pool, ip, poolProperties, subnetID, m.cpiConfig.Cloud.Properties.Openstack.StateTimeOut)
 		if err != nil {
 			return poolMemberships, fmt.Errorf("failed to create pool membership of IP '%s' in pool '%s': %w", ip, pool.ID, err)
 		}

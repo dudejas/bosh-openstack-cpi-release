@@ -9,6 +9,8 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils/utilsfakes"
 	"github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/listeners"
+	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/loadbalancers"
 	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/pools"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -21,6 +23,10 @@ var _ = Describe("LoadbalancerService", func() {
 	var loadbalancerFacade loadbalancerfakes.FakeLoadbalancerFacade
 	var logger utilsfakes.FakeLogger
 	var poolsPage mocks.MockPage
+	var mockPool pools.Pool
+	var mockListener listeners.Listener
+	var mockMember pools.Member
+	var poolProps properties.LoadbalancerPool
 
 	BeforeEach(func() {
 		serviceClient = gophercloud.ServiceClient{}
@@ -31,13 +37,45 @@ var _ = Describe("LoadbalancerService", func() {
 		poolsPage = mocks.MockPage{}
 
 		loadbalancer.LoadbalancerServicePollingInterval = 0
-		loadbalancerFacade.GetPoolReturns(&pools.Pool{ID: "pool-id", ProvisioningStatus: "ACTIVE"}, nil)
+
+		monitoringPort := 5678
+		poolProps = properties.LoadbalancerPool{
+			Name:           "pool-name",
+			ProtocolPort:   1234,
+			MonitoringPort: &monitoringPort,
+		}
+
+		mockListener = listeners.Listener{
+			ID:            "the-listener-id",
+			Loadbalancers: []listeners.LoadBalancerID{{ID: "the-lb-id"}},
+		}
+
+		mockPool = pools.Pool{
+			ID:            "pool-id",
+			Name:          "pool-name",
+			Loadbalancers: []pools.LoadBalancerID{pools.LoadBalancerID{ID: "the-lb-id"}},
+			Listeners:     []pools.ListenerID{{ID: "the-listener-id"}},
+		}
+
+		mockMember = pools.Member{
+			ID:           "the-member-id",
+			SubnetID:     "subnet-id",
+			Address:      "1.1.1.1",
+			ProtocolPort: 1234,
+			MonitorPort:  5678,
+		}
+
+		loadbalancerFacade.GetPoolReturns(&mockPool, nil)
+
+		loadbalancerFacade.GetListenerReturns(&mockListener, nil)
+
+		loadbalancerFacade.ExtractPoolMembersReturns([]pools.Member{mockMember}, nil)
 	})
 
 	Context("GetPool", func() {
 		BeforeEach(func() {
 			loadbalancerFacade.ListPoolsReturns(poolsPage, nil)
-			loadbalancerFacade.ExtractPoolsReturns([]pools.Pool{{Name: "pool-name", ID: "pool-id"}}, nil)
+			loadbalancerFacade.ExtractPoolsReturns([]pools.Pool{mockPool}, nil)
 		})
 
 		It("lists loadbalancer pools", func() {
@@ -106,162 +144,176 @@ var _ = Describe("LoadbalancerService", func() {
 
 	Context("CreatePoolMember", func() {
 		BeforeEach(func() {
-			loadbalancerFacade.GetPoolMemberReturns(&pools.Member{ID: "the-member-id", ProvisioningStatus: "ACTIVE"}, nil)
-			loadbalancerFacade.CreatePoolMemberReturns(&pools.Member{ID: "the-member-id"}, nil)
+			loadbalancerFacade.GetLoadbalancerReturns(&loadbalancers.LoadBalancer{ID: "the-lb-id", ProvisioningStatus: "ACTIVE"}, nil)
+			loadbalancerFacade.CreatePoolMemberReturns(&mockMember, nil)
 		})
 
-		It("waits for the pool to become ACTIVE", func() {
-			loadbalancerFacade.GetPoolReturnsOnCall(0, &pools.Pool{ID: "pool-id", ProvisioningStatus: "PENDING_UPDATE"}, nil)
-			loadbalancerFacade.GetPoolReturnsOnCall(1, &pools.Pool{ID: "pool-id", ProvisioningStatus: "ACTIVE"}, nil)
+		It("waits for the loadbalancer to become ACTIVE", func() {
+			loadbalancerFacade.GetLoadbalancerReturnsOnCall(0, &loadbalancers.LoadBalancer{ID: "the-lb-id", ProvisioningStatus: "PENDING_UPDATE"}, nil)
+			loadbalancerFacade.GetLoadbalancerReturnsOnCall(1, &loadbalancers.LoadBalancer{ID: "the-lb-id", ProvisioningStatus: "ACTIVE"}, nil)
 
 			_, err := loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
-				CreatePoolMember("pool-id", "1.1.1.1", properties.LoadbalancerPool{}, "subnet-id", 1)
+				CreatePoolMember(mockPool, "1.1.1.1", poolProps, "subnet-id", 1)
 
-			retryableServiceClient, poolId := loadbalancerFacade.GetPoolArgsForCall(0)
+			retryableServiceClient, poolId := loadbalancerFacade.GetLoadbalancerArgsForCall(0)
 			var utilsRetryableServiceClient utils.RetryableServiceClient
 			Expect(retryableServiceClient).To(BeAssignableToTypeOf(utilsRetryableServiceClient))
 
-			Expect(poolId).To(Equal("pool-id"))
+			Expect(poolId).To(Equal("the-lb-id"))
 			Expect(err).ToNot(HaveOccurred())
 		})
 
-		It("times out while waiting for pool to become ACTIVE", func() {
-			loadbalancerFacade.GetPoolReturns(&pools.Pool{ID: "pool-id", ProvisioningStatus: "PENDING_UPDATE"}, nil)
+		It("retrieves the loadbalancer via listeners", func() {
+			mockPool.Loadbalancers = []pools.LoadBalancerID{}
+
+			_, err := loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
+				CreatePoolMember(mockPool, "1.1.1.1", poolProps, "subnet-id", 1)
+
+			retryableServiceClient, poolId := loadbalancerFacade.GetLoadbalancerArgsForCall(0)
+			var utilsRetryableServiceClient utils.RetryableServiceClient
+			Expect(retryableServiceClient).To(BeAssignableToTypeOf(utilsRetryableServiceClient))
+
+			Expect(poolId).To(Equal("the-lb-id"))
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("fails if no loadbalancers nor listeners are associated with pool", func() {
+			mockPool.Loadbalancers = []pools.LoadBalancerID{}
+			mockPool.Listeners = []pools.ListenerID{}
 
 			poolMember, err := loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
-				CreatePoolMember("pool-id", "1.1.1.1", properties.LoadbalancerPool{}, "subnet-id", 1)
+				CreatePoolMember(mockPool, "1.1.1.1", poolProps, "subnet-id", 1)
 
-			Expect(err.Error()).To(ContainSubstring("timeout while waiting for pool 'pool-id' to become active"))
+			Expect(err.Error()).To(ContainSubstring("no load balancers or listeners associated with pool 'pool-id'"))
 			Expect(poolMember).To(BeNil())
 		})
 
-		It("returns an error while waiting if getting pool fails", func() {
-			loadbalancerFacade.GetPoolReturns(nil, errors.New("boom"))
+		It("fails if multiple listeners are associated with pool", func() {
+			mockPool.Loadbalancers = []pools.LoadBalancerID{}
+			mockPool.Listeners = append(mockPool.Listeners, []pools.ListenerID{{ID: "another-listener-id"}}...)
 
 			poolMember, err := loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
-				CreatePoolMember("pool-id", "1.1.1.1", properties.LoadbalancerPool{}, "subnet-id", 1)
+				CreatePoolMember(mockPool, "1.1.1.1", poolProps, "subnet-id", 1)
 
-			Expect(err.Error()).To(ContainSubstring("failed to retrieve pool 'pool-id': boom"))
+			Expect(err.Error()).To(ContainSubstring("more than one listener is associated with pool 'pool-id'"))
 			Expect(poolMember).To(BeNil())
 		})
 
-		It("returns an error while waiting if the pool is in state ERROR", func() {
-			loadbalancerFacade.GetPoolReturns(&pools.Pool{ID: "pool-id", ProvisioningStatus: "ERROR"}, nil)
+		It("fails if multiple loadbalancers are associated with pool", func() {
+			mockPool.Loadbalancers = append(mockPool.Loadbalancers, []pools.LoadBalancerID{{ID: "another-lb-id"}}...)
 
 			poolMember, err := loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
-				CreatePoolMember("pool-id", "1.1.1.1", properties.LoadbalancerPool{}, "subnet-id", 1)
+				CreatePoolMember(mockPool, "1.1.1.1", poolProps, "subnet-id", 1)
 
-			Expect(err.Error()).To(ContainSubstring("pool status ended up in ERROR state"))
+			Expect(err.Error()).To(ContainSubstring("more than one load balancer is associated with pool 'pool-id'"))
+			Expect(poolMember).To(BeNil())
+		})
+
+		It("fails if retrieving a listener fails", func() {
+			mockPool.Loadbalancers = []pools.LoadBalancerID{}
+
+			loadbalancerFacade.GetListenerReturns(&listeners.Listener{}, errors.New("boom"))
+
+			poolMember, err := loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
+				CreatePoolMember(mockPool, "1.1.1.1", poolProps, "subnet-id", 1)
+
+			Expect(err.Error()).To(ContainSubstring("failed to retrieve listener 'the-listener-id'"))
+			Expect(poolMember).To(BeNil())
+		})
+
+		It("times out while waiting for loadbalancer to become ACTIVE", func() {
+			loadbalancerFacade.GetLoadbalancerReturns(&loadbalancers.LoadBalancer{ID: "the-lb-id", ProvisioningStatus: "PENDING_UPDATE"}, nil)
+
+			poolMember, err := loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
+				CreatePoolMember(mockPool, "1.1.1.1", poolProps, "subnet-id", 1)
+
+			Expect(err.Error()).To(ContainSubstring("timeout while waiting for loadbalancer 'the-lb-id' to become active"))
+			Expect(poolMember).To(BeNil())
+		})
+
+		It("returns an error while waiting if getting loadbalancer fails", func() {
+			loadbalancerFacade.GetLoadbalancerReturns(nil, errors.New("boom"))
+
+			poolMember, err := loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
+				CreatePoolMember(mockPool, "1.1.1.1", poolProps, "subnet-id", 1)
+
+			Expect(err.Error()).To(ContainSubstring("failed to retrieve loadbalancer 'the-lb-id': boom"))
+			Expect(poolMember).To(BeNil())
+		})
+
+		It("returns an error while waiting if the loadbalancer is in state ERROR", func() {
+			loadbalancerFacade.GetLoadbalancerReturns(&loadbalancers.LoadBalancer{ID: "the-lb-id", ProvisioningStatus: "ERROR"}, nil)
+
+			poolMember, err := loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
+				CreatePoolMember(mockPool, "1.1.1.1", poolProps, "subnet-id", 1)
+
+			Expect(err.Error()).To(ContainSubstring("loadbalancer status ended up in 'ERROR' state"))
 			Expect(poolMember).To(BeNil())
 		})
 
 		It("creates a pool member", func() {
-			loadbalancerFacade.GetPoolMemberReturns(&pools.Member{ID: "the-member-id", ProvisioningStatus: "ACTIVE"}, nil)
+			poolMember, err := loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
+				CreatePoolMember(mockPool, "1.1.1.1", poolProps, "subnet-id", 1)
 
-			loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
-				CreatePoolMember("pool-id", "1.1.1.1", properties.LoadbalancerPool{ProtocolPort: 1234}, "subnet-id", 1)
-
-			_, poolID, createMemberOpts := loadbalancerFacade.CreatePoolMemberArgsForCall(0)
+			_, poolID, _ := loadbalancerFacade.CreatePoolMemberArgsForCall(0)
 			Expect(poolID).To(Equal("pool-id"))
-			Expect(createMemberOpts).To(Equal(pools.CreateMemberOpts{
-				Address:      "1.1.1.1",
-				ProtocolPort: 1234,
-				SubnetID:     "subnet-id",
-			}))
-		})
 
-		It("creates a pool member with monitoring port if provided", func() {
-			loadbalancerFacade.GetPoolMemberReturns(&pools.Member{ID: "the-member-id", ProvisioningStatus: "ACTIVE"}, nil)
-
-			monitoringPort := 5678
-			loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
-				CreatePoolMember("pool-id", "1.1.1.1", properties.LoadbalancerPool{ProtocolPort: 1234, MonitoringPort: &monitoringPort}, "subnet-id", 1)
-
-			_, poolID, createMemberOpts := loadbalancerFacade.CreatePoolMemberArgsForCall(0)
-			Expect(poolID).To(Equal("pool-id"))
-			Expect(createMemberOpts).To(Equal(pools.CreateMemberOpts{
-				Address:      "1.1.1.1",
-				ProtocolPort: 1234,
-				SubnetID:     "subnet-id",
-				MonitorPort:  &monitoringPort,
-			}))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(poolMember.ID).To(Equal("the-member-id"))
+			Expect(poolMember.Address).To(Equal("1.1.1.1"))
+			Expect(poolMember.ProtocolPort).To(Equal(1234))
+			Expect(poolMember.MonitorPort).To(Equal(5678))
+			Expect(poolMember.SubnetID).To(Equal("subnet-id"))
 		})
 
 		It("returns an error if creating a pool member fails", func() {
 			loadbalancerFacade.CreatePoolMemberReturns(nil, errors.New("boom"))
 
 			_, err := loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
-				CreatePoolMember("pool-id", "1.1.1.1", properties.LoadbalancerPool{}, "subnet-id", 1)
+				CreatePoolMember(mockPool, "1.1.1.1", poolProps, "subnet-id", 1)
 
 			Expect(err.Error()).To(Equal("failed to create pool member: boom"))
 		})
 
-		It("waits for the pool member to become ACTIVE", func() {
-			loadbalancerFacade.GetPoolMemberReturnsOnCall(0, &pools.Member{ID: "the-member-id", ProvisioningStatus: "PENDING_CREATE"}, nil)
-			loadbalancerFacade.GetPoolMemberReturnsOnCall(1, &pools.Member{ID: "the-member-id", ProvisioningStatus: "ACTIVE"}, nil)
+		It("tries to find the pool member causing the conflict and returns it", func() {
+			testError := gophercloud.ErrDefault409{gophercloud.ErrUnexpectedResponseCode{Actual: 409}}
+			loadbalancerFacade.CreatePoolMemberReturns(nil, testError)
 
-			poolMember, err := loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
-				CreatePoolMember("pool-id", "1.1.1.1", properties.LoadbalancerPool{}, "subnet-id", 1)
-
-			Expect(err).ToNot(HaveOccurred())
-			Expect(poolMember.ID).To(Equal("the-member-id"))
-		})
-
-		It("returns an error while waiting if getting pool member fails", func() {
-			loadbalancerFacade.GetPoolMemberReturns(nil, errors.New("boom"))
-
-			poolMember, err := loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
-				CreatePoolMember("pool-id", "1.1.1.1", properties.LoadbalancerPool{}, "subnet-id", 1)
-
-			Expect(err.Error()).To(ContainSubstring("failed to retrieve pool member 'the-member-id': boom"))
-			Expect(poolMember).To(BeNil())
-		})
-
-		It("returns an error while waiting if the pool member creation finishes in state ERROR", func() {
-			loadbalancerFacade.GetPoolMemberReturns(&pools.Member{ID: "123-456", ProvisioningStatus: "ERROR"}, nil)
-
-			poolMember, err := loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
-				CreatePoolMember("pool-id", "1.1.1.1", properties.LoadbalancerPool{}, "subnet-id", 1)
-
-			Expect(err.Error()).To(ContainSubstring("pool member creation finished with ERROR state"))
-			Expect(poolMember).To(BeNil())
-		})
-
-		It("returns an error while waiting if the pool member provisioning status is unknown", func() {
-			loadbalancerFacade.GetPoolMemberReturns(&pools.Member{ID: "123-456", ProvisioningStatus: "unknown-status"}, nil)
-
-			poolMember, err := loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
-				CreatePoolMember("pool-id", "1.1.1.1", properties.LoadbalancerPool{}, "subnet-id", 1)
-
-			Expect(err.Error()).To(ContainSubstring("pool member creation fails for unknown provisioning status 'unknown-status'"))
-			Expect(poolMember).To(BeNil())
-		})
-
-		It("returns an error while waiting if the pool member creation times out", func() {
-			loadbalancerFacade.GetPoolMemberReturns(&pools.Member{ID: "123-456", ProvisioningStatus: "PENDING_CREATE"}, nil)
-
-			poolMember, err := loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
-				CreatePoolMember("pool-id", "1.1.1.1", properties.LoadbalancerPool{}, "subnet-id", 1)
-
-			Expect(err.Error()).To(ContainSubstring("timeout while waiting for pool member 'the-member-id' to become active"))
-			Expect(poolMember).To(BeNil())
-		})
-
-		It("returns a pool member", func() {
-			loadbalancerFacade.GetPoolMemberReturnsOnCall(0, &pools.Member{ID: "the-member-id", ProvisioningStatus: "ACTIVE"}, nil)
-
-			poolMember, err := loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
-				CreatePoolMember("pool-id", "1.1.1.1", properties.LoadbalancerPool{}, "subnet-id", 1)
+			member, err := loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
+				CreatePoolMember(mockPool, "1.1.1.1", poolProps, "subnet-id", 1)
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(poolMember.ID).To(Equal("the-member-id"))
+			Expect(member).To(Equal(&mockMember))
 		})
 	})
 
 	Context("DeletePoolMember", func() {
-		It("waits for the pool to become ACTIVE", func() {
-			loadbalancerFacade.GetPoolReturnsOnCall(0, &pools.Pool{ID: "pool-id", ProvisioningStatus: "PENDING_UPDATE"}, nil)
-			loadbalancerFacade.GetPoolReturnsOnCall(1, &pools.Pool{ID: "pool-id", ProvisioningStatus: "ACTIVE"}, nil)
+		BeforeEach(func() {
+			loadbalancerFacade.GetLoadbalancerReturns(&loadbalancers.LoadBalancer{ID: "the-lb-id", ProvisioningStatus: "ACTIVE"}, nil)
+		})
+
+		It("returns an error if getting pool fails", func() {
+			loadbalancerFacade.GetPoolReturns(nil, errors.New("boom"))
+
+			err := loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
+				DeletePoolMember("pool-id", "member-id", 1)
+
+			Expect(err.Error()).To(ContainSubstring("failed to get pool with ID 'pool-id': boom"))
+		})
+
+		It("fails if no loadbalancers nor listeners are associated with pool", func() {
+			mockPool.Loadbalancers = []pools.LoadBalancerID{}
+			mockPool.Listeners = []pools.ListenerID{}
+
+			err := loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
+				DeletePoolMember("pool-id", "member-id", 1)
+
+			Expect(err.Error()).To(ContainSubstring("no load balancers or listeners associated with pool 'pool-id'"))
+		})
+
+		It("waits for the loadbalancer to become ACTIVE", func() {
+			loadbalancerFacade.GetLoadbalancerReturnsOnCall(0, &loadbalancers.LoadBalancer{ID: "the-lb-id", ProvisioningStatus: "PENDING_UPDATE"}, nil)
+			loadbalancerFacade.GetLoadbalancerReturnsOnCall(1, &loadbalancers.LoadBalancer{ID: "the-lb-id", ProvisioningStatus: "ACTIVE"}, nil)
 
 			err := loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
 				DeletePoolMember("pool-id", "member-id", 1)
@@ -275,36 +327,36 @@ var _ = Describe("LoadbalancerService", func() {
 			Expect(loadbalancerFacade.DeletePoolMemberCallCount()).To(Equal(1))
 		})
 
-		It("times out while waiting for pool to become ACTIVE", func() {
-			loadbalancerFacade.GetPoolReturns(&pools.Pool{ID: "pool-id", ProvisioningStatus: "PENDING_UPDATE"}, nil)
+		It("times out while waiting for loadbalancer to become ACTIVE", func() {
+			loadbalancerFacade.GetLoadbalancerReturns(&loadbalancers.LoadBalancer{ID: "the-lb-id", ProvisioningStatus: "PENDING_UPDATE"}, nil)
 
 			err := loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
 				DeletePoolMember("pool-id", "member-id", 1)
 
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("timeout while waiting for pool 'pool-id' to become active"))
+			Expect(err.Error()).To(ContainSubstring("timeout while waiting for loadbalancer 'the-lb-id' to become active"))
 			Expect(loadbalancerFacade.DeletePoolMemberCallCount()).To(Equal(0))
 		})
 
-		It("returns an error while waiting if getting pool fails", func() {
-			loadbalancerFacade.GetPoolReturns(nil, errors.New("boom"))
+		It("returns an error while waiting if getting loadbalancer fails", func() {
+			loadbalancerFacade.GetLoadbalancerReturns(&loadbalancers.LoadBalancer{}, errors.New("boom"))
 
 			err := loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
 				DeletePoolMember("pool-id", "member-id", 1)
 
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("failed to retrieve pool 'pool-id': boom"))
+			Expect(err.Error()).To(ContainSubstring("failed to retrieve loadbalancer 'the-lb-id': boom"))
 			Expect(loadbalancerFacade.DeletePoolMemberCallCount()).To(Equal(0))
 		})
 
-		It("returns an error while waiting if the pool is in state ERROR", func() {
-			loadbalancerFacade.GetPoolReturns(&pools.Pool{ID: "pool-id", ProvisioningStatus: "ERROR"}, nil)
+		It("returns an error while waiting if the loadbalancer is in state ERROR", func() {
+			loadbalancerFacade.GetLoadbalancerReturns(&loadbalancers.LoadBalancer{ID: "the-lb-id", ProvisioningStatus: "ERROR"}, nil)
 
 			err := loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
 				DeletePoolMember("pool-id", "member-id", 1)
 
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("pool status ended up in ERROR state"))
+			Expect(err.Error()).To(ContainSubstring("loadbalancer status ended up in 'ERROR' state"))
 			Expect(loadbalancerFacade.DeletePoolMemberCallCount()).To(Equal(0))
 		})
 

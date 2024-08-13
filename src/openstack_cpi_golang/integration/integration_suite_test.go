@@ -54,6 +54,14 @@ func getDefaultConfig(url string) config.CpiConfig {
 		Region:                  "region",
 		DefaultKeyName:          "default_key_name",
 		StemcellPubliclyVisible: true,
+		StateTimeOut:            1,
+	}
+
+	defaultConfig.Cloud.Properties.RetryConfig = config.RetryConfigMap{
+		"default": config.RetryConfig{
+			MaxAttempts:   10,
+			SleepDuration: 0,
+		},
 	}
 
 	return defaultConfig

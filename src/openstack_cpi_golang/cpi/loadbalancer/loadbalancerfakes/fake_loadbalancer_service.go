@@ -10,10 +10,10 @@ import (
 )
 
 type FakeLoadbalancerService struct {
-	CreatePoolMemberStub        func(string, string, properties.LoadbalancerPool, string, int) (*pools.Member, error)
+	CreatePoolMemberStub        func(pools.Pool, string, properties.LoadbalancerPool, string, int) (*pools.Member, error)
 	createPoolMemberMutex       sync.RWMutex
 	createPoolMemberArgsForCall []struct {
-		arg1 string
+		arg1 pools.Pool
 		arg2 string
 		arg3 properties.LoadbalancerPool
 		arg4 string
@@ -57,11 +57,11 @@ type FakeLoadbalancerService struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeLoadbalancerService) CreatePoolMember(arg1 string, arg2 string, arg3 properties.LoadbalancerPool, arg4 string, arg5 int) (*pools.Member, error) {
+func (fake *FakeLoadbalancerService) CreatePoolMember(arg1 pools.Pool, arg2 string, arg3 properties.LoadbalancerPool, arg4 string, arg5 int) (*pools.Member, error) {
 	fake.createPoolMemberMutex.Lock()
 	ret, specificReturn := fake.createPoolMemberReturnsOnCall[len(fake.createPoolMemberArgsForCall)]
 	fake.createPoolMemberArgsForCall = append(fake.createPoolMemberArgsForCall, struct {
-		arg1 string
+		arg1 pools.Pool
 		arg2 string
 		arg3 properties.LoadbalancerPool
 		arg4 string
@@ -86,13 +86,13 @@ func (fake *FakeLoadbalancerService) CreatePoolMemberCallCount() int {
 	return len(fake.createPoolMemberArgsForCall)
 }
 
-func (fake *FakeLoadbalancerService) CreatePoolMemberCalls(stub func(string, string, properties.LoadbalancerPool, string, int) (*pools.Member, error)) {
+func (fake *FakeLoadbalancerService) CreatePoolMemberCalls(stub func(pools.Pool, string, properties.LoadbalancerPool, string, int) (*pools.Member, error)) {
 	fake.createPoolMemberMutex.Lock()
 	defer fake.createPoolMemberMutex.Unlock()
 	fake.CreatePoolMemberStub = stub
 }
 
-func (fake *FakeLoadbalancerService) CreatePoolMemberArgsForCall(i int) (string, string, properties.LoadbalancerPool, string, int) {
+func (fake *FakeLoadbalancerService) CreatePoolMemberArgsForCall(i int) (pools.Pool, string, properties.LoadbalancerPool, string, int) {
 	fake.createPoolMemberMutex.RLock()
 	defer fake.createPoolMemberMutex.RUnlock()
 	argsForCall := fake.createPoolMemberArgsForCall[i]
