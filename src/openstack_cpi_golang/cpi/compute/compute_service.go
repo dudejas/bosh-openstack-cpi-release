@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
@@ -13,6 +12,7 @@ import (
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/bootfromvolume"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/volumeattach"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"time"
@@ -73,6 +73,20 @@ type ComputeService interface {
 	GetServerAZ(
 		vmcid string,
 	) (string, error)
+
+	AttachVolume(
+		serverID string,
+		volumeID string,
+		device string,
+	) (*volumeattach.VolumeAttachment, error)
+
+	ListVolumeAttachments(
+		serverID string,
+	) ([]volumeattach.VolumeAttachment, error)
+
+	GetFlavorById(
+		flavorId string,
+	) (flavors.Flavor, error)
 }
 
 type computeService struct {
@@ -563,4 +577,22 @@ func (c computeService) waitForServerToBecomeDeleted(serverID string, timeout ti
 			time.Sleep(ComputeServicePollingInterval)
 		}
 	}
+}
+
+func (c computeService) AttachVolume(serverID string, volumeID string, device string) (*volumeattach.VolumeAttachment, error) {
+	// see: https://github.com/gophercloud/gophercloud/blob/master/openstack/compute/v2/volumeattach/doc.go
+	opts := volumeattach.CreateOpts{
+		Device:   device,
+		VolumeID: volumeID,
+	}
+	result, err := c.computeFacade.AttachVolume(c.serviceClients.ServiceClient, serverID, opts)
+	return result, err
+}
+
+func (c computeService) ListVolumeAttachments(serverID string) ([]volumeattach.VolumeAttachment, error) {
+	return c.computeFacade.ListVolumeAttachments(c.serviceClients.ServiceClient, serverID)
+}
+
+func (c computeService) GetFlavorById(flavorId string) (flavors.Flavor, error) {
+	return c.flavorResolver.GetFlavorById(flavorId)
 }

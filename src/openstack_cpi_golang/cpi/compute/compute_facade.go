@@ -5,6 +5,7 @@ import (
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/availabilityzones"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/volumeattach"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/pagination"
@@ -40,6 +41,10 @@ type ComputeFacade interface {
 	UpdateServerMetadata(client utils.ServiceClient, serverID string, opts servers.UpdateMetadataOptsBuilder) (map[string]string, error)
 
 	DeleteServerMetaData(client *gophercloud.ServiceClient, serverID string, key string) error
+
+	AttachVolume(client *gophercloud.ServiceClient, serverID string, opts volumeattach.CreateOptsBuilder) (*volumeattach.VolumeAttachment, error)
+
+	ListVolumeAttachments(client *gophercloud.ServiceClient, serverID string) ([]volumeattach.VolumeAttachment, error)
 }
 
 type computeFacade struct {
@@ -97,4 +102,22 @@ func (c computeFacade) UpdateServerMetadata(client utils.ServiceClient, serverID
 
 func (c computeFacade) DeleteServerMetaData(client *gophercloud.ServiceClient, serverID string, key string) error {
 	return servers.DeleteMetadatum(client, serverID, key).ExtractErr()
+}
+
+func (c computeFacade) AttachVolume(client *gophercloud.ServiceClient, serverID string, opts volumeattach.CreateOptsBuilder) (*volumeattach.VolumeAttachment, error) {
+	return volumeattach.Create(client, serverID, opts).Extract()
+}
+
+func (c computeFacade) ListVolumeAttachments(client *gophercloud.ServiceClient, serverID string) ([]volumeattach.VolumeAttachment, error) {
+	var allAttachments []volumeattach.VolumeAttachment
+	pager := volumeattach.List(client, serverID)
+	err := pager.EachPage(func(page pagination.Page) (bool, error) {
+		attachmentPageList, err := volumeattach.ExtractVolumeAttachments(page)
+		if err != nil {
+			return false, err
+		}
+		allAttachments = append(allAttachments, attachmentPageList...)
+		return true, nil
+	})
+	return allAttachments, err
 }

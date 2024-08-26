@@ -129,7 +129,11 @@ func (f Factory) New(ctx apiv1.CallContext) (apiv1.CPI, error) {
 			f.cpiConfig,
 			f.logger,
 		),
-		methods.NewAttachDiskMethod(),
+		methods.NewAttachDiskMethod(
+			compute.NewComputeServiceBuilder(openstackService, f.cpiConfig, f.logger),
+			volume.NewVolumeServiceBuilder(openstackService, f.cpiConfig, f.logger),
+			f.cpiConfig,
+			f.logger),
 		methods.NewDetachDiskMethod(),
 		methods.NewHasDiskMethod(
 			volume.NewVolumeServiceBuilder(openstackService, f.cpiConfig, f.logger),

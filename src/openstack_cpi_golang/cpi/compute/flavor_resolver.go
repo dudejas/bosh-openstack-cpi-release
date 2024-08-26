@@ -17,6 +17,7 @@ type FlavorResolver interface {
 	ResolveFlavorForInstanceType(flavorName string) (flavors.Flavor, error)
 	ResolveFlavorForRequirements(vmResources apiv1.VMResources, bootFromVolume bool) ([]flavors.Flavor, error)
 	GetClosestMatchedFlavor(possibleFlavors []flavors.Flavor) flavors.Flavor
+	GetFlavorById(flavorId string) (flavors.Flavor, error)
 }
 
 type flavorResolver struct {
@@ -32,6 +33,27 @@ func NewFlavorResolver(
 		serviceClients: serviceClients,
 		computeFacade:  computeFacade,
 	}
+}
+
+func (f flavorResolver) GetFlavorById(flavorId string) (flavors.Flavor, error) {
+	allFlavors, err := f.getFlavors()
+	if err != nil {
+		return flavors.Flavor{}, fmt.Errorf("failed to get flavors: %w", err)
+	}
+
+	var flavor *flavors.Flavor
+	for _, singleFlavor := range allFlavors {
+		if singleFlavor.ID == flavorId {
+			flavor = &singleFlavor
+			break
+		}
+	}
+
+	if flavor == nil {
+		return flavors.Flavor{}, fmt.Errorf("flavor for id '%s' not found", flavorId)
+	}
+
+	return *flavor, nil
 }
 
 func (f flavorResolver) ResolveFlavorForInstanceType(instanceType string) (flavors.Flavor, error) {

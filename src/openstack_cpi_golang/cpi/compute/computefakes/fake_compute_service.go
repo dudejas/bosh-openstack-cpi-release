@@ -8,11 +8,27 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/compute"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/volumeattach"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 )
 
 type FakeComputeService struct {
+	AttachVolumeStub        func(string, string, string) (*volumeattach.VolumeAttachment, error)
+	attachVolumeMutex       sync.RWMutex
+	attachVolumeArgsForCall []struct {
+		arg1 string
+		arg2 string
+		arg3 string
+	}
+	attachVolumeReturns struct {
+		result1 *volumeattach.VolumeAttachment
+		result2 error
+	}
+	attachVolumeReturnsOnCall map[int]struct {
+		result1 *volumeattach.VolumeAttachment
+		result2 error
+	}
 	CreateServerStub        func(apiv1.StemcellCID, properties.CreateVM, properties.NetworkConfig, apiv1.AgentID, apiv1.VMEnv, config.CpiConfig) (*servers.Server, error)
 	createServerMutex       sync.RWMutex
 	createServerArgsForCall []struct {
@@ -55,6 +71,19 @@ type FakeComputeService struct {
 	}
 	deleteServerMetaDataReturnsOnCall map[int]struct {
 		result1 error
+	}
+	GetFlavorByIdStub        func(string) (flavors.Flavor, error)
+	getFlavorByIdMutex       sync.RWMutex
+	getFlavorByIdArgsForCall []struct {
+		arg1 string
+	}
+	getFlavorByIdReturns struct {
+		result1 flavors.Flavor
+		result2 error
+	}
+	getFlavorByIdReturnsOnCall map[int]struct {
+		result1 flavors.Flavor
+		result2 error
 	}
 	GetMatchingFlavorStub        func(apiv1.VMResources, bool) (flavors.Flavor, error)
 	getMatchingFlavorMutex       sync.RWMutex
@@ -109,6 +138,19 @@ type FakeComputeService struct {
 		result1 string
 		result2 error
 	}
+	ListVolumeAttachmentsStub        func(string) ([]volumeattach.VolumeAttachment, error)
+	listVolumeAttachmentsMutex       sync.RWMutex
+	listVolumeAttachmentsArgsForCall []struct {
+		arg1 string
+	}
+	listVolumeAttachmentsReturns struct {
+		result1 []volumeattach.VolumeAttachment
+		result2 error
+	}
+	listVolumeAttachmentsReturnsOnCall map[int]struct {
+		result1 []volumeattach.VolumeAttachment
+		result2 error
+	}
 	RebootServerStub        func(string, config.CpiConfig) error
 	rebootServerMutex       sync.RWMutex
 	rebootServerArgsForCall []struct {
@@ -149,6 +191,72 @@ type FakeComputeService struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeComputeService) AttachVolume(arg1 string, arg2 string, arg3 string) (*volumeattach.VolumeAttachment, error) {
+	fake.attachVolumeMutex.Lock()
+	ret, specificReturn := fake.attachVolumeReturnsOnCall[len(fake.attachVolumeArgsForCall)]
+	fake.attachVolumeArgsForCall = append(fake.attachVolumeArgsForCall, struct {
+		arg1 string
+		arg2 string
+		arg3 string
+	}{arg1, arg2, arg3})
+	stub := fake.AttachVolumeStub
+	fakeReturns := fake.attachVolumeReturns
+	fake.recordInvocation("AttachVolume", []interface{}{arg1, arg2, arg3})
+	fake.attachVolumeMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeComputeService) AttachVolumeCallCount() int {
+	fake.attachVolumeMutex.RLock()
+	defer fake.attachVolumeMutex.RUnlock()
+	return len(fake.attachVolumeArgsForCall)
+}
+
+func (fake *FakeComputeService) AttachVolumeCalls(stub func(string, string, string) (*volumeattach.VolumeAttachment, error)) {
+	fake.attachVolumeMutex.Lock()
+	defer fake.attachVolumeMutex.Unlock()
+	fake.AttachVolumeStub = stub
+}
+
+func (fake *FakeComputeService) AttachVolumeArgsForCall(i int) (string, string, string) {
+	fake.attachVolumeMutex.RLock()
+	defer fake.attachVolumeMutex.RUnlock()
+	argsForCall := fake.attachVolumeArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *FakeComputeService) AttachVolumeReturns(result1 *volumeattach.VolumeAttachment, result2 error) {
+	fake.attachVolumeMutex.Lock()
+	defer fake.attachVolumeMutex.Unlock()
+	fake.AttachVolumeStub = nil
+	fake.attachVolumeReturns = struct {
+		result1 *volumeattach.VolumeAttachment
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeComputeService) AttachVolumeReturnsOnCall(i int, result1 *volumeattach.VolumeAttachment, result2 error) {
+	fake.attachVolumeMutex.Lock()
+	defer fake.attachVolumeMutex.Unlock()
+	fake.AttachVolumeStub = nil
+	if fake.attachVolumeReturnsOnCall == nil {
+		fake.attachVolumeReturnsOnCall = make(map[int]struct {
+			result1 *volumeattach.VolumeAttachment
+			result2 error
+		})
+	}
+	fake.attachVolumeReturnsOnCall[i] = struct {
+		result1 *volumeattach.VolumeAttachment
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeComputeService) CreateServer(arg1 apiv1.StemcellCID, arg2 properties.CreateVM, arg3 properties.NetworkConfig, arg4 apiv1.AgentID, arg5 apiv1.VMEnv, arg6 config.CpiConfig) (*servers.Server, error) {
@@ -343,6 +451,70 @@ func (fake *FakeComputeService) DeleteServerMetaDataReturnsOnCall(i int, result1
 	fake.deleteServerMetaDataReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
+}
+
+func (fake *FakeComputeService) GetFlavorById(arg1 string) (flavors.Flavor, error) {
+	fake.getFlavorByIdMutex.Lock()
+	ret, specificReturn := fake.getFlavorByIdReturnsOnCall[len(fake.getFlavorByIdArgsForCall)]
+	fake.getFlavorByIdArgsForCall = append(fake.getFlavorByIdArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.GetFlavorByIdStub
+	fakeReturns := fake.getFlavorByIdReturns
+	fake.recordInvocation("GetFlavorById", []interface{}{arg1})
+	fake.getFlavorByIdMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeComputeService) GetFlavorByIdCallCount() int {
+	fake.getFlavorByIdMutex.RLock()
+	defer fake.getFlavorByIdMutex.RUnlock()
+	return len(fake.getFlavorByIdArgsForCall)
+}
+
+func (fake *FakeComputeService) GetFlavorByIdCalls(stub func(string) (flavors.Flavor, error)) {
+	fake.getFlavorByIdMutex.Lock()
+	defer fake.getFlavorByIdMutex.Unlock()
+	fake.GetFlavorByIdStub = stub
+}
+
+func (fake *FakeComputeService) GetFlavorByIdArgsForCall(i int) string {
+	fake.getFlavorByIdMutex.RLock()
+	defer fake.getFlavorByIdMutex.RUnlock()
+	argsForCall := fake.getFlavorByIdArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeComputeService) GetFlavorByIdReturns(result1 flavors.Flavor, result2 error) {
+	fake.getFlavorByIdMutex.Lock()
+	defer fake.getFlavorByIdMutex.Unlock()
+	fake.GetFlavorByIdStub = nil
+	fake.getFlavorByIdReturns = struct {
+		result1 flavors.Flavor
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeComputeService) GetFlavorByIdReturnsOnCall(i int, result1 flavors.Flavor, result2 error) {
+	fake.getFlavorByIdMutex.Lock()
+	defer fake.getFlavorByIdMutex.Unlock()
+	fake.GetFlavorByIdStub = nil
+	if fake.getFlavorByIdReturnsOnCall == nil {
+		fake.getFlavorByIdReturnsOnCall = make(map[int]struct {
+			result1 flavors.Flavor
+			result2 error
+		})
+	}
+	fake.getFlavorByIdReturnsOnCall[i] = struct {
+		result1 flavors.Flavor
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeComputeService) GetMatchingFlavor(arg1 apiv1.VMResources, arg2 bool) (flavors.Flavor, error) {
@@ -602,6 +774,70 @@ func (fake *FakeComputeService) GetServerAZReturnsOnCall(i int, result1 string, 
 	}{result1, result2}
 }
 
+func (fake *FakeComputeService) ListVolumeAttachments(arg1 string) ([]volumeattach.VolumeAttachment, error) {
+	fake.listVolumeAttachmentsMutex.Lock()
+	ret, specificReturn := fake.listVolumeAttachmentsReturnsOnCall[len(fake.listVolumeAttachmentsArgsForCall)]
+	fake.listVolumeAttachmentsArgsForCall = append(fake.listVolumeAttachmentsArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.ListVolumeAttachmentsStub
+	fakeReturns := fake.listVolumeAttachmentsReturns
+	fake.recordInvocation("ListVolumeAttachments", []interface{}{arg1})
+	fake.listVolumeAttachmentsMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeComputeService) ListVolumeAttachmentsCallCount() int {
+	fake.listVolumeAttachmentsMutex.RLock()
+	defer fake.listVolumeAttachmentsMutex.RUnlock()
+	return len(fake.listVolumeAttachmentsArgsForCall)
+}
+
+func (fake *FakeComputeService) ListVolumeAttachmentsCalls(stub func(string) ([]volumeattach.VolumeAttachment, error)) {
+	fake.listVolumeAttachmentsMutex.Lock()
+	defer fake.listVolumeAttachmentsMutex.Unlock()
+	fake.ListVolumeAttachmentsStub = stub
+}
+
+func (fake *FakeComputeService) ListVolumeAttachmentsArgsForCall(i int) string {
+	fake.listVolumeAttachmentsMutex.RLock()
+	defer fake.listVolumeAttachmentsMutex.RUnlock()
+	argsForCall := fake.listVolumeAttachmentsArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeComputeService) ListVolumeAttachmentsReturns(result1 []volumeattach.VolumeAttachment, result2 error) {
+	fake.listVolumeAttachmentsMutex.Lock()
+	defer fake.listVolumeAttachmentsMutex.Unlock()
+	fake.ListVolumeAttachmentsStub = nil
+	fake.listVolumeAttachmentsReturns = struct {
+		result1 []volumeattach.VolumeAttachment
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeComputeService) ListVolumeAttachmentsReturnsOnCall(i int, result1 []volumeattach.VolumeAttachment, result2 error) {
+	fake.listVolumeAttachmentsMutex.Lock()
+	defer fake.listVolumeAttachmentsMutex.Unlock()
+	fake.ListVolumeAttachmentsStub = nil
+	if fake.listVolumeAttachmentsReturnsOnCall == nil {
+		fake.listVolumeAttachmentsReturnsOnCall = make(map[int]struct {
+			result1 []volumeattach.VolumeAttachment
+			result2 error
+		})
+	}
+	fake.listVolumeAttachmentsReturnsOnCall[i] = struct {
+		result1 []volumeattach.VolumeAttachment
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeComputeService) RebootServer(arg1 string, arg2 config.CpiConfig) error {
 	fake.rebootServerMutex.Lock()
 	ret, specificReturn := fake.rebootServerReturnsOnCall[len(fake.rebootServerArgsForCall)]
@@ -794,12 +1030,16 @@ func (fake *FakeComputeService) UpdateServerMetadataReturnsOnCall(i int, result1
 func (fake *FakeComputeService) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.attachVolumeMutex.RLock()
+	defer fake.attachVolumeMutex.RUnlock()
 	fake.createServerMutex.RLock()
 	defer fake.createServerMutex.RUnlock()
 	fake.deleteServerMutex.RLock()
 	defer fake.deleteServerMutex.RUnlock()
 	fake.deleteServerMetaDataMutex.RLock()
 	defer fake.deleteServerMetaDataMutex.RUnlock()
+	fake.getFlavorByIdMutex.RLock()
+	defer fake.getFlavorByIdMutex.RUnlock()
 	fake.getMatchingFlavorMutex.RLock()
 	defer fake.getMatchingFlavorMutex.RUnlock()
 	fake.getMetadataMutex.RLock()
@@ -808,6 +1048,8 @@ func (fake *FakeComputeService) Invocations() map[string][][]interface{} {
 	defer fake.getServerMutex.RUnlock()
 	fake.getServerAZMutex.RLock()
 	defer fake.getServerAZMutex.RUnlock()
+	fake.listVolumeAttachmentsMutex.RLock()
+	defer fake.listVolumeAttachmentsMutex.RUnlock()
 	fake.rebootServerMutex.RLock()
 	defer fake.rebootServerMutex.RUnlock()
 	fake.updateServerMutex.RLock()

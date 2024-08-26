@@ -8,12 +8,28 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/keypairs"
+	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/volumeattach"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/pagination"
 )
 
 type FakeComputeFacade struct {
+	AttachVolumeStub        func(*gophercloud.ServiceClient, string, volumeattach.CreateOptsBuilder) (*volumeattach.VolumeAttachment, error)
+	attachVolumeMutex       sync.RWMutex
+	attachVolumeArgsForCall []struct {
+		arg1 *gophercloud.ServiceClient
+		arg2 string
+		arg3 volumeattach.CreateOptsBuilder
+	}
+	attachVolumeReturns struct {
+		result1 *volumeattach.VolumeAttachment
+		result2 error
+	}
+	attachVolumeReturnsOnCall map[int]struct {
+		result1 *volumeattach.VolumeAttachment
+		result2 error
+	}
 	CreateServerStub        func(utils.ServiceClient, servers.CreateOptsBuilder) (*servers.Server, error)
 	createServerMutex       sync.RWMutex
 	createServerArgsForCall []struct {
@@ -137,6 +153,20 @@ type FakeComputeFacade struct {
 		result1 pagination.Page
 		result2 error
 	}
+	ListVolumeAttachmentsStub        func(*gophercloud.ServiceClient, string) ([]volumeattach.VolumeAttachment, error)
+	listVolumeAttachmentsMutex       sync.RWMutex
+	listVolumeAttachmentsArgsForCall []struct {
+		arg1 *gophercloud.ServiceClient
+		arg2 string
+	}
+	listVolumeAttachmentsReturns struct {
+		result1 []volumeattach.VolumeAttachment
+		result2 error
+	}
+	listVolumeAttachmentsReturnsOnCall map[int]struct {
+		result1 []volumeattach.VolumeAttachment
+		result2 error
+	}
 	RebootServerStub        func(utils.ServiceClient, string, servers.RebootOptsBuilder) error
 	rebootServerMutex       sync.RWMutex
 	rebootServerArgsForCall []struct {
@@ -182,6 +212,72 @@ type FakeComputeFacade struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeComputeFacade) AttachVolume(arg1 *gophercloud.ServiceClient, arg2 string, arg3 volumeattach.CreateOptsBuilder) (*volumeattach.VolumeAttachment, error) {
+	fake.attachVolumeMutex.Lock()
+	ret, specificReturn := fake.attachVolumeReturnsOnCall[len(fake.attachVolumeArgsForCall)]
+	fake.attachVolumeArgsForCall = append(fake.attachVolumeArgsForCall, struct {
+		arg1 *gophercloud.ServiceClient
+		arg2 string
+		arg3 volumeattach.CreateOptsBuilder
+	}{arg1, arg2, arg3})
+	stub := fake.AttachVolumeStub
+	fakeReturns := fake.attachVolumeReturns
+	fake.recordInvocation("AttachVolume", []interface{}{arg1, arg2, arg3})
+	fake.attachVolumeMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeComputeFacade) AttachVolumeCallCount() int {
+	fake.attachVolumeMutex.RLock()
+	defer fake.attachVolumeMutex.RUnlock()
+	return len(fake.attachVolumeArgsForCall)
+}
+
+func (fake *FakeComputeFacade) AttachVolumeCalls(stub func(*gophercloud.ServiceClient, string, volumeattach.CreateOptsBuilder) (*volumeattach.VolumeAttachment, error)) {
+	fake.attachVolumeMutex.Lock()
+	defer fake.attachVolumeMutex.Unlock()
+	fake.AttachVolumeStub = stub
+}
+
+func (fake *FakeComputeFacade) AttachVolumeArgsForCall(i int) (*gophercloud.ServiceClient, string, volumeattach.CreateOptsBuilder) {
+	fake.attachVolumeMutex.RLock()
+	defer fake.attachVolumeMutex.RUnlock()
+	argsForCall := fake.attachVolumeArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *FakeComputeFacade) AttachVolumeReturns(result1 *volumeattach.VolumeAttachment, result2 error) {
+	fake.attachVolumeMutex.Lock()
+	defer fake.attachVolumeMutex.Unlock()
+	fake.AttachVolumeStub = nil
+	fake.attachVolumeReturns = struct {
+		result1 *volumeattach.VolumeAttachment
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeComputeFacade) AttachVolumeReturnsOnCall(i int, result1 *volumeattach.VolumeAttachment, result2 error) {
+	fake.attachVolumeMutex.Lock()
+	defer fake.attachVolumeMutex.Unlock()
+	fake.AttachVolumeStub = nil
+	if fake.attachVolumeReturnsOnCall == nil {
+		fake.attachVolumeReturnsOnCall = make(map[int]struct {
+			result1 *volumeattach.VolumeAttachment
+			result2 error
+		})
+	}
+	fake.attachVolumeReturnsOnCall[i] = struct {
+		result1 *volumeattach.VolumeAttachment
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeComputeFacade) CreateServer(arg1 utils.ServiceClient, arg2 servers.CreateOptsBuilder) (*servers.Server, error) {
@@ -764,6 +860,71 @@ func (fake *FakeComputeFacade) ListFlavorsReturnsOnCall(i int, result1 paginatio
 	}{result1, result2}
 }
 
+func (fake *FakeComputeFacade) ListVolumeAttachments(arg1 *gophercloud.ServiceClient, arg2 string) ([]volumeattach.VolumeAttachment, error) {
+	fake.listVolumeAttachmentsMutex.Lock()
+	ret, specificReturn := fake.listVolumeAttachmentsReturnsOnCall[len(fake.listVolumeAttachmentsArgsForCall)]
+	fake.listVolumeAttachmentsArgsForCall = append(fake.listVolumeAttachmentsArgsForCall, struct {
+		arg1 *gophercloud.ServiceClient
+		arg2 string
+	}{arg1, arg2})
+	stub := fake.ListVolumeAttachmentsStub
+	fakeReturns := fake.listVolumeAttachmentsReturns
+	fake.recordInvocation("ListVolumeAttachments", []interface{}{arg1, arg2})
+	fake.listVolumeAttachmentsMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeComputeFacade) ListVolumeAttachmentsCallCount() int {
+	fake.listVolumeAttachmentsMutex.RLock()
+	defer fake.listVolumeAttachmentsMutex.RUnlock()
+	return len(fake.listVolumeAttachmentsArgsForCall)
+}
+
+func (fake *FakeComputeFacade) ListVolumeAttachmentsCalls(stub func(*gophercloud.ServiceClient, string) ([]volumeattach.VolumeAttachment, error)) {
+	fake.listVolumeAttachmentsMutex.Lock()
+	defer fake.listVolumeAttachmentsMutex.Unlock()
+	fake.ListVolumeAttachmentsStub = stub
+}
+
+func (fake *FakeComputeFacade) ListVolumeAttachmentsArgsForCall(i int) (*gophercloud.ServiceClient, string) {
+	fake.listVolumeAttachmentsMutex.RLock()
+	defer fake.listVolumeAttachmentsMutex.RUnlock()
+	argsForCall := fake.listVolumeAttachmentsArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeComputeFacade) ListVolumeAttachmentsReturns(result1 []volumeattach.VolumeAttachment, result2 error) {
+	fake.listVolumeAttachmentsMutex.Lock()
+	defer fake.listVolumeAttachmentsMutex.Unlock()
+	fake.ListVolumeAttachmentsStub = nil
+	fake.listVolumeAttachmentsReturns = struct {
+		result1 []volumeattach.VolumeAttachment
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeComputeFacade) ListVolumeAttachmentsReturnsOnCall(i int, result1 []volumeattach.VolumeAttachment, result2 error) {
+	fake.listVolumeAttachmentsMutex.Lock()
+	defer fake.listVolumeAttachmentsMutex.Unlock()
+	fake.ListVolumeAttachmentsStub = nil
+	if fake.listVolumeAttachmentsReturnsOnCall == nil {
+		fake.listVolumeAttachmentsReturnsOnCall = make(map[int]struct {
+			result1 []volumeattach.VolumeAttachment
+			result2 error
+		})
+	}
+	fake.listVolumeAttachmentsReturnsOnCall[i] = struct {
+		result1 []volumeattach.VolumeAttachment
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeComputeFacade) RebootServer(arg1 utils.ServiceClient, arg2 string, arg3 servers.RebootOptsBuilder) error {
 	fake.rebootServerMutex.Lock()
 	ret, specificReturn := fake.rebootServerReturnsOnCall[len(fake.rebootServerArgsForCall)]
@@ -962,6 +1123,8 @@ func (fake *FakeComputeFacade) UpdateServerMetadataReturnsOnCall(i int, result1 
 func (fake *FakeComputeFacade) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.attachVolumeMutex.RLock()
+	defer fake.attachVolumeMutex.RUnlock()
 	fake.createServerMutex.RLock()
 	defer fake.createServerMutex.RUnlock()
 	fake.deleteServerMutex.RLock()
@@ -980,6 +1143,8 @@ func (fake *FakeComputeFacade) Invocations() map[string][][]interface{} {
 	defer fake.getServerWithAZMutex.RUnlock()
 	fake.listFlavorsMutex.RLock()
 	defer fake.listFlavorsMutex.RUnlock()
+	fake.listVolumeAttachmentsMutex.RLock()
+	defer fake.listVolumeAttachmentsMutex.RUnlock()
 	fake.rebootServerMutex.RLock()
 	defer fake.rebootServerMutex.RUnlock()
 	fake.updateServerMutex.RLock()
