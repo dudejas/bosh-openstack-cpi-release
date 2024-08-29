@@ -69,6 +69,19 @@ type FakeComputeFacade struct {
 	deleteServerMetaDataReturnsOnCall map[int]struct {
 		result1 error
 	}
+	DetachVolumeStub        func(*gophercloud.ServiceClient, string, string) error
+	detachVolumeMutex       sync.RWMutex
+	detachVolumeArgsForCall []struct {
+		arg1 *gophercloud.ServiceClient
+		arg2 string
+		arg3 string
+	}
+	detachVolumeReturns struct {
+		result1 error
+	}
+	detachVolumeReturnsOnCall map[int]struct {
+		result1 error
+	}
 	ExtractFlavorsStub        func(pagination.Page) ([]flavors.Flavor, error)
 	extractFlavorsMutex       sync.RWMutex
 	extractFlavorsArgsForCall []struct {
@@ -466,6 +479,69 @@ func (fake *FakeComputeFacade) DeleteServerMetaDataReturnsOnCall(i int, result1 
 		})
 	}
 	fake.deleteServerMetaDataReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeComputeFacade) DetachVolume(arg1 *gophercloud.ServiceClient, arg2 string, arg3 string) error {
+	fake.detachVolumeMutex.Lock()
+	ret, specificReturn := fake.detachVolumeReturnsOnCall[len(fake.detachVolumeArgsForCall)]
+	fake.detachVolumeArgsForCall = append(fake.detachVolumeArgsForCall, struct {
+		arg1 *gophercloud.ServiceClient
+		arg2 string
+		arg3 string
+	}{arg1, arg2, arg3})
+	stub := fake.DetachVolumeStub
+	fakeReturns := fake.detachVolumeReturns
+	fake.recordInvocation("DetachVolume", []interface{}{arg1, arg2, arg3})
+	fake.detachVolumeMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeComputeFacade) DetachVolumeCallCount() int {
+	fake.detachVolumeMutex.RLock()
+	defer fake.detachVolumeMutex.RUnlock()
+	return len(fake.detachVolumeArgsForCall)
+}
+
+func (fake *FakeComputeFacade) DetachVolumeCalls(stub func(*gophercloud.ServiceClient, string, string) error) {
+	fake.detachVolumeMutex.Lock()
+	defer fake.detachVolumeMutex.Unlock()
+	fake.DetachVolumeStub = stub
+}
+
+func (fake *FakeComputeFacade) DetachVolumeArgsForCall(i int) (*gophercloud.ServiceClient, string, string) {
+	fake.detachVolumeMutex.RLock()
+	defer fake.detachVolumeMutex.RUnlock()
+	argsForCall := fake.detachVolumeArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *FakeComputeFacade) DetachVolumeReturns(result1 error) {
+	fake.detachVolumeMutex.Lock()
+	defer fake.detachVolumeMutex.Unlock()
+	fake.DetachVolumeStub = nil
+	fake.detachVolumeReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeComputeFacade) DetachVolumeReturnsOnCall(i int, result1 error) {
+	fake.detachVolumeMutex.Lock()
+	defer fake.detachVolumeMutex.Unlock()
+	fake.DetachVolumeStub = nil
+	if fake.detachVolumeReturnsOnCall == nil {
+		fake.detachVolumeReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.detachVolumeReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }
@@ -1131,6 +1207,8 @@ func (fake *FakeComputeFacade) Invocations() map[string][][]interface{} {
 	defer fake.deleteServerMutex.RUnlock()
 	fake.deleteServerMetaDataMutex.RLock()
 	defer fake.deleteServerMetaDataMutex.RUnlock()
+	fake.detachVolumeMutex.RLock()
+	defer fake.detachVolumeMutex.RUnlock()
 	fake.extractFlavorsMutex.RLock()
 	defer fake.extractFlavorsMutex.RUnlock()
 	fake.getOSKeyPairMutex.RLock()

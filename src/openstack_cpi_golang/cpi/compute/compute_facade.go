@@ -44,6 +44,8 @@ type ComputeFacade interface {
 
 	AttachVolume(client *gophercloud.ServiceClient, serverID string, opts volumeattach.CreateOptsBuilder) (*volumeattach.VolumeAttachment, error)
 
+	DetachVolume(client *gophercloud.ServiceClient, serverID string, volumeID string) error
+
 	ListVolumeAttachments(client *gophercloud.ServiceClient, serverID string) ([]volumeattach.VolumeAttachment, error)
 }
 
@@ -108,16 +110,14 @@ func (c computeFacade) AttachVolume(client *gophercloud.ServiceClient, serverID 
 	return volumeattach.Create(client, serverID, opts).Extract()
 }
 
+func (c computeFacade) DetachVolume(client *gophercloud.ServiceClient, serverID string, volumeID string) error {
+	return volumeattach.Delete(client, serverID, volumeID).ExtractErr()
+}
+
 func (c computeFacade) ListVolumeAttachments(client *gophercloud.ServiceClient, serverID string) ([]volumeattach.VolumeAttachment, error) {
-	var allAttachments []volumeattach.VolumeAttachment
-	pager := volumeattach.List(client, serverID)
-	err := pager.EachPage(func(page pagination.Page) (bool, error) {
-		attachmentPageList, err := volumeattach.ExtractVolumeAttachments(page)
-		if err != nil {
-			return false, err
-		}
-		allAttachments = append(allAttachments, attachmentPageList...)
-		return true, nil
-	})
-	return allAttachments, err
+	page, err := volumeattach.List(client, serverID).AllPages()
+	if err != nil {
+		return nil, err
+	}
+	return volumeattach.ExtractVolumeAttachments(page)
 }

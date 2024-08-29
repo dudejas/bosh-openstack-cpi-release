@@ -35,13 +35,11 @@ func NewAttachDiskMethod(
 	}
 }
 
-const waitTimeSeconds = 60
-const firstDeviceNameLetter = 'b'
-
 var initialDiskHint = apiv1.DiskHint{}
 
 func (a AttachDiskMethod) attachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID, returnDiskHint bool) (apiv1.DiskHint, error) {
 
+	openstackConfig := a.cpiConfig.Cloud.Properties.Openstack
 	diskHint := initialDiskHint
 
 	a.logger.Info("attach_disk", fmt.Sprintf("Execute attach disk ID %s to VM ID %s", diskCID.AsString(), vmCID.AsString()))
@@ -83,10 +81,10 @@ func (a AttachDiskMethod) attachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID, r
 		return diskHint, fmt.Errorf("attach_disk: Failed to attach volume ID %s to VM ID %s: %w", diskVolume.ID, server.ID, err)
 	}
 	a.logger.Debug("attach_disk", fmt.Sprintf("Attaching volume DONE: Volume ID: %s, VM ID: %s, mountPoint: %s", volumeAttachment.VolumeID, volumeAttachment.ServerID, volumeAttachment.Device))
-	a.logger.Debug("attach_disk", fmt.Sprintf("Waiting for volume ID %s to get in use by VM ID %s (time: %d secs)", diskCID.AsString(), vmCID.AsString(), waitTimeSeconds))
-	err = volumeService.WaitForVolumeToBecomeStatus(diskCID.AsString(), time.Duration(waitTimeSeconds)*time.Second, "in-use")
+	a.logger.Debug("attach_disk", fmt.Sprintf("Waiting for volume ID %s to get in use by VM ID %s (time: %d secs)", diskCID.AsString(), vmCID.AsString(), openstackConfig.StateTimeOut))
+	err = volumeService.WaitForVolumeToBecomeStatus(diskCID.AsString(), time.Duration(a.cpiConfig.Cloud.Properties.Openstack.StateTimeOut)*time.Second, "in-use")
 	if err != nil {
-		return diskHint, fmt.Errorf("attach_disk: Timeout on waiting to attach volume ID %s to VM %s (waiting: %d sec): %w", diskVolume.ID, server.ID, waitTimeSeconds, err)
+		return diskHint, fmt.Errorf("attach_disk: Timeout on waiting to attach volume ID %s to VM %s (waiting: %d sec): %w", diskVolume.ID, server.ID, a.cpiConfig.Cloud.Properties.Openstack.StateTimeOut, err)
 	}
 	a.logger.Info("attach_disk", fmt.Sprintf("Successfully attached volume ID %s to VM %s (Volume status now: 'in-use')", diskCID.AsString(), vmCID.AsString()))
 	if returnDiskHint {
@@ -108,15 +106,20 @@ func (a AttachDiskMethod) checkDiskAttach(diskVolume volumes.Volume, vmCID apiv1
 }
 
 func (a AttachDiskMethod) getFirstDeviceNameLetter(computeService compute.ComputeService, server servers.Server) (rune, error) {
-	inspectChar := firstDeviceNameLetter
-	configDrive := a.cpiConfig.OpenStackConfig().ConfigDrive
-	idStr, ok := server.Flavor["id"].(string)
-	if !ok {
-		a.logger.Warn("getFirstDeviceNameLetter", fmt.Sprintf("No flavor ID for server %s found", server.ID))
+	inspectChar := 'b'
+	if server.Flavor == nil {
+		a.logger.Warn("getFirstDeviceNameLetter", fmt.Sprintf("No flavor for server %s found. Using device letter: %c", server.ID, inspectChar))
+		return inspectChar, nil
 	}
-	flavor, err := computeService.GetFlavorById(idStr)
+	idValue, ok := server.Flavor["id"].(string)
+	if !ok {
+		a.logger.Warn("getFirstDeviceNameLetter", fmt.Sprintf("No server flavor ID for server %s found. Using device letter: %c", server.ID, inspectChar))
+		return inspectChar, nil
+	}
+	flavor, err := computeService.GetFlavorById(idValue)
 	if err != nil {
-		return ' ', fmt.Errorf("getFirstDeviceNameLetter: Failed to get flavor by ID %s: %w", idStr, err)
+		a.logger.Warn("getFirstDeviceNameLetter", fmt.Sprintf("No flavor setting for server %s found. Using device letter: %c", server.ID, inspectChar))
+		return inspectChar, nil
 	}
 	if flavor.Ephemeral > 0 {
 		inspectChar = inspectChar + 1
@@ -126,6 +129,7 @@ func (a AttachDiskMethod) getFirstDeviceNameLetter(computeService compute.Comput
 		inspectChar = inspectChar + 1
 		a.logger.Debug("getFirstDeviceNameLetter", fmt.Sprintf("Flavor ID %s has swap disk. Switch device name letter: %c\n", flavor.ID, inspectChar))
 	}
+	configDrive := a.cpiConfig.OpenStackConfig().ConfigDrive
 	if configDrive == "disk" {
 		inspectChar = inspectChar + 1
 		a.logger.Debug("getFirstDeviceNameLetter", fmt.Sprintf("ConfigDrive is set to 'disk'. Switch device name letter: %c\n", inspectChar))

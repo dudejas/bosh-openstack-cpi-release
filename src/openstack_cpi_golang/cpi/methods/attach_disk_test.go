@@ -17,7 +17,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("AttachDiskMethod", func() {
+var _ = Describe("AttachDiskMethod Unit Tests", func() {
 
 	const (
 		volumeId1              = "vol1-id"
@@ -63,7 +63,7 @@ var _ = Describe("AttachDiskMethod", func() {
 			Expect(err.Error()).To(Equal("attach_disk: Failed to get volume service (attach_disk): boom"))
 		})
 
-		It("fails on get volume (V1)", func() {
+		It("fails on get server", func() {
 			volumeService.GetVolumeReturns(nil, errors.New("boom"))
 			volumeServiceBuilder.BuildReturns(volumeService, nil)
 			attachDiskMethod := methods.NewAttachDiskMethod(computeServiceBuilder, volumeServiceBuilder, cpiConfig, logger)
@@ -221,7 +221,7 @@ var _ = Describe("AttachDiskMethod", func() {
 			Expect(err.Error()).To(Equal(fmt.Sprintf("attach_disk: Failed to attach volume ID %s to VM ID %s: boom", volumeId1, serverId)))
 		})
 
-		It("fails on attach disk be4coming available within timeout period (V1)", func() {
+		It("fails on attach disk becoming available within timeout period (V1)", func() {
 			server := servers.Server{
 				ID:     serverId,
 				Status: serverStatusActive,
@@ -236,6 +236,7 @@ var _ = Describe("AttachDiskMethod", func() {
 			volumeAttach := volumeattach.VolumeAttachment{}
 			computeService.AttachVolumeReturns(&volumeAttach, nil)
 			volumeService.WaitForVolumeToBecomeStatusReturns(errors.New("boom"))
+			cpiConfig.Cloud.Properties.Openstack.StateTimeOut = 60
 			attachDiskMethod := methods.NewAttachDiskMethod(computeServiceBuilder, volumeServiceBuilder, cpiConfig, logger)
 			vmCID := apiv1.NewVMCID(serverId)
 			diskCID := apiv1.NewDiskCID(volumeId1)
@@ -351,8 +352,9 @@ var _ = Describe("AttachDiskMethod", func() {
 			volume := volumes.Volume{}
 			volumeService.GetVolumeReturns(&volume, nil)
 			attachDiskMethod := methods.NewAttachDiskMethod(computeServiceBuilder, volumeServiceBuilder, cpiConfig, logger)
-			_, err := attachDiskMethod.GetMountPoint(computeService, server)
-			Expect(err.Error()).To(Equal("getMountPoint: Failed to get first device letter service: getFirstDeviceNameLetter: Failed to get flavor by ID 1: boom"))
+			result, err := attachDiskMethod.GetMountPoint(computeService, server)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(deviceB))
 		})
 
 		It("server w/o attached volumes", func() {
@@ -367,8 +369,8 @@ var _ = Describe("AttachDiskMethod", func() {
 
 		It("server w/ attached volumes: checking disk attachments", func() {
 			var volumeAttachments []volumeattach.VolumeAttachment
-			volume1 := volumeattach.VolumeAttachment{ID: volumeId1, Device: deviceA}
-			volume2 := volumeattach.VolumeAttachment{ID: volumeId1, Device: deviceB}
+			volume1 := volumeattach.VolumeAttachment{VolumeID: volumeId1, Device: deviceA}
+			volume2 := volumeattach.VolumeAttachment{VolumeID: volumeId1, Device: deviceB}
 			volumeAttachments = append(volumeAttachments, volume1, volume2)
 			computeService.ListVolumeAttachmentsReturns(volumeAttachments, nil)
 			server = servers.Server{ID: serverId}
@@ -383,7 +385,7 @@ var _ = Describe("AttachDiskMethod", func() {
 			for i := 1; i < 26; i++ { // omit "a"; search start with "b"
 				id := fmt.Sprintf("vol%d-id", i+1)
 				device := fmt.Sprintf("/dev/sd%c", 'a'+i)
-				attachedVolumes = append(attachedVolumes, volumeattach.VolumeAttachment{ID: id, Device: device})
+				attachedVolumes = append(attachedVolumes, volumeattach.VolumeAttachment{VolumeID: id, Device: device})
 			}
 			attachDiskMethod := methods.NewAttachDiskMethod(computeServiceBuilder, volumeServiceBuilder, cpiConfig, logger)
 			_, err := attachDiskMethod.GetDeviceChar('b', attachedVolumes)
@@ -407,7 +409,7 @@ var _ = Describe("AttachDiskMethod", func() {
 				} else {
 					device = fmt.Sprintf("/dev/xvd%c", 'a'+i)
 				}
-				attachedVolumes = append(attachedVolumes, volumeattach.VolumeAttachment{ID: id, Device: device})
+				attachedVolumes = append(attachedVolumes, volumeattach.VolumeAttachment{VolumeID: id, Device: device})
 			}
 			attachDiskMethod := methods.NewAttachDiskMethod(computeServiceBuilder, volumeServiceBuilder, cpiConfig, logger)
 			driveLetter, err := attachDiskMethod.GetDeviceChar('b', attachedVolumes)
@@ -435,7 +437,7 @@ var _ = Describe("AttachDiskMethod", func() {
 			Expect(result).To(Equal('b'))
 		})
 
-		It("fails on first device name letter: fails to get flavor by ID", func() {
+		It("on first device name letter: fails to get flavor by ID", func() {
 			flavorMap := map[string]interface{}{
 				"id": "1",
 			}
@@ -443,8 +445,9 @@ var _ = Describe("AttachDiskMethod", func() {
 			computeService.GetFlavorByIdReturns(flavors.Flavor{}, errors.New("boom"))
 
 			attachDiskMethod := methods.NewAttachDiskMethod(computeServiceBuilder, volumeServiceBuilder, cpiConfig, logger)
-			_, err := attachDiskMethod.GetFirstDeviceNameLetterWrapper(computeService, server)
-			Expect(err.Error()).To(Equal("getFirstDeviceNameLetter: Failed to get flavor by ID 1: boom"))
+			result, err := attachDiskMethod.GetFirstDeviceNameLetterWrapper(computeService, server)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal('b'))
 		})
 
 		It("returns specific first device name letter when using flavor: using Ephemeral ", func() {

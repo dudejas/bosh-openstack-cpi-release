@@ -80,6 +80,11 @@ type ComputeService interface {
 		device string,
 	) (*volumeattach.VolumeAttachment, error)
 
+	DetachVolume(
+		serverID string,
+		volumeID string,
+	) error
+
 	ListVolumeAttachments(
 		serverID string,
 	) ([]volumeattach.VolumeAttachment, error)
@@ -585,8 +590,11 @@ func (c computeService) AttachVolume(serverID string, volumeID string, device st
 		Device:   device,
 		VolumeID: volumeID,
 	}
-	result, err := c.computeFacade.AttachVolume(c.serviceClients.ServiceClient, serverID, opts)
-	return result, err
+	return c.computeFacade.AttachVolume(c.serviceClients.ServiceClient, serverID, opts)
+}
+
+func (c computeService) DetachVolume(serverID string, volumeID string) error {
+	return c.computeFacade.DetachVolume(c.serviceClients.ServiceClient, serverID, volumeID)
 }
 
 func (c computeService) ListVolumeAttachments(serverID string) ([]volumeattach.VolumeAttachment, error) {
