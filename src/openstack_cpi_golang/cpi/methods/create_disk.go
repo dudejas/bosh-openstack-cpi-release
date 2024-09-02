@@ -3,6 +3,9 @@ package methods
 import (
 	"errors"
 	"fmt"
+	"math"
+	"time"
+
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/compute"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
@@ -10,8 +13,6 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/volume"
 	"github.com/gophercloud/gophercloud"
-	"math"
-	"time"
 )
 
 type CreateDiskMethod struct {
@@ -40,7 +41,10 @@ func (a CreateDiskMethod) CreateDisk(
 	var errDefault404 gophercloud.ErrDefault404
 
 	cloudProps := properties.CreateDisk{}
-	props.As(&cloudProps)
+	err := props.As(&cloudProps)
+	if err != nil {
+		return apiv1.DiskCID{}, fmt.Errorf("failed to parse disk cloud properties: %w", err)
+	}
 
 	openstackConfig := a.cpiConfig.Cloud.Properties.Openstack
 

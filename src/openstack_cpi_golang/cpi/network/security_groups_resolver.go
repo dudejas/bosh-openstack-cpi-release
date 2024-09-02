@@ -2,6 +2,7 @@ package network
 
 import (
 	"fmt"
+
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/security/groups"
 )

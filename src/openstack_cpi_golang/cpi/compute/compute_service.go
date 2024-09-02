@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"time"
+
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
@@ -15,7 +18,6 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/volumeattach"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
-	"time"
 )
 
 var ComputeServicePollingInterval = 10 * time.Second
@@ -171,12 +173,12 @@ func (c computeService) CreateServer(
 
 	userData, err := c.createServerUserData(networkConfig, cpiConfig, vmName, flavor, agentID, env)
 	if err != nil {
-		fmt.Errorf("failed to create user data: %w", err)
+		return nil, fmt.Errorf("failed to create user data: %w", err)
 	}
 
 	userDataJson, err := json.Marshal(userData)
 	if err != nil {
-		fmt.Errorf("failed to marshal user data: %w", err)
+		return nil, fmt.Errorf("failed to marshal user data: %w", err)
 	}
 
 	var server *servers.Server
@@ -256,8 +258,7 @@ func (c computeService) RebootServer(
 		return err
 	}
 
-	var rebootOpts servers.RebootOptsBuilder
-	rebootOpts = servers.RebootOpts{
+	rebootOpts := servers.RebootOpts{
 		Type: servers.SoftReboot,
 	}
 
@@ -374,7 +375,7 @@ func (c computeService) DeleteServerMetaData(
 		}
 	}
 
-	for id, _ := range oldMetaDataMapToBeDeleted {
+	for id := range oldMetaDataMapToBeDeleted {
 		err := c.computeFacade.DeleteServerMetaData(c.serviceClients.ServiceClient, serverID, id)
 		if err != nil {
 			return fmt.Errorf("failed to delete server metadata for key %s: %w", id, err)

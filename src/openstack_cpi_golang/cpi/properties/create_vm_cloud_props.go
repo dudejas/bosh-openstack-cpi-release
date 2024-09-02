@@ -2,6 +2,7 @@ package properties
 
 import (
 	"fmt"
+
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 )
 

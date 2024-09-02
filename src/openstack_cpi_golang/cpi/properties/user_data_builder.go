@@ -2,6 +2,7 @@ package properties
 
 import (
 	"encoding/json"
+
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
@@ -38,7 +39,7 @@ func (u userDataBuilder) WithConfig(config config.CpiConfig) userDataBuilder {
 func (u userDataBuilder) WithNetworks(networks map[string]UserdataNetwork) userDataBuilder {
 	u.networks = networks
 
-	allDNSServers := []string{}
+	allDNSServers := make([]string, 0)
 	for _, network := range u.networks {
 		allDNSServers = append(allDNSServers, network.DNS...)
 	}

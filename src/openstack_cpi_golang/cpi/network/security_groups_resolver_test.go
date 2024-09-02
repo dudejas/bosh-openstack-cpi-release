@@ -3,6 +3,7 @@ package network_test
 import (
 	"encoding/json"
 	"errors"
+
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/mocks"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/network"
@@ -53,7 +54,7 @@ var _ = Describe("NetworkService", func() {
 
 	Context("Resolve", func() {
 		It("resolves security groups by id", func() {
-			network.NewSecurityGroupsResolver(serviceClients, &networkingFacade, &logger).Resolve([]string{"the_group_id"})
+			_, _ = network.NewSecurityGroupsResolver(serviceClients, &networkingFacade, &logger).Resolve([]string{"the_group_id"})
 
 			_, securityGroupID := networkingFacade.GetSecurityGroupsArgsForCall(0)
 			Expect(securityGroupID).To(Equal("the_group_id"))
@@ -62,7 +63,7 @@ var _ = Describe("NetworkService", func() {
 		It("logs a warning if getting security group by id fails", func() {
 			networkingFacade.GetSecurityGroupsReturns(nil, errors.New("boom"))
 
-			network.NewSecurityGroupsResolver(serviceClients, &networkingFacade, &logger).Resolve([]string{"the_group_id"})
+			_, _ = network.NewSecurityGroupsResolver(serviceClients, &networkingFacade, &logger).Resolve([]string{"the_group_id"})
 
 			_, msg, _ := logger.WarnArgsForCall(0)
 			Expect(msg).To(Equal("failed to get security group 'the_group_id' by id: boom. Trying to get security group by name"))
@@ -81,7 +82,7 @@ var _ = Describe("NetworkService", func() {
 				networkingFacade.GetSecurityGroupsReturns(nil, nil)
 				networkingFacade.ListSecurityGroupsReturns(securityGroupsPage, nil)
 
-				network.NewSecurityGroupsResolver(serviceClients, &networkingFacade, &logger).Resolve([]string{"the_group_id"})
+				_, _ = network.NewSecurityGroupsResolver(serviceClients, &networkingFacade, &logger).Resolve([]string{"the_group_id"})
 
 				Expect(networkingFacade.GetSecurityGroupsCallCount()).To(Equal(1))
 			})
@@ -99,7 +100,7 @@ var _ = Describe("NetworkService", func() {
 				networkingFacade.GetSecurityGroupsReturns(nil, errors.New("baam"))
 				networkingFacade.ListSecurityGroupsReturns(securityGroupsPage, nil)
 
-				network.NewSecurityGroupsResolver(serviceClients, &networkingFacade, &logger).Resolve([]string{"the_group_id"})
+				_, _ = network.NewSecurityGroupsResolver(serviceClients, &networkingFacade, &logger).Resolve([]string{"the_group_id"})
 
 				page := networkingFacade.ExtractSecurityGroupsArgsForCall(0)
 				Expect(page).To(Equal(securityGroupsPage))

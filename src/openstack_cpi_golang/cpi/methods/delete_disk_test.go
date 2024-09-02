@@ -2,6 +2,7 @@ package methods_test
 
 import (
 	"errors"
+
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/methods"
@@ -49,7 +50,7 @@ var _ = Describe("DeleteDisk", func() {
 		})
 
 		It("creates the volume service", func() {
-			methods.NewDeleteDiskMethod(
+			err := methods.NewDeleteDiskMethod(
 				&volumeServiceBuilder,
 				cpiConfig,
 				&logger,
@@ -57,6 +58,7 @@ var _ = Describe("DeleteDisk", func() {
 				apiv1.NewDiskCID("some-disk-cid"),
 			)
 
+			Expect(err).ToNot(HaveOccurred())
 			Expect(volumeServiceBuilder.BuildCallCount()).To(Equal(1))
 		})
 
@@ -136,7 +138,7 @@ var _ = Describe("DeleteDisk", func() {
 			})
 
 			It("issues a logger message", func() {
-				methods.NewDeleteDiskMethod(
+				_ = methods.NewDeleteDiskMethod(
 					&volumeServiceBuilder,
 					cpiConfig,
 					&logger,

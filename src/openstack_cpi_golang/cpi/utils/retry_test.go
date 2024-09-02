@@ -2,13 +2,14 @@ package utils_test
 
 import (
 	"errors"
+	"net"
+
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils/utilsfakes"
 	"github.com/gophercloud/gophercloud"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"net"
 )
 
 type MockNetError struct {
@@ -35,7 +36,7 @@ var _ = Describe("RetryOnError", func() {
 	})
 
 	It("logs the current error", func() {
-		utils.RetryOnError(retryConfig, &logger)(nil, "", "", nil, errors.New("boom"), 0)
+		_ = utils.RetryOnError(retryConfig, &logger)(nil, "", "", nil, errors.New("boom"), 0)
 
 		tag, msg, _ := logger.WarnArgsForCall(0)
 		Expect(tag).To(Equal("retry on error"))

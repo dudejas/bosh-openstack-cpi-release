@@ -2,6 +2,7 @@ package methods_test
 
 import (
 	"errors"
+
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/image"
@@ -103,7 +104,7 @@ var _ = Describe("CreateStemcellMethod", func() {
 
 			theCloudProps := &MockStemcellCloudProps{ImageID: "123-456"}
 
-			methods.NewCreateStemcellMethod(
+			_, _ = methods.NewCreateStemcellMethod(
 				&imageServiceBuilder,
 				&heavyStemcellCreator,
 				&lightStemcellCreator,
@@ -126,7 +127,7 @@ var _ = Describe("CreateStemcellMethod", func() {
 
 			theCloudProps := &MockStemcellCloudProps{}
 
-			methods.NewCreateStemcellMethod(
+			_, _ = methods.NewCreateStemcellMethod(
 				&imageServiceBuilder,
 				&heavyStemcellCreator,
 				&lightStemcellCreator,
@@ -169,7 +170,7 @@ var _ = Describe("CreateStemcellMethod", func() {
 
 			theCloudProps := &MockStemcellCloudProps{}
 
-			methods.NewCreateStemcellMethod(
+			_, _ = methods.NewCreateStemcellMethod(
 				&imageServiceBuilder,
 				&heavyStemcellCreator,
 				&lightStemcellCreator,

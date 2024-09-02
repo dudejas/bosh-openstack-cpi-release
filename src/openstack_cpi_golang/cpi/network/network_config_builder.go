@@ -2,11 +2,12 @@ package network
 
 import (
 	"fmt"
+	"slices"
+
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
-	"slices"
 )
 
 type networkConfigBuilder struct {
@@ -165,7 +166,10 @@ func (b networkConfigBuilder) createSingleNetwork(networks apiv1.Networks, netwo
 
 func (b networkConfigBuilder) createNetwork(key string, network apiv1.Network) properties.Network {
 	vmNetworkProps := properties.NetworkCloudProps{}
-	network.CloudProps().As(&vmNetworkProps)
+	err := network.CloudProps().As(&vmNetworkProps)
+	if err != nil {
+		return properties.Network{}
+	}
 
 	return properties.Network{
 		Key:        key,

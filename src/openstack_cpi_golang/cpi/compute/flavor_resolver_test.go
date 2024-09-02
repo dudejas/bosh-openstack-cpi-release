@@ -2,6 +2,7 @@ package compute_test
 
 import (
 	"errors"
+
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/compute"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/compute/computefakes"
@@ -33,7 +34,7 @@ var _ = Describe("FlavorResolver", func() {
 
 	Context("ResolveFlavorForInstanceType", func() {
 		It("lists flavors", func() {
-			compute.NewFlavorResolver(serviceClients, &computeFacade).ResolveFlavorForInstanceType("the_instance_type")
+			_, _ = compute.NewFlavorResolver(serviceClients, &computeFacade).ResolveFlavorForInstanceType("the_instance_type")
 
 			Expect(computeFacade.ListFlavorsCallCount()).To(Equal(1))
 		})
@@ -47,7 +48,7 @@ var _ = Describe("FlavorResolver", func() {
 		})
 
 		It("extract flavors", func() {
-			compute.NewFlavorResolver(serviceClients, &computeFacade).ResolveFlavorForInstanceType("the_instance_type")
+			_, _ = compute.NewFlavorResolver(serviceClients, &computeFacade).ResolveFlavorForInstanceType("the_instance_type")
 
 			Expect(computeFacade.ExtractFlavorsArgsForCall(0)).To(Equal(flavorsPage))
 			Expect(computeFacade.ExtractFlavorsCallCount()).To(Equal(1))
@@ -86,7 +87,7 @@ var _ = Describe("FlavorResolver", func() {
 		})
 
 		It("lists flavors", func() {
-			compute.NewFlavorResolver(serviceClients, &computeFacade).ResolveFlavorForRequirements(vmResources, bootFromVolume)
+			_, _ = compute.NewFlavorResolver(serviceClients, &computeFacade).ResolveFlavorForRequirements(vmResources, bootFromVolume)
 
 			Expect(computeFacade.ListFlavorsCallCount()).To(Equal(1))
 		})
@@ -100,7 +101,7 @@ var _ = Describe("FlavorResolver", func() {
 		})
 
 		It("extract flavors", func() {
-			compute.NewFlavorResolver(serviceClients, &computeFacade).ResolveFlavorForRequirements(vmResources, bootFromVolume)
+			_, _ = compute.NewFlavorResolver(serviceClients, &computeFacade).ResolveFlavorForRequirements(vmResources, bootFromVolume)
 
 			Expect(computeFacade.ExtractFlavorsArgsForCall(0)).To(Equal(flavorsPage))
 			Expect(computeFacade.ExtractFlavorsCallCount()).To(Equal(1))

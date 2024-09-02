@@ -2,6 +2,7 @@ package image_test
 
 import (
 	"fmt"
+
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/image"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/image/imagefakes"
@@ -36,7 +37,7 @@ var _ = Describe("lightStemcellCreator", func() {
 			imageServiceClient := imagefakes.FakeImageService{}
 
 			subject := image.NewLightStemcellCreator(config.OpenstackConfig{})
-			subject.Create(&imageServiceClient, properties.CreateStemcell{ImageID: "123-456"})
+			_, _ = subject.Create(&imageServiceClient, properties.CreateStemcell{ImageID: "123-456"})
 
 			imageID := imageServiceClient.GetImageArgsForCall(0)
 			Expect(imageID).To(Equal("123-456"))

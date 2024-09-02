@@ -2,6 +2,7 @@ package compute
 
 import (
 	"fmt"
+
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/bootfromvolume"

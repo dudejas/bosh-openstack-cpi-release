@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/compute"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/compute/computefakes"
@@ -102,8 +103,6 @@ var _ = Describe("ComputeService", func() {
 		It("returns error if flavors resolution fails", func() {
 			flavorResolver.ResolveFlavorForInstanceTypeReturns(flavors.Flavor{}, errors.New("boom"))
 
-			createCpiConfig(10)
-
 			_, err := computeService.CreateServer(
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
@@ -119,7 +118,7 @@ var _ = Describe("ComputeService", func() {
 		It("resolves the key pair via cloud config name", func() {
 			computeFacade.GetOSKeyPairReturns(&keypairs.KeyPair{Name: "the_key_name"}, nil)
 
-			computeService.CreateServer(
+			_, _ = computeService.CreateServer(
 				apiv1.StemcellCID{},
 				properties.CreateVM{
 					InstanceType: "the_instance_type",
@@ -143,7 +142,7 @@ var _ = Describe("ComputeService", func() {
 			openstackConfig := config.OpenstackConfig{StateTimeOut: 10, DefaultKeyName: "key_name_from_config"}
 			cpiConfig.Cloud.Properties.Openstack = openstackConfig
 
-			computeService.CreateServer(
+			_, _ = computeService.CreateServer(
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
@@ -306,7 +305,7 @@ var _ = Describe("ComputeService", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				userData := properties.UserData{}
-				json.Unmarshal(userDataBytes, &userData)
+				_ = json.Unmarshal(userDataBytes, &userData)
 				Expect(userData.Server.Name).To(Equal(server["name"]))
 				Expect(userData.VM.Name).To(Equal(server["name"]))
 				Expect(userData.Disks.System).To(Equal("/dev/sda"))
@@ -333,7 +332,7 @@ var _ = Describe("ComputeService", func() {
 			computeFacade.CreateServerReturnsOnCall(0, nil, errors.New("boom"))
 			computeFacade.CreateServerReturnsOnCall(1, &servers.Server{ID: "123-456"}, nil)
 
-			computeService.CreateServer(
+			_, _ = computeService.CreateServer(
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
@@ -362,7 +361,7 @@ var _ = Describe("ComputeService", func() {
 
 			compute.ComputeServicePollingInterval = 0
 
-			computeService.CreateServer(
+			_, _ = computeService.CreateServer(
 				apiv1.StemcellCID{},
 				defaultCloudConfig,
 				networkConfig,
@@ -534,7 +533,9 @@ var _ = Describe("ComputeService", func() {
 		})
 
 		It("still succeeds if no server is found", func() {
-			testError := gophercloud.ErrDefault404{gophercloud.ErrUnexpectedResponseCode{Actual: 404}}
+			testError := gophercloud.ErrDefault404{
+				ErrUnexpectedResponseCode: gophercloud.ErrUnexpectedResponseCode{Actual: 404},
+			}
 			computeFacade.GetServerReturnsOnCall(0, nil, testError)
 
 			err := computeService.DeleteServer(
@@ -568,7 +569,9 @@ var _ = Describe("ComputeService", func() {
 		})
 
 		It("still succeeds if server is not found while deletion", func() {
-			testError := gophercloud.ErrDefault404{gophercloud.ErrUnexpectedResponseCode{Actual: 404}}
+			testError := gophercloud.ErrDefault404{
+				ErrUnexpectedResponseCode: gophercloud.ErrUnexpectedResponseCode{Actual: 404},
+			}
 			computeFacade.GetServerReturnsOnCall(1, nil, testError)
 
 			err := computeService.DeleteServer(
@@ -710,7 +713,9 @@ var _ = Describe("ComputeService", func() {
 		})
 
 		It("returns empty metadata and no error if metadata not found", func() {
-			testError := gophercloud.ErrDefault404{gophercloud.ErrUnexpectedResponseCode{Actual: 404}}
+			testError := gophercloud.ErrDefault404{
+				ErrUnexpectedResponseCode: gophercloud.ErrUnexpectedResponseCode{Actual: 404},
+			}
 			computeFacade.GetServerMetadataReturns(nil, testError)
 
 			serverMetadata, err := computeService.GetMetadata(
@@ -735,8 +740,7 @@ var _ = Describe("ComputeService", func() {
 	})
 
 	Context("UpdateServer", func() {
-		var serverExp servers.Server
-		serverExp = servers.Server{ID: "123-456", Status: "ACTIVE"}
+		serverExp := servers.Server{ID: "123-456", Status: "ACTIVE"}
 
 		It("updates a server without raising errors", func() {
 			computeFacade.UpdateServerReturns(&serverExp, nil)

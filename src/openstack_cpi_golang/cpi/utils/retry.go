@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
-	"github.com/gophercloud/gophercloud"
 	"net"
 	"time"
+
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
+	"github.com/gophercloud/gophercloud"
 )
 
 func RetryOnError(retryConfig config.RetryConfig, logger Logger) func(
@@ -66,9 +67,8 @@ func isTimeout(err error) bool {
 }
 
 func isNetworkError(err error) bool {
-	_, ok := err.(*net.OpError)
-	if ok {
-		return true
-	}
-	return false
+	var opError *net.OpError
+	result := errors.As(err, &opError)
+
+	return result
 }

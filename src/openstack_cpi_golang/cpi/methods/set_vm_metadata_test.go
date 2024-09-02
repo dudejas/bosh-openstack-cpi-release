@@ -2,6 +2,7 @@ package methods_test
 
 import (
 	"errors"
+
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
@@ -65,7 +66,7 @@ var _ = Describe("NewSetVMMetadataMethod", func() {
 		})
 
 		It("creates the compute service", func() {
-			methods.NewSetVMMetadataMethod(
+			_ = methods.NewSetVMMetadataMethod(
 				computeServiceBuilder,
 				logger,
 				cpiConfig,
@@ -92,7 +93,7 @@ var _ = Describe("NewSetVMMetadataMethod", func() {
 		})
 
 		It("deletes nil value out imported metadata map", func() {
-			methods.NewSetVMMetadataMethod(
+			_ = methods.NewSetVMMetadataMethod(
 				computeServiceBuilder,
 				logger,
 				cpiConfig,

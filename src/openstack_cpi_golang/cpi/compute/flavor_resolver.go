@@ -2,12 +2,13 @@ package compute
 
 import (
 	"fmt"
+	"math"
+	"sort"
+
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/flavors"
-	"math"
-	"sort"
 )
 
 const NoDisk = 0

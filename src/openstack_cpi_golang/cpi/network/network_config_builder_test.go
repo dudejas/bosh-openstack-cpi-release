@@ -3,6 +3,9 @@ package network_test
 import (
 	"encoding/binary"
 	"encoding/json"
+	"net"
+	"sort"
+
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/network"
@@ -12,8 +15,6 @@ import (
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils/utilsfakes"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"net"
-	"sort"
 )
 
 var _ = Describe("NetworkConfigBuilder", func() {

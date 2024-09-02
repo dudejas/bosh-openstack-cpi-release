@@ -2,6 +2,7 @@ package openstack
 
 import (
 	"fmt"
+
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/gophercloud/gophercloud"
@@ -77,16 +78,4 @@ func (c openstackService) endpointOpts() gophercloud.EndpointOpts {
 	return gophercloud.EndpointOpts{
 		Region: c.envVar.Get("OS_REGION_NAME"),
 	}
-}
-
-func (c openstackService) authenticate(config config.OpenstackConfig) (*gophercloud.ProviderClient, error) {
-	opts := gophercloud.AuthOptions{
-		IdentityEndpoint: config.AuthURL,
-		Username:         config.Username,
-		Password:         config.APIKey,
-		DomainName:       config.DomainName,
-		TenantName:       config.ProjectName,
-	}
-
-	return c.openstackFacade.AuthenticatedClient(opts)
 }

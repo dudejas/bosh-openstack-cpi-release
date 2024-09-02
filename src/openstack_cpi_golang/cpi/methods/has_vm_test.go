@@ -2,6 +2,7 @@ package methods_test
 
 import (
 	"errors"
+
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/compute/computefakes"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/methods"
@@ -29,7 +30,7 @@ var _ = Describe("HasVMMethod", func() {
 		})
 
 		It("creates the compute service", func() {
-			methods.NewHasVMMethod(
+			_, _ = methods.NewHasVMMethod(
 				&computeServiceBuilder,
 				&logger,
 			).HasVM(
@@ -54,7 +55,9 @@ var _ = Describe("HasVMMethod", func() {
 		})
 
 		It("returns false and no error if GetServer fails with notFound", func() {
-			testError := gophercloud.ErrDefault404{gophercloud.ErrUnexpectedResponseCode{Actual: 404}}
+			testError := gophercloud.ErrDefault404{
+				ErrUnexpectedResponseCode: gophercloud.ErrUnexpectedResponseCode{Actual: 404},
+			}
 			computeService.GetServerReturns(nil, testError)
 
 			exists, err := methods.NewHasVMMethod(

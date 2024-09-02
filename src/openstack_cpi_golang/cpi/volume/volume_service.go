@@ -3,13 +3,14 @@ package volume
 import (
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/google/uuid"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/extensions/volumeactions"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/volumes"
-	"time"
 )
 
 var VolumeServicePollingInterval = 10 * time.Second
@@ -102,8 +103,7 @@ func (v volumeService) GetVolume(volumeID string) (*volumes.Volume, error) {
 }
 
 func (v volumeService) ExtendVolumeSize(volumeID string, size int) error {
-	var extendOpts volumeactions.ExtendSizeOptsBuilder
-	extendOpts = volumeactions.ExtendSizeOpts{
+	extendOpts := volumeactions.ExtendSizeOpts{
 		NewSize: size,
 	}
 
@@ -125,8 +125,7 @@ func (v volumeService) DeleteVolume(volumeID string) error {
 }
 
 func (v volumeService) getVolumeCreateOpts(size int, availabilityZone string, volumeType string, name string) volumes.CreateOptsBuilder {
-	var createOpts volumes.CreateOptsBuilder
-	createOpts = volumes.CreateOpts{
+	createOpts := volumes.CreateOpts{
 		Size:             size,
 		AvailabilityZone: availabilityZone,
 		VolumeType:       volumeType,
@@ -136,7 +135,6 @@ func (v volumeService) getVolumeCreateOpts(size int, availabilityZone string, vo
 }
 
 func (v volumeService) getVolumeDeleteOpts() volumes.DeleteOptsBuilder {
-	var deleteOpts volumes.DeleteOptsBuilder
-	deleteOpts = volumes.DeleteOpts{}
+	deleteOpts := volumes.DeleteOpts{}
 	return deleteOpts
 }

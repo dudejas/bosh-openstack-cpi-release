@@ -2,6 +2,7 @@ package methods_test
 
 import (
 	"errors"
+
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/compute/computefakes"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
@@ -67,7 +68,7 @@ var _ = Describe("CreateDisk", func() {
 		})
 
 		It("creates the volume service", func() {
-			methods.NewCreateDiskMethod(
+			_, _ = methods.NewCreateDiskMethod(
 				&computeServiceBuilder,
 				&volumeServiceBuilder,
 				cpiConfig,
@@ -100,7 +101,7 @@ var _ = Describe("CreateDisk", func() {
 		})
 
 		It("creates the compute service", func() {
-			methods.NewCreateDiskMethod(
+			_, _ = methods.NewCreateDiskMethod(
 				&computeServiceBuilder,
 				&volumeServiceBuilder,
 				cpiConfig,
@@ -139,7 +140,7 @@ var _ = Describe("CreateDisk", func() {
 			})
 
 			It("gets the server availability zone", func() {
-				methods.NewCreateDiskMethod(
+				_, _ = methods.NewCreateDiskMethod(
 					&computeServiceBuilder,
 					&volumeServiceBuilder,
 					cpiConfig,
@@ -149,6 +150,7 @@ var _ = Describe("CreateDisk", func() {
 					apiv1.CloudPropsImpl{RawMessage: []byte(jsonStr)},
 					&apiv1.VMCID{},
 				)
+
 				_, _, az := volumeService.CreateVolumeArgsForCall(0)
 
 				Expect(computeService.GetServerAZCallCount()).To(Equal(1))
@@ -176,7 +178,7 @@ var _ = Describe("CreateDisk", func() {
 
 		Context("when ignore_server_availability_zone is true", func() {
 			It("does not get the server availability zone", func() {
-				methods.NewCreateDiskMethod(
+				_, _ = methods.NewCreateDiskMethod(
 					&computeServiceBuilder,
 					&volumeServiceBuilder,
 					cpiConfig,
@@ -192,7 +194,7 @@ var _ = Describe("CreateDisk", func() {
 		})
 
 		It("creates the volume", func() {
-			methods.NewCreateDiskMethod(
+			_, _ = methods.NewCreateDiskMethod(
 				&computeServiceBuilder,
 				&volumeServiceBuilder,
 				cpiConfig,

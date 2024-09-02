@@ -3,11 +3,12 @@ package integration_test
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/volumes"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"net/http"
 )
 
 var _ = Describe("AttachDiskMethod Integration Tests", func() {

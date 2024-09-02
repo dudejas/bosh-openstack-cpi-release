@@ -2,6 +2,7 @@ package methods_test
 
 import (
 	"errors"
+
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/methods"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils/utilsfakes"
@@ -29,7 +30,7 @@ var _ = Describe("HasDiskMethod", func() {
 		})
 
 		It("creates the volume service", func() {
-			methods.NewHasDiskMethod(
+			_, _ = methods.NewHasDiskMethod(
 				&volumeServicebuilder,
 				&logger,
 			).HasDisk(
@@ -54,7 +55,9 @@ var _ = Describe("HasDiskMethod", func() {
 		})
 
 		It("returns false and no error if GetVolume fails with notFound", func() {
-			testError := gophercloud.ErrDefault404{gophercloud.ErrUnexpectedResponseCode{Actual: 404}}
+			testError := gophercloud.ErrDefault404{
+				ErrUnexpectedResponseCode: gophercloud.ErrUnexpectedResponseCode{Actual: 404},
+			}
 			volumeService.GetVolumeReturns(nil, testError)
 
 			exists, err := methods.NewHasDiskMethod(

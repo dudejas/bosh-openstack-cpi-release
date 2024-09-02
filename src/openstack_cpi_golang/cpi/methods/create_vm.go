@@ -2,6 +2,8 @@ package methods
 
 import (
 	"fmt"
+	"strconv"
+
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/compute"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
@@ -13,7 +15,6 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/pools"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
-	"strconv"
 )
 
 type CreateVMMethod struct {
@@ -55,11 +56,14 @@ func (m CreateVMMethod) CreateVMV2(
 	networks apiv1.Networks, diskCIDs []apiv1.DiskCID, env apiv1.VMEnv) (apiv1.VMCID, apiv1.Networks, error) {
 
 	cloudProps := properties.CreateVM{}
-	props.As(&cloudProps)
+	err := props.As(&cloudProps)
+	if err != nil {
+		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to parse vm cloud properties: %w", err)
+	}
 
-	createdPortsIds := []ports.Port{}
+	createdPortsIds := make([]ports.Port, 0)
 
-	err := cloudProps.Validate(m.cpiConfig.Cloud.Properties.Openstack)
+	err = cloudProps.Validate(m.cpiConfig.Cloud.Properties.Openstack)
 	if err != nil {
 		return apiv1.VMCID{}, apiv1.Networks{}, fmt.Errorf("failed to validate cloud properties: %w", err)
 	}

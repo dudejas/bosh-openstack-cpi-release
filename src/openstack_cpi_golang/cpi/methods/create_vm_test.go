@@ -2,6 +2,7 @@ package methods_test
 
 import (
 	"errors"
+
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/compute/computefakes"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
@@ -100,7 +101,7 @@ var _ = Describe("CreateVMMethod", func() {
 
 		Context("Services creation and validation", func() {
 			It("creates the compute service", func() {
-				methods.NewCreateVMMethod(
+				_, _, _ = methods.NewCreateVMMethod(
 					&imageServiceBuilder,
 					&networkServiceBuilder,
 					&computeServiceBuilder,
@@ -144,7 +145,7 @@ var _ = Describe("CreateVMMethod", func() {
 			})
 
 			It("creates the network service", func() {
-				methods.NewCreateVMMethod(
+				_, _, _ = methods.NewCreateVMMethod(
 					&imageServiceBuilder,
 					&networkServiceBuilder,
 					&computeServiceBuilder,
@@ -188,7 +189,7 @@ var _ = Describe("CreateVMMethod", func() {
 			})
 
 			It("creates the image service", func() {
-				methods.NewCreateVMMethod(
+				_, _, _ = methods.NewCreateVMMethod(
 					&imageServiceBuilder,
 					&networkServiceBuilder,
 					&computeServiceBuilder,
@@ -232,7 +233,7 @@ var _ = Describe("CreateVMMethod", func() {
 			})
 
 			It("creates the loadbalancer service", func() {
-				methods.NewCreateVMMethod(
+				_, _, _ = methods.NewCreateVMMethod(
 					&imageServiceBuilder,
 					&networkServiceBuilder,
 					&computeServiceBuilder,
@@ -327,7 +328,7 @@ var _ = Describe("CreateVMMethod", func() {
 		Context("Port creation", func() {
 			It("creates a port per manual network", func() {
 
-				methods.NewCreateVMMethod(
+				_, _, _ = methods.NewCreateVMMethod(
 					&imageServiceBuilder,
 					&networkServiceBuilder,
 					&computeServiceBuilder,
@@ -369,7 +370,7 @@ var _ = Describe("CreateVMMethod", func() {
 			})
 
 			It("configures the created ports in the network config", func() {
-				methods.NewCreateVMMethod(
+				_, _, _ = methods.NewCreateVMMethod(
 					&imageServiceBuilder,
 					&networkServiceBuilder,
 					&computeServiceBuilder,
@@ -393,7 +394,7 @@ var _ = Describe("CreateVMMethod", func() {
 
 		Context("Server creation", func() {
 			It("creates a server", func() {
-				methods.NewCreateVMMethod(
+				_, _, _ = methods.NewCreateVMMethod(
 					&imageServiceBuilder,
 					&networkServiceBuilder,
 					&computeServiceBuilder,
@@ -464,7 +465,7 @@ var _ = Describe("CreateVMMethod", func() {
 
 		Context("VIP Network configuration", func() {
 			It("configures the VIP network of the created server", func() {
-				methods.NewCreateVMMethod(
+				_, _, _ = methods.NewCreateVMMethod(
 					&imageServiceBuilder,
 					&networkServiceBuilder,
 					&computeServiceBuilder,
@@ -512,7 +513,7 @@ var _ = Describe("CreateVMMethod", func() {
 		Context("Loadbalancer configuration", func() {
 			It("gets pool ids of provided pools", func() {
 
-				methods.NewCreateVMMethod(
+				_, _, _ = methods.NewCreateVMMethod(
 					&imageServiceBuilder,
 					&networkServiceBuilder,
 					&computeServiceBuilder,
@@ -561,7 +562,7 @@ var _ = Describe("CreateVMMethod", func() {
 					"availability_zones": ["z1", "z2"]
 				}`
 
-				methods.NewCreateVMMethod(
+				_, _, _ = methods.NewCreateVMMethod(
 					&imageServiceBuilder,
 					&networkServiceBuilder,
 					&computeServiceBuilder,
@@ -603,7 +604,7 @@ var _ = Describe("CreateVMMethod", func() {
 			})
 
 			It("Creates a single pool member", func() {
-				methods.NewCreateVMMethod(
+				_, _, _ = methods.NewCreateVMMethod(
 					&imageServiceBuilder,
 					&networkServiceBuilder,
 					&computeServiceBuilder,
@@ -637,7 +638,7 @@ var _ = Describe("CreateVMMethod", func() {
 					"availability_zones": ["z1", "z2"]
 				}`
 
-				methods.NewCreateVMMethod(
+				_, _, _ = methods.NewCreateVMMethod(
 					&imageServiceBuilder,
 					&networkServiceBuilder,
 					&computeServiceBuilder,
@@ -705,7 +706,7 @@ var _ = Describe("CreateVMMethod", func() {
 				loadbalancerService.CreatePoolMemberReturnsOnCall(0, &pools.Member{ID: "the-member-id", PoolID: "the-pool-id-1"}, nil)
 				loadbalancerService.CreatePoolMemberReturnsOnCall(1, &pools.Member{ID: "the-member-id-1", PoolID: "the-pool-id-2"}, nil)
 
-				methods.NewCreateVMMethod(
+				_, _, _ = methods.NewCreateVMMethod(
 					&imageServiceBuilder,
 					&networkServiceBuilder,
 					&computeServiceBuilder,
@@ -764,7 +765,7 @@ var _ = Describe("CreateVMMethod", func() {
 			It("deletes ports if server creation fails", func() {
 				computeService.CreateServerReturns(nil, errors.New("boom"))
 
-				methods.NewCreateVMMethod(
+				_, _, _ = methods.NewCreateVMMethod(
 					&imageServiceBuilder,
 					&networkServiceBuilder,
 					&computeServiceBuilder,
@@ -786,7 +787,7 @@ var _ = Describe("CreateVMMethod", func() {
 			It("deletes ports and server if configuring vip network fails", func() {
 				networkService.ConfigureVIPNetworkReturns(errors.New("boom"))
 
-				methods.NewCreateVMMethod(
+				_, _, _ = methods.NewCreateVMMethod(
 					&imageServiceBuilder,
 					&networkServiceBuilder,
 					&computeServiceBuilder,
@@ -809,7 +810,7 @@ var _ = Describe("CreateVMMethod", func() {
 			It("deletes ports, server, and pool members if update server metadata fails", func() {
 				networkService.ConfigureVIPNetworkReturns(errors.New("boom"))
 
-				methods.NewCreateVMMethod(
+				_, _, _ = methods.NewCreateVMMethod(
 					&imageServiceBuilder,
 					&networkServiceBuilder,
 					&computeServiceBuilder,

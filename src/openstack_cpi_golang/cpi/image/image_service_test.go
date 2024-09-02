@@ -2,11 +2,12 @@ package image_test
 
 import (
 	"errors"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/image/imagefakes"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/image/imagefakes"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/image"
@@ -65,7 +66,7 @@ var _ = Describe("ImageService", func() {
 				StemcellPubliclyVisible: true,
 			}
 
-			image.NewImageService(serviceClients, &imagesFacade, &httpClient, &logger).
+			_, _ = image.NewImageService(serviceClients, &imagesFacade, &httpClient, &logger).
 				CreateImage(cloudProps, openstackConfig)
 
 			public := images.ImageVisibilityPublic
@@ -105,7 +106,7 @@ var _ = Describe("ImageService", func() {
 		It("returns the id of an existing image entity in OpenStack", func() {
 			imagesFacade.GetImageReturns(&images.Image{ID: "123-456", Status: "active"}, nil)
 
-			image.NewImageService(serviceClients, &imagesFacade, &httpClient, &logger).
+			_, _ = image.NewImageService(serviceClients, &imagesFacade, &httpClient, &logger).
 				GetImage("123-456")
 
 			serviceClient, imageID := imagesFacade.GetImageArgsForCall(0)
@@ -169,7 +170,7 @@ var _ = Describe("ImageService", func() {
 			httpClient.NewRequestReturns(&request, nil)
 			httpClient.DoReturns(&http.Response{StatusCode: 204}, nil)
 
-			image.NewImageService(serviceClients, &imagesFacade, &httpClient, &logger).
+			_ = image.NewImageService(serviceClients, &imagesFacade, &httpClient, &logger).
 				UploadImage("123-456", "testdata/root.img")
 
 			Expect(httpClient.DoCallCount()).To(Equal(1))
@@ -216,7 +217,7 @@ var _ = Describe("ImageService", func() {
 		It("deletes an existing image in OpenStack", func() {
 			imagesFacade.DeleteImageReturns(nil)
 
-			image.NewImageService(serviceClients, &imagesFacade, &httpClient, &logger).
+			_ = image.NewImageService(serviceClients, &imagesFacade, &httpClient, &logger).
 				DeleteImage("123-456")
 
 			serviceClient, imageID := imagesFacade.DeleteImageArgsForCall(0)

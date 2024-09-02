@@ -3,12 +3,13 @@ package loadbalancer
 import (
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/loadbalancers"
 	"github.com/gophercloud/gophercloud/openstack/loadbalancer/v2/pools"
-	"time"
 )
 
 var LoadbalancerServicePollingInterval = 10 * time.Second

@@ -2,6 +2,7 @@ package methods
 
 import (
 	"fmt"
+
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/image"
 
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"

@@ -1,9 +1,10 @@
 package compute
 
 import (
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"math/rand"
 	"time"
+
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 )
 
 //counterfeiter:generate . AvailabilityZoneProvider

@@ -1,0 +1,89 @@
+name: Go
+
+concurrency:
+  group: '${{ github.workflow }}-${{ github.head_ref || github.run_id }}'
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'src/openstack_cpi_golang/**'
+
+jobs:
+  go_lint:
+    name: Run golangci-lint
+    runs-on: [ solinas-medium ]
+
+    steps:
+      - uses: hmarr/debug-action@v2
+
+      - uses: actions/cache/restore@v4
+        name: Restore Repo from Actions Artifact Cache
+        with:
+          path: ${{ github.workspace }}
+          key: bosh-openstack-cpi-release-git-repo-cache
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: src/openstack_cpi_golang/go.mod
+
+      - name: Install golangci-lint
+        run: |
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
+      - name: Run golangci-lint
+        run: |
+          cd src/openstack_cpi_golang
+          golangci-lint run --enable goimports
+
+  unit_tests:
+    name: Run unit tests
+    runs-on: [ solinas-medium ]
+
+    steps:
+      - uses: hmarr/debug-action@v2
+
+      - uses: actions/cache/restore@v4
+        name: Restore Repo from Actions Artifact Cache
+        with:
+          path: ${{ github.workspace }}
+          key: bosh-openstack-cpi-release-git-repo-cache
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: src/openstack_cpi_golang/go.mod
+
+      - name: Run unit tests
+        run: ./src/openstack_cpi_golang/scripts/run-unit-tests
+  integration_tests:
+    name: Run integration tests
+    runs-on: [ solinas-medium ]
+
+    steps:
+      - uses: hmarr/debug-action@v2
+
+      - uses: actions/cache/restore@v4
+        name: Restore Repo from Actions Artifact Cache
+        with:
+          path: ${{ github.workspace }}
+          key: bosh-openstack-cpi-release-git-repo-cache
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: src/openstack_cpi_golang/go.mod
+
+      - name: Run integration tests
+        run: ./src/openstack_cpi_golang/scripts/run-integration-tests

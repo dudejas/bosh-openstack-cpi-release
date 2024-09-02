@@ -2,13 +2,14 @@ package methods
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/image"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/image/root_image"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
-	"os"
 )
 
 type CreateStemcellMethod struct {
@@ -45,7 +46,10 @@ func (a CreateStemcellMethod) CreateStemcell(
 	a.logger.Info("create_stemcell", "Creating new image...")
 
 	var cloudProps = properties.CreateStemcell{}
-	props.As(&cloudProps)
+	err := props.As(&cloudProps)
+	if err != nil {
+		return apiv1.StemcellCID{}, fmt.Errorf("failed to parse stemcell cloud properties: %w", err)
+	}
 
 	imageService, err := a.imageServiceBuilder.Build()
 	if err != nil {

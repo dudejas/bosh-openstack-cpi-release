@@ -22,10 +22,9 @@ var _ = Describe("CreateVM", func() {
 				LoadbalancerPools: []properties.LoadbalancerPool{{ProtocolPort: 1234}},
 			}
 
-			cloudProps.Validate(openstackConfig)
+			err := cloudProps.Validate(openstackConfig)
 
-			Expect(cloudProps.Validate(openstackConfig).Error()).
-				To(Equal("load balancer pool defined without name"))
+			Expect(err.Error()).To(Equal("load balancer pool defined without name"))
 		})
 
 		It("returns an error if a loadbalancer has no port", func() {
@@ -33,10 +32,9 @@ var _ = Describe("CreateVM", func() {
 				LoadbalancerPools: []properties.LoadbalancerPool{{Name: "name"}},
 			}
 
-			cloudProps.Validate(openstackConfig)
+			err := cloudProps.Validate(openstackConfig)
 
-			Expect(cloudProps.Validate(openstackConfig).Error()).
-				To(Equal("load balancer pool 'name' has no port definition"))
+			Expect(err.Error()).To(Equal("load balancer pool 'name' has no port definition"))
 		})
 
 		It("returns an error if 'availability_zone' and 'availability_zones' is configured", func() {
@@ -45,10 +43,9 @@ var _ = Describe("CreateVM", func() {
 				AvailabilityZones: []string{"az1", "az2"},
 			}
 
-			cloudProps.Validate(openstackConfig)
+			err := cloudProps.Validate(openstackConfig)
 
-			Expect(cloudProps.Validate(openstackConfig).Error()).
-				To(Equal("only one property of 'availability_zone' and 'availability_zones' can be configured"))
+			Expect(err.Error()).To(Equal("only one property of 'availability_zone' and 'availability_zones' can be configured"))
 		})
 
 		It("returns an error if 'availability_zones' are configured without ignore_server_availability_zone", func() {
@@ -56,10 +53,9 @@ var _ = Describe("CreateVM", func() {
 				AvailabilityZones: []string{"az1", "az2"},
 			}
 
-			cloudProps.Validate(openstackConfig)
+			err := cloudProps.Validate(openstackConfig)
 
-			Expect(cloudProps.Validate(openstackConfig).Error()).
-				To(Equal("cannot use multiple azs without 'openstack.ignore_server_availability_zone' set to true"))
+			Expect(err.Error()).To(Equal("cannot use multiple azs without 'openstack.ignore_server_availability_zone' set to true"))
 		})
 
 	})

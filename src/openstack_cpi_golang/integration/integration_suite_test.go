@@ -3,15 +3,16 @@ package integration_test
 import (
 	"bytes"
 	"fmt"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
-	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
-	boshlog "github.com/cloudfoundry/bosh-utils/logger"
 	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
+	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
+	boshlog "github.com/cloudfoundry/bosh-utils/logger"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -106,7 +107,7 @@ func MockAuthentication() {
 	Mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			fmt.Fprintf(w, `{
+			_, _ = fmt.Fprintf(w, `{
 					"versions": {"values": [
 						{"status": "stable","id": "v3.0","links": [{ "href": "%s", "rel": "self" }]},
 						{"status": "stable","id": "v2.0","links": [{ "href": "%s", "rel": "self" }]}
@@ -121,7 +122,7 @@ func MockAuthentication() {
 			w.Header().Add("X-Subject-Token", "0123456789")
 			w.WriteHeader(http.StatusCreated)
 
-			fmt.Fprintf(w, `{
+			_, _ = fmt.Fprintf(w, `{
 					"token": {
 						"expires_at": "2013-02-02T18:30:59.000000Z",
 						"catalog": [{
@@ -172,8 +173,8 @@ func writeJsonParamToStdIn(json string) {
 	os.Stdin = reader
 
 	go func() {
-		writer.WriteString(json)
-		writer.Close()
+		_, _ = writer.WriteString(json)
+		_ = writer.Close()
 	}()
 }
 
@@ -184,7 +185,7 @@ func setupReadableStdOut() (chan string, *os.File) {
 	// copy the output in a separate goroutine so reading from the pipe doesn't block indefinitely
 	go func() {
 		var buf bytes.Buffer
-		io.Copy(&buf, reader)
+		_, _ = io.Copy(&buf, reader)
 		outChannel <- buf.String()
 	}()
 

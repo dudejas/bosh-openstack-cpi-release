@@ -2,6 +2,7 @@ package image_test
 
 import (
 	"errors"
+
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/image"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/image/imagefakes"
@@ -56,7 +57,7 @@ var _ = Describe("heavyStemcellCreator", func() {
 			imageServiceClient.UploadImageReturns(nil)
 			theCloudProps := properties.CreateStemcell{}
 
-			image.NewHeavyStemcellCreator(config).
+			_, _ = image.NewHeavyStemcellCreator(config).
 				Create(&imageServiceClient, properties.CreateStemcell{}, "root/image/path")
 
 			cloudProps, config := imageServiceClient.CreateImageArgsForCall(0)
@@ -68,7 +69,7 @@ var _ = Describe("heavyStemcellCreator", func() {
 			imageServiceClient.CreateImageReturns("1234", nil)
 			imageServiceClient.UploadImageReturns(nil)
 
-			image.NewHeavyStemcellCreator(config).
+			_, _ = image.NewHeavyStemcellCreator(config).
 				Create(&imageServiceClient, properties.CreateStemcell{}, "root/image/path")
 
 			imageID, imageFilePath := imageServiceClient.UploadImageArgsForCall(0)

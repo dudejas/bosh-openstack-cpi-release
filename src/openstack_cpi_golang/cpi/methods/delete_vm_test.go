@@ -2,6 +2,7 @@ package methods_test
 
 import (
 	"errors"
+
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/compute/computefakes"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
@@ -49,7 +50,7 @@ var _ = Describe("DeleteVMMethod", func() {
 		})
 
 		It("creates the compute service", func() {
-			methods.NewDeleteVMMethod(
+			_ = methods.NewDeleteVMMethod(
 				&networkServiceBuilder,
 				&computeServiceBuilder,
 				&loadbalancerServiceBuilder,
@@ -79,7 +80,7 @@ var _ = Describe("DeleteVMMethod", func() {
 		})
 
 		It("creates the network service", func() {
-			methods.NewDeleteVMMethod(
+			_ = methods.NewDeleteVMMethod(
 				&networkServiceBuilder,
 				&computeServiceBuilder,
 				&loadbalancerServiceBuilder,
@@ -142,7 +143,7 @@ var _ = Describe("DeleteVMMethod", func() {
 		})
 
 		It("calls serverMetadata with correct cid", func() {
-			methods.NewDeleteVMMethod(
+			_ = methods.NewDeleteVMMethod(
 				&networkServiceBuilder,
 				&computeServiceBuilder,
 				&loadbalancerServiceBuilder,
@@ -173,7 +174,7 @@ var _ = Describe("DeleteVMMethod", func() {
 		})
 
 		It("creates the loadbalancer service", func() {
-			methods.NewDeleteVMMethod(
+			err := methods.NewDeleteVMMethod(
 				&networkServiceBuilder,
 				&computeServiceBuilder,
 				&loadbalancerServiceBuilder,
@@ -183,6 +184,7 @@ var _ = Describe("DeleteVMMethod", func() {
 				apiv1.NewVMCID("vm-id"),
 			)
 
+			Expect(err).ToNot(HaveOccurred())
 			Expect(loadbalancerServiceBuilder.BuildCallCount()).To(Equal(1))
 		})
 

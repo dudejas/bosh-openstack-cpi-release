@@ -2,12 +2,13 @@ package integration_test
 
 import (
 	"fmt"
+	"net/http"
+	"sync/atomic"
+
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"net/http"
-	"sync/atomic"
 )
 
 var _ = Describe("Create Stemcell", func() {

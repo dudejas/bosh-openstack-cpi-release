@@ -3,6 +3,8 @@ package network
 import (
 	"errors"
 	"fmt"
+	"net"
+
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
@@ -11,7 +13,6 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/layer3/floatingips"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/subnets"
-	"net"
 )
 
 //counterfeiter:generate . NetworkService
@@ -72,15 +73,15 @@ func (c networkService) ConfigureVIPNetwork(
 			return fmt.Errorf("failed to get floating IP: %w", err)
 		}
 
-		ports, err := c.GetPorts(instanceId, networkConfig.DefaultNetwork, false)
+		instancePorts, err := c.GetPorts(instanceId, networkConfig.DefaultNetwork, false)
 		if err != nil {
 			return fmt.Errorf("failed to get port: %w", err)
 		}
-		if len(ports) == 0 {
+		if len(instancePorts) == 0 {
 			return fmt.Errorf("no port allocated by instance %s and network %s", instanceId, networkConfig.DefaultNetwork.CloudProps.NetID)
 		}
 
-		err = c.associateFloatingIp(floatingIp.ID, ports[0].ID)
+		err = c.associateFloatingIp(floatingIp.ID, instancePorts[0].ID)
 		if err != nil {
 			return fmt.Errorf("failed to associate floating ip to port: %w", err)
 		}
@@ -289,12 +290,12 @@ func (c networkService) isVRRPPortExisting(cloudProperties properties.CreateVM) 
 			return false, fmt.Errorf("failed to list VRRP ports: %w", err)
 		}
 
-		ports, err := c.networkingFacade.ExtractPorts(page)
+		vrrpPorts, err := c.networkingFacade.ExtractPorts(page)
 		if err != nil {
-			return false, fmt.Errorf("failed to extract ports: %w", err)
+			return false, fmt.Errorf("failed to extract VRRP ports: %w", err)
 		}
 
-		if len(ports) == 0 {
+		if len(vrrpPorts) == 0 {
 			return false, nil
 		}
 	}

@@ -2,6 +2,7 @@ package loadbalancer_test
 
 import (
 	"errors"
+
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/loadbalancer"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/loadbalancer/loadbalancerfakes"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/mocks"
@@ -53,7 +54,7 @@ var _ = Describe("LoadbalancerService", func() {
 		mockPool = pools.Pool{
 			ID:            "pool-id",
 			Name:          "pool-name",
-			Loadbalancers: []pools.LoadBalancerID{pools.LoadBalancerID{ID: "the-lb-id"}},
+			Loadbalancers: []pools.LoadBalancerID{{ID: "the-lb-id"}},
 			Listeners:     []pools.ListenerID{{ID: "the-listener-id"}},
 		}
 
@@ -79,7 +80,7 @@ var _ = Describe("LoadbalancerService", func() {
 		})
 
 		It("lists loadbalancer pools", func() {
-			loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
+			_, _ = loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
 				GetPool("pool-name")
 
 			_, listOpts := loadbalancerFacade.ListPoolsArgsForCall(0)
@@ -97,7 +98,7 @@ var _ = Describe("LoadbalancerService", func() {
 		})
 
 		It("extracts loadbalancer pools", func() {
-			loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
+			_, _ = loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
 				GetPool("pool-name")
 
 			Expect(loadbalancerFacade.ExtractPoolsArgsForCall(0)).To(Equal(poolsPage))
@@ -276,7 +277,9 @@ var _ = Describe("LoadbalancerService", func() {
 		})
 
 		It("tries to find the pool member causing the conflict and returns it", func() {
-			testError := gophercloud.ErrDefault409{gophercloud.ErrUnexpectedResponseCode{Actual: 409}}
+			testError := gophercloud.ErrDefault409{
+				ErrUnexpectedResponseCode: gophercloud.ErrUnexpectedResponseCode{Actual: 409},
+			}
 			loadbalancerFacade.CreatePoolMemberReturns(nil, testError)
 
 			member, err := loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).
@@ -373,7 +376,9 @@ var _ = Describe("LoadbalancerService", func() {
 		})
 
 		It("does not fail if delete pool member returns error-not-found", func() {
-			testError := gophercloud.ErrDefault404{gophercloud.ErrUnexpectedResponseCode{Actual: 404}}
+			testError := gophercloud.ErrDefault404{
+				ErrUnexpectedResponseCode: gophercloud.ErrUnexpectedResponseCode{Actual: 404},
+			}
 			loadbalancerFacade.DeletePoolMemberReturns(testError)
 
 			err := loadbalancer.NewLoadbalancerService(serviceClients, &loadbalancerFacade, &logger).

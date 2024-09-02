@@ -2,6 +2,9 @@ package methods
 
 import (
 	"fmt"
+	"regexp"
+	"time"
+
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/compute"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
@@ -10,8 +13,6 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/volumes"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/volumeattach"
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
-	"regexp"
-	"time"
 )
 
 type AttachDiskMethod struct {
@@ -187,13 +188,13 @@ func (a AttachDiskMethod) getDiskHint(diskVolume volumes.Volume, volumeService v
 		if err != nil {
 			a.logger.Error("attach_disk", fmt.Sprintf("Failed to get volume: %v", err))
 		} else {
-			if currVolume.Attachments != nil && len(currVolume.Attachments) != 0 {
+			if len(currVolume.Attachments) != 0 {
 				attachment := currVolume.Attachments[0]
 				diskHint = apiv1.NewDiskHintFromString(attachment.Device)
 			}
 		}
 	} else {
-		if diskVolume.Attachments != nil && len(diskVolume.Attachments) != 0 {
+		if len(diskVolume.Attachments) != 0 {
 			attachment := diskVolume.Attachments[0]
 			diskHint = apiv1.NewDiskHintFromString(attachment.Device)
 		}
