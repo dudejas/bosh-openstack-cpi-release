@@ -33,6 +33,10 @@ type VolumeService interface {
 		volumeID string,
 		size int,
 	) error
+	SetDiskMetadata(
+		volumeID string,
+		metadata map[string]string,
+	) error
 }
 
 type volumeService struct {
@@ -110,6 +114,17 @@ func (v volumeService) ExtendVolumeSize(volumeID string, size int) error {
 	err := v.volumeFacade.ExtendVolumeSize(v.serviceClients.ServiceClient, volumeID, extendOpts)
 	if err != nil {
 		return fmt.Errorf("failed to extend volume size: %w", err)
+	}
+	return nil
+}
+
+func (v volumeService) SetDiskMetadata(volumeID string, metadata map[string]string) error {
+	updateOpts := volumes.UpdateOpts{
+		Metadata: metadata,
+	}
+	err := v.volumeFacade.SetDiskMetadata(v.serviceClients.ServiceClient, volumeID, updateOpts)
+	if err != nil {
+		return fmt.Errorf("failed to set disk metadata: %w", err)
 	}
 	return nil
 }

@@ -62,6 +62,18 @@ type FakeVolumeService struct {
 		result1 *volumes.Volume
 		result2 error
 	}
+	SetDiskMetadataStub        func(string, map[string]string) error
+	setDiskMetadataMutex       sync.RWMutex
+	setDiskMetadataArgsForCall []struct {
+		arg1 string
+		arg2 map[string]string
+	}
+	setDiskMetadataReturns struct {
+		result1 error
+	}
+	setDiskMetadataReturnsOnCall map[int]struct {
+		result1 error
+	}
 	WaitForVolumeToBecomeStatusStub        func(string, time.Duration, string) error
 	waitForVolumeToBecomeStatusMutex       sync.RWMutex
 	waitForVolumeToBecomeStatusArgsForCall []struct {
@@ -332,6 +344,68 @@ func (fake *FakeVolumeService) GetVolumeReturnsOnCall(i int, result1 *volumes.Vo
 	}{result1, result2}
 }
 
+func (fake *FakeVolumeService) SetDiskMetadata(arg1 string, arg2 map[string]string) error {
+	fake.setDiskMetadataMutex.Lock()
+	ret, specificReturn := fake.setDiskMetadataReturnsOnCall[len(fake.setDiskMetadataArgsForCall)]
+	fake.setDiskMetadataArgsForCall = append(fake.setDiskMetadataArgsForCall, struct {
+		arg1 string
+		arg2 map[string]string
+	}{arg1, arg2})
+	stub := fake.SetDiskMetadataStub
+	fakeReturns := fake.setDiskMetadataReturns
+	fake.recordInvocation("SetDiskMetadata", []interface{}{arg1, arg2})
+	fake.setDiskMetadataMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeVolumeService) SetDiskMetadataCallCount() int {
+	fake.setDiskMetadataMutex.RLock()
+	defer fake.setDiskMetadataMutex.RUnlock()
+	return len(fake.setDiskMetadataArgsForCall)
+}
+
+func (fake *FakeVolumeService) SetDiskMetadataCalls(stub func(string, map[string]string) error) {
+	fake.setDiskMetadataMutex.Lock()
+	defer fake.setDiskMetadataMutex.Unlock()
+	fake.SetDiskMetadataStub = stub
+}
+
+func (fake *FakeVolumeService) SetDiskMetadataArgsForCall(i int) (string, map[string]string) {
+	fake.setDiskMetadataMutex.RLock()
+	defer fake.setDiskMetadataMutex.RUnlock()
+	argsForCall := fake.setDiskMetadataArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeVolumeService) SetDiskMetadataReturns(result1 error) {
+	fake.setDiskMetadataMutex.Lock()
+	defer fake.setDiskMetadataMutex.Unlock()
+	fake.SetDiskMetadataStub = nil
+	fake.setDiskMetadataReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeVolumeService) SetDiskMetadataReturnsOnCall(i int, result1 error) {
+	fake.setDiskMetadataMutex.Lock()
+	defer fake.setDiskMetadataMutex.Unlock()
+	fake.SetDiskMetadataStub = nil
+	if fake.setDiskMetadataReturnsOnCall == nil {
+		fake.setDiskMetadataReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.setDiskMetadataReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeVolumeService) WaitForVolumeToBecomeStatus(arg1 string, arg2 time.Duration, arg3 string) error {
 	fake.waitForVolumeToBecomeStatusMutex.Lock()
 	ret, specificReturn := fake.waitForVolumeToBecomeStatusReturnsOnCall[len(fake.waitForVolumeToBecomeStatusArgsForCall)]
@@ -406,6 +480,8 @@ func (fake *FakeVolumeService) Invocations() map[string][][]interface{} {
 	defer fake.extendVolumeSizeMutex.RUnlock()
 	fake.getVolumeMutex.RLock()
 	defer fake.getVolumeMutex.RUnlock()
+	fake.setDiskMetadataMutex.RLock()
+	defer fake.setDiskMetadataMutex.RUnlock()
 	fake.waitForVolumeToBecomeStatusMutex.RLock()
 	defer fake.waitForVolumeToBecomeStatusMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

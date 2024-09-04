@@ -12,6 +12,7 @@ type VolumeFacade interface {
 	GetVolume(client utils.RetryableServiceClient, volumeID string) (*volumes.Volume, error)
 	DeleteVolume(client utils.RetryableServiceClient, volumeID string, opts volumes.DeleteOptsBuilder) error
 	ExtendVolumeSize(client utils.ServiceClient, volumeID string, opts volumeactions.ExtendSizeOptsBuilder) error
+	SetDiskMetadata(client utils.ServiceClient, volumeID string, opts volumes.UpdateOptsBuilder) error
 }
 
 type volumeFacade struct{}
@@ -34,6 +35,11 @@ func (v volumeFacade) DeleteVolume(client utils.RetryableServiceClient, volumeID
 
 func (v volumeFacade) ExtendVolumeSize(client utils.ServiceClient, volumeID string, opts volumeactions.ExtendSizeOptsBuilder) error {
 	return volumeactions.ExtendSize(client, volumeID, opts).ExtractErr()
+}
+
+func (v volumeFacade) SetDiskMetadata(client utils.ServiceClient, volumeID string, opts volumes.UpdateOptsBuilder) error {
+	_, err := volumes.Update(client, volumeID, opts).Extract()
+	return err
 }
 
 func NewVolumeFacade() volumeFacade {

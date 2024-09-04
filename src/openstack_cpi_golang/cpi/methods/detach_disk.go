@@ -2,12 +2,13 @@ package methods
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/compute"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/config"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/volume"
-	"time"
 )
 
 type DetachDiskMethod struct {
@@ -59,7 +60,7 @@ func (a DetachDiskMethod) DetachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID) e
 		}
 		a.logger.Debug("detach_disk", fmt.Sprintf("%d: Existing attachment: device: %s, volume ID: %s", idx+1, attachment.Device, attachment.VolumeID))
 	}
-	if attachmentFound == true {
+	if attachmentFound {
 		a.logger.Debug("detach_disk", fmt.Sprintf("Detaching volume ID: %s, server: %s", diskCID.AsString(), vmCID.AsString()))
 		err = computeService.DetachVolume(vmCID.AsString(), diskCID.AsString())
 		if err != nil {

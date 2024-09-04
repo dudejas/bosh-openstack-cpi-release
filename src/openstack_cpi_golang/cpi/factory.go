@@ -147,7 +147,10 @@ func (f Factory) New(ctx apiv1.CallContext) (apiv1.CPI, error) {
 			f.cpiConfig,
 			f.logger,
 		),
-		methods.NewSetDiskMetadataMethod(),
+		methods.NewSetDiskMetadataMethod(
+			compute.NewComputeServiceBuilder(openstackService, f.cpiConfig, f.logger),
+			volume.NewVolumeServiceBuilder(openstackService, f.cpiConfig, f.logger),
+			f.logger),
 		methods.NewDeleteSnapshotMethod(),
 		methods.NewSnapshotDiskMethod(),
 	}, nil
