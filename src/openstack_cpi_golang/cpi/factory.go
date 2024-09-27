@@ -116,8 +116,9 @@ func (f Factory) New(ctx apiv1.CallContext) (apiv1.CPI, error) {
 			compute.NewComputeServiceBuilder(openstackService, f.cpiConfig, f.logger),
 			f.logger,
 			f.cpiConfig),
-		methods.NewGetDisksMethod(),
-
+		methods.NewGetDisksMethod(
+			compute.NewComputeServiceBuilder(openstackService, f.cpiConfig, f.logger),
+			f.logger),
 		methods.NewCreateDiskMethod(
 			compute.NewComputeServiceBuilder(openstackService, f.cpiConfig, f.logger),
 			volume.NewVolumeServiceBuilder(openstackService, f.cpiConfig, f.logger),
