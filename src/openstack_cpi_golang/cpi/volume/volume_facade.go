@@ -16,6 +16,7 @@ type VolumeFacade interface {
 	ExtendVolumeSize(client utils.ServiceClient, volumeID string, opts volumeactions.ExtendSizeOptsBuilder) error
 	SetDiskMetadata(client utils.ServiceClient, volumeID string, opts volumes.UpdateOptsBuilder) error
 	CreateSnapshot(client *gophercloud.ServiceClient, opts snapshots.CreateOptsBuilder) (*snapshots.Snapshot, error)
+	DeleteSnapshot(client *gophercloud.ServiceClient, snapshotID string) error
 	UpdateMetaDataSnapShot(client *gophercloud.ServiceClient, snapshotID string, opts snapshots.UpdateMetadataOptsBuilder) (map[string]interface{}, error)
 	GetSnapshot(client utils.RetryableServiceClient, snapshotID string) (*snapshots.Snapshot, error)
 }
@@ -49,6 +50,10 @@ func (v volumeFacade) SetDiskMetadata(client utils.ServiceClient, volumeID strin
 
 func (v volumeFacade) CreateSnapshot(client *gophercloud.ServiceClient, opts snapshots.CreateOptsBuilder) (*snapshots.Snapshot, error) {
 	return snapshots.Create(client, opts).Extract()
+}
+
+func (v volumeFacade) DeleteSnapshot(client *gophercloud.ServiceClient, snapshotID string) error {
+	return snapshots.Delete(client, snapshotID).ExtractErr()
 }
 
 func (v volumeFacade) UpdateMetaDataSnapShot(client *gophercloud.ServiceClient, snapshotID string, opts snapshots.UpdateMetadataOptsBuilder) (map[string]interface{}, error) {

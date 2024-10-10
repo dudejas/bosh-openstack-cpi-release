@@ -152,7 +152,10 @@ func (f Factory) New(ctx apiv1.CallContext) (apiv1.CPI, error) {
 			compute.NewComputeServiceBuilder(openstackService, f.cpiConfig, f.logger),
 			volume.NewVolumeServiceBuilder(openstackService, f.cpiConfig, f.logger),
 			f.logger),
-		methods.NewDeleteSnapshotMethod(),
+		methods.NewDeleteSnapshotMethod(
+			volume.NewVolumeServiceBuilder(openstackService, f.cpiConfig, f.logger),
+			f.cpiConfig,
+			f.logger),
 		methods.NewSnapshotDiskMethod(
 			volume.NewVolumeServiceBuilder(openstackService, f.cpiConfig, f.logger),
 			f.cpiConfig,

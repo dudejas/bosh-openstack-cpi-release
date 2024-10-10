@@ -44,6 +44,17 @@ type FakeVolumeService struct {
 		result1 *volumes.Volume
 		result2 error
 	}
+	DeleteSnapshotStub        func(string) error
+	deleteSnapshotMutex       sync.RWMutex
+	deleteSnapshotArgsForCall []struct {
+		arg1 string
+	}
+	deleteSnapshotReturns struct {
+		result1 error
+	}
+	deleteSnapshotReturnsOnCall map[int]struct {
+		result1 error
+	}
 	DeleteVolumeStub        func(string) error
 	deleteVolumeMutex       sync.RWMutex
 	deleteVolumeArgsForCall []struct {
@@ -281,6 +292,67 @@ func (fake *FakeVolumeService) CreateVolumeReturnsOnCall(i int, result1 *volumes
 		result1 *volumes.Volume
 		result2 error
 	}{result1, result2}
+}
+
+func (fake *FakeVolumeService) DeleteSnapshot(arg1 string) error {
+	fake.deleteSnapshotMutex.Lock()
+	ret, specificReturn := fake.deleteSnapshotReturnsOnCall[len(fake.deleteSnapshotArgsForCall)]
+	fake.deleteSnapshotArgsForCall = append(fake.deleteSnapshotArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.DeleteSnapshotStub
+	fakeReturns := fake.deleteSnapshotReturns
+	fake.recordInvocation("DeleteSnapshot", []interface{}{arg1})
+	fake.deleteSnapshotMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeVolumeService) DeleteSnapshotCallCount() int {
+	fake.deleteSnapshotMutex.RLock()
+	defer fake.deleteSnapshotMutex.RUnlock()
+	return len(fake.deleteSnapshotArgsForCall)
+}
+
+func (fake *FakeVolumeService) DeleteSnapshotCalls(stub func(string) error) {
+	fake.deleteSnapshotMutex.Lock()
+	defer fake.deleteSnapshotMutex.Unlock()
+	fake.DeleteSnapshotStub = stub
+}
+
+func (fake *FakeVolumeService) DeleteSnapshotArgsForCall(i int) string {
+	fake.deleteSnapshotMutex.RLock()
+	defer fake.deleteSnapshotMutex.RUnlock()
+	argsForCall := fake.deleteSnapshotArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeVolumeService) DeleteSnapshotReturns(result1 error) {
+	fake.deleteSnapshotMutex.Lock()
+	defer fake.deleteSnapshotMutex.Unlock()
+	fake.DeleteSnapshotStub = nil
+	fake.deleteSnapshotReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeVolumeService) DeleteSnapshotReturnsOnCall(i int, result1 error) {
+	fake.deleteSnapshotMutex.Lock()
+	defer fake.deleteSnapshotMutex.Unlock()
+	fake.DeleteSnapshotStub = nil
+	if fake.deleteSnapshotReturnsOnCall == nil {
+		fake.deleteSnapshotReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.deleteSnapshotReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
 }
 
 func (fake *FakeVolumeService) DeleteVolume(arg1 string) error {
@@ -794,6 +866,8 @@ func (fake *FakeVolumeService) Invocations() map[string][][]interface{} {
 	defer fake.createSnapshotMutex.RUnlock()
 	fake.createVolumeMutex.RLock()
 	defer fake.createVolumeMutex.RUnlock()
+	fake.deleteSnapshotMutex.RLock()
+	defer fake.deleteSnapshotMutex.RUnlock()
 	fake.deleteVolumeMutex.RLock()
 	defer fake.deleteVolumeMutex.RUnlock()
 	fake.extendVolumeSizeMutex.RLock()

@@ -46,18 +46,18 @@ type VolumeService interface {
 		description string,
 		metadata map[string]string,
 	) (*snapshots.Snapshot, error)
-
+	DeleteSnapshot(
+		snapShotID string,
+	) error
 	UpdateMetaDataSnapshot(
 		snapShotID string,
 		metadata map[string]interface{},
 	) (map[string]interface{}, error)
-
 	WaitForSnapshotToBecomeStatus(
 		snapShotID string,
 		timeout time.Duration,
 		status string,
 	) error
-
 	GetSnapshot(
 		snapShotID string,
 	) (*snapshots.Snapshot, error)
@@ -185,6 +185,14 @@ func (v volumeService) CreateSnapshot(
 	}
 
 	return snapshot, nil
+}
+
+func (v volumeService) DeleteSnapshot(snapShotID string) error {
+	err := v.volumeFacade.DeleteSnapshot(v.serviceClients.ServiceClient, snapShotID)
+	if err != nil {
+		return fmt.Errorf("failed to delete snapshot: %w", err)
+	}
+	return nil
 }
 
 func (v volumeService) UpdateMetaDataSnapshot(

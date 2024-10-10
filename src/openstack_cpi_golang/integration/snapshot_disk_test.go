@@ -27,7 +27,7 @@ var _ = Describe("SNAPSHOT DISK", func() {
 				switch r.Method {
 				case http.MethodGet:
 					w.WriteHeader(http.StatusOK)
-					fmt.Fprintf(w, `{
+					_, _ = fmt.Fprintf(w, `{
 					"volume": {
 						"id": "volume-id",
 						"name": "old-name",
@@ -46,7 +46,7 @@ var _ = Describe("SNAPSHOT DISK", func() {
 				switch r.Method {
 				case http.MethodPost:
 					w.WriteHeader(http.StatusAccepted)
-					fmt.Fprintf(w, `{
+					_, _ = fmt.Fprintf(w, `{
 						"snapshot": {
 							"id": "snapshot-id",
 							"force": true,
@@ -69,7 +69,7 @@ var _ = Describe("SNAPSHOT DISK", func() {
 				switch r.Method {
 				case http.MethodGet:
 					w.WriteHeader(http.StatusOK)
-					fmt.Fprintf(w, `{
+					_, _ = fmt.Fprintf(w, `{
 					"snapshot": {
 						"id": "snapshot-id",
 						"name": "snapshot-name",
@@ -92,7 +92,7 @@ var _ = Describe("SNAPSHOT DISK", func() {
 				switch r.Method {
 				case http.MethodPut:
 					w.WriteHeader(http.StatusOK)
-					fmt.Fprintf(w, `{
+					_, _ = fmt.Fprintf(w, `{
 					"snapShotID": "snapshot-id",
 					"metadata": {
 						"deployment":     "deployment",
@@ -126,7 +126,7 @@ var _ = Describe("SNAPSHOT DISK", func() {
 			err := cpi.Execute(config, logger)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			stdOutWriter.Close()
+			_ = stdOutWriter.Close()
 			Expect(<-outChannel).To(ContainSubstring(`"result":"snapshot-id","error":null`))
 		})
 	})
@@ -139,7 +139,7 @@ var _ = Describe("SNAPSHOT DISK", func() {
 				switch r.Method {
 				case http.MethodGet:
 					w.WriteHeader(http.StatusUnauthorized)
-					fmt.Fprintf(w, `{
+					_, _ = fmt.Fprintf(w, `{
 						"volume": {
 							"id": "volume-id",
 							"name": "old-name",
@@ -175,7 +175,7 @@ var _ = Describe("SNAPSHOT DISK", func() {
 			err := cpi.Execute(config, logger)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			stdOutWriter.Close()
+			_ = stdOutWriter.Close()
 			Expect(<-outChannel).To(ContainSubstring(`"message":"snapShotDisk: Failed to get volume ID`))
 		})
 
@@ -189,7 +189,7 @@ var _ = Describe("SNAPSHOT DISK", func() {
 				switch r.Method {
 				case http.MethodGet:
 					w.WriteHeader(http.StatusOK)
-					fmt.Fprintf(w, `{
+					_, _ = fmt.Fprintf(w, `{
 					"volume": {
 						"id": "volume-id",
 						"name": "old-name",
@@ -232,7 +232,7 @@ var _ = Describe("SNAPSHOT DISK", func() {
 			err := cpi.Execute(config, logger)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			stdOutWriter.Close()
+			_ = stdOutWriter.Close()
 			Expect(<-outChannel).To(ContainSubstring(`"message":"snapShotDisk: Failed to create snapshot snapshot-`))
 		})
 
@@ -246,7 +246,7 @@ var _ = Describe("SNAPSHOT DISK", func() {
 				switch r.Method {
 				case http.MethodGet:
 					w.WriteHeader(http.StatusOK)
-					fmt.Fprintf(w, `{
+					_, _ = fmt.Fprintf(w, `{
 						"volume": {
 							"id": "volume-id",
 							"name": "old-name",
@@ -265,7 +265,7 @@ var _ = Describe("SNAPSHOT DISK", func() {
 				switch r.Method {
 				case http.MethodPost:
 					w.WriteHeader(http.StatusAccepted)
-					fmt.Fprintf(w, `{
+					_, _ = fmt.Fprintf(w, `{
 						"snapshot": {
 							"id": "snapshot-id",
 							"force": true,
@@ -311,7 +311,7 @@ var _ = Describe("SNAPSHOT DISK", func() {
 			err := cpi.Execute(config, logger)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			stdOutWriter.Close()
+			_ = stdOutWriter.Close()
 			Expect(<-outChannel).To(ContainSubstring(`"message":"snapShotDisk: Failed while waiting for creating snapshot snapshot-`))
 		})
 
