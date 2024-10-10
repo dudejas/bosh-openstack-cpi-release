@@ -4,6 +4,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/snapshots"
+
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/volume"
@@ -107,6 +109,101 @@ var _ = Describe("VolumeService", func() {
 			err := volumeService.DeleteVolume("some_disk_cid")
 
 			Expect(err).ToNot(HaveOccurred())
+		})
+	})
+
+	Context("CreateSnapshot", func() {
+		It("returns an error if snapshot creation fails", func() {
+			volumeFacade.CreateSnapshotReturns(nil, errors.New("boom"))
+			_, err := volumeService.CreateSnapshot(
+				"123-456",
+				true,
+				"test-snapshot",
+				"test-snapshot-description",
+				map[string]string{})
+
+			Expect(err.Error()).To(ContainSubstring("failed to create snapshot: boom"))
+		})
+	})
+
+	Context("UpdateMetaDataSnapshot", func() {
+		It("returns an error if snapshot metadata Update fails", func() {
+			volumeFacade.UpdateMetaDataSnapShotReturns(nil, errors.New("boom"))
+			_, err := volumeService.UpdateMetaDataSnapshot(
+				"123-456",
+				map[string]interface{}{},
+			)
+
+			Expect(err.Error()).To(ContainSubstring("failed to update metadata snapshot: boom"))
+		})
+	})
+
+	Context("GetSnapshot", func() {
+		var snapshot snapshots.Snapshot
+
+		BeforeEach(func() {
+			snapshot = snapshots.Snapshot{
+				ID: "123-456",
+			}
+			volumeFacade.GetSnapshotReturns(&snapshot, nil)
+
+		})
+
+		It("returns snapshot", func() {
+			snapShotResult, err := volumeService.GetSnapshot(
+				"123-456",
+			)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(snapShotResult.ID).To(Equal(snapshot.ID))
+		})
+
+		It("returns an error if snapshot retrieval fail", func() {
+			volumeFacade.GetSnapshotReturns(nil, errors.New("boom"))
+
+			_, err := volumeService.GetSnapshot(
+				"123-456",
+			)
+
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(Equal("failed to retrieve snapshot information: boom"))
+		})
+	})
+
+	Context("WaitForSnapshotToBecomeStatus", func() {
+		It("returns error if snapshot was failed to become available", func() {
+			volumeFacade.GetSnapshotReturns(&snapshots.Snapshot{ID: "123-456", Status: "error"}, nil)
+
+			err := volumeService.WaitForSnapshotToBecomeStatus("123-456", 1*time.Second, "some_target_status")
+
+			Expect(err.Error()).To(Equal("snapshot became error state while waiting to become some_target_status"))
+		})
+
+		It("returns an available volume", func() {
+			volumeFacade.GetSnapshotReturnsOnCall(0, &snapshots.Snapshot{ID: "123-456", Status: "creating"}, nil)
+			volumeFacade.GetSnapshotReturnsOnCall(1, &snapshots.Snapshot{ID: "123-456", Status: "some_target_status"}, nil)
+
+			err := volumeService.WaitForSnapshotToBecomeStatus("123-456", 1*time.Second, "some_target_status")
+
+			Expect(volumeFacade.GetSnapshotCallCount()).To(Equal(2))
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("times out while waiting for snapshot to become some_target_status", func() {
+			volumeFacade.GetSnapshotReturns(&snapshots.Snapshot{ID: "123-456", Status: "creating"}, nil)
+
+			err := volumeService.WaitForSnapshotToBecomeStatus("123-456", 1, "some_target_status")
+
+			Expect(err.Error()).To(Equal("timeout while waiting for snapshot to become some_target_status"))
+		})
+
+		It("returns an error if it cannot get the snapshot", func() {
+			volumeFacade.GetSnapshotReturns(&snapshots.Snapshot{}, errors.New("boom"))
+
+			err := volumeService.WaitForSnapshotToBecomeStatus("123-456", 1, "some_target_status")
+
+			Expect(volumeFacade.GetSnapshotCallCount()).To(Equal(1))
+			Expect(err.Error()).To(Equal("failed to retrieve snapshot information: boom"))
 		})
 	})
 })

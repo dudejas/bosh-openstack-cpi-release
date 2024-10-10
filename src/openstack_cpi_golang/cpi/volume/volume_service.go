@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/snapshots"
+
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/utils"
 	"github.com/google/uuid"
@@ -37,6 +39,28 @@ type VolumeService interface {
 		volumeID string,
 		metadata map[string]string,
 	) error
+	CreateSnapshot(
+		volumeID string,
+		force bool,
+		name string,
+		description string,
+		metadata map[string]string,
+	) (*snapshots.Snapshot, error)
+
+	UpdateMetaDataSnapshot(
+		snapShotID string,
+		metadata map[string]interface{},
+	) (map[string]interface{}, error)
+
+	WaitForSnapshotToBecomeStatus(
+		snapShotID string,
+		timeout time.Duration,
+		status string,
+	) error
+
+	GetSnapshot(
+		snapShotID string,
+	) (*snapshots.Snapshot, error)
 }
 
 type volumeService struct {
@@ -137,6 +161,89 @@ func (v volumeService) DeleteVolume(volumeID string) error {
 		return fmt.Errorf("failed to delete volume: %w", err)
 	}
 	return nil
+}
+
+func (v volumeService) CreateSnapshot(
+	volumeID string,
+	force bool,
+	name string,
+	description string,
+	metadata map[string]string,
+) (*snapshots.Snapshot, error) {
+
+	snapshot, err := v.volumeFacade.CreateSnapshot(
+		v.serviceClients.ServiceClient,
+		snapshots.CreateOpts{
+			VolumeID:    volumeID,
+			Force:       force,
+			Name:        name,
+			Description: description,
+			Metadata:    metadata},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create snapshot: %w", err)
+	}
+
+	return snapshot, nil
+}
+
+func (v volumeService) UpdateMetaDataSnapshot(
+	snapShotID string,
+	metadata map[string]interface{},
+) (map[string]interface{}, error) {
+
+	metaData, err := v.volumeFacade.UpdateMetaDataSnapShot(
+		v.serviceClients.ServiceClient,
+		snapShotID,
+		snapshots.UpdateMetadataOpts{
+			Metadata: metadata},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update metadata snapshot: %w", err)
+	}
+
+	return metaData, nil
+}
+
+func (v volumeService) GetSnapshot(snapShotID string) (*snapshots.Snapshot, error) {
+	snapshot, err := v.volumeFacade.GetSnapshot(v.serviceClients.RetryableServiceClient, snapShotID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve snapshot information: %w", err)
+	}
+	return snapshot, nil
+}
+
+func (v volumeService) WaitForSnapshotToBecomeStatus(snapShotID string, timeout time.Duration, status string) error {
+	timeoutTimer := time.NewTimer(timeout)
+	var errDefault404 gophercloud.ErrDefault404
+
+	for {
+		select {
+		case <-timeoutTimer.C:
+			return fmt.Errorf("timeout while waiting for snapshot to become %s", status)
+		default:
+			snapshot, err := v.GetSnapshot(snapShotID)
+			if err != nil {
+				if errors.As(err, &errDefault404) && status == "deleted" {
+					return nil
+				}
+				return err
+			}
+
+			switch snapshot.Status {
+			case status:
+				return nil
+			case "error":
+				return fmt.Errorf("snapshot became error state while waiting to become %s", status)
+			case "failed":
+				return fmt.Errorf("snapshot became error state while waiting to become %s", status)
+			case "killed":
+				return fmt.Errorf("snapshot became error state while waiting to become %s", status)
+			}
+
+			time.Sleep(VolumeServicePollingInterval)
+		}
+	}
 }
 
 func (v volumeService) getVolumeCreateOpts(size int, availabilityZone string, volumeType string, name string) volumes.CreateOptsBuilder {

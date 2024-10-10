@@ -7,10 +7,28 @@ import (
 
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/properties"
 	"github.com/cloudfoundry/bosh-openstack-cpi-release/src/openstack_cpi_golang/cpi/volume"
+	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/snapshots"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/v3/volumes"
 )
 
 type FakeVolumeService struct {
+	CreateSnapshotStub        func(string, bool, string, string, map[string]string) (*snapshots.Snapshot, error)
+	createSnapshotMutex       sync.RWMutex
+	createSnapshotArgsForCall []struct {
+		arg1 string
+		arg2 bool
+		arg3 string
+		arg4 string
+		arg5 map[string]string
+	}
+	createSnapshotReturns struct {
+		result1 *snapshots.Snapshot
+		result2 error
+	}
+	createSnapshotReturnsOnCall map[int]struct {
+		result1 *snapshots.Snapshot
+		result2 error
+	}
 	CreateVolumeStub        func(int, properties.CreateDisk, string) (*volumes.Volume, error)
 	createVolumeMutex       sync.RWMutex
 	createVolumeArgsForCall []struct {
@@ -49,6 +67,19 @@ type FakeVolumeService struct {
 	extendVolumeSizeReturnsOnCall map[int]struct {
 		result1 error
 	}
+	GetSnapshotStub        func(string) (*snapshots.Snapshot, error)
+	getSnapshotMutex       sync.RWMutex
+	getSnapshotArgsForCall []struct {
+		arg1 string
+	}
+	getSnapshotReturns struct {
+		result1 *snapshots.Snapshot
+		result2 error
+	}
+	getSnapshotReturnsOnCall map[int]struct {
+		result1 *snapshots.Snapshot
+		result2 error
+	}
 	GetVolumeStub        func(string) (*volumes.Volume, error)
 	getVolumeMutex       sync.RWMutex
 	getVolumeArgsForCall []struct {
@@ -74,6 +105,33 @@ type FakeVolumeService struct {
 	setDiskMetadataReturnsOnCall map[int]struct {
 		result1 error
 	}
+	UpdateMetaDataSnapshotStub        func(string, map[string]interface{}) (map[string]interface{}, error)
+	updateMetaDataSnapshotMutex       sync.RWMutex
+	updateMetaDataSnapshotArgsForCall []struct {
+		arg1 string
+		arg2 map[string]interface{}
+	}
+	updateMetaDataSnapshotReturns struct {
+		result1 map[string]interface{}
+		result2 error
+	}
+	updateMetaDataSnapshotReturnsOnCall map[int]struct {
+		result1 map[string]interface{}
+		result2 error
+	}
+	WaitForSnapshotToBecomeStatusStub        func(string, time.Duration, string) error
+	waitForSnapshotToBecomeStatusMutex       sync.RWMutex
+	waitForSnapshotToBecomeStatusArgsForCall []struct {
+		arg1 string
+		arg2 time.Duration
+		arg3 string
+	}
+	waitForSnapshotToBecomeStatusReturns struct {
+		result1 error
+	}
+	waitForSnapshotToBecomeStatusReturnsOnCall map[int]struct {
+		result1 error
+	}
 	WaitForVolumeToBecomeStatusStub        func(string, time.Duration, string) error
 	waitForVolumeToBecomeStatusMutex       sync.RWMutex
 	waitForVolumeToBecomeStatusArgsForCall []struct {
@@ -89,6 +147,74 @@ type FakeVolumeService struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeVolumeService) CreateSnapshot(arg1 string, arg2 bool, arg3 string, arg4 string, arg5 map[string]string) (*snapshots.Snapshot, error) {
+	fake.createSnapshotMutex.Lock()
+	ret, specificReturn := fake.createSnapshotReturnsOnCall[len(fake.createSnapshotArgsForCall)]
+	fake.createSnapshotArgsForCall = append(fake.createSnapshotArgsForCall, struct {
+		arg1 string
+		arg2 bool
+		arg3 string
+		arg4 string
+		arg5 map[string]string
+	}{arg1, arg2, arg3, arg4, arg5})
+	stub := fake.CreateSnapshotStub
+	fakeReturns := fake.createSnapshotReturns
+	fake.recordInvocation("CreateSnapshot", []interface{}{arg1, arg2, arg3, arg4, arg5})
+	fake.createSnapshotMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4, arg5)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeVolumeService) CreateSnapshotCallCount() int {
+	fake.createSnapshotMutex.RLock()
+	defer fake.createSnapshotMutex.RUnlock()
+	return len(fake.createSnapshotArgsForCall)
+}
+
+func (fake *FakeVolumeService) CreateSnapshotCalls(stub func(string, bool, string, string, map[string]string) (*snapshots.Snapshot, error)) {
+	fake.createSnapshotMutex.Lock()
+	defer fake.createSnapshotMutex.Unlock()
+	fake.CreateSnapshotStub = stub
+}
+
+func (fake *FakeVolumeService) CreateSnapshotArgsForCall(i int) (string, bool, string, string, map[string]string) {
+	fake.createSnapshotMutex.RLock()
+	defer fake.createSnapshotMutex.RUnlock()
+	argsForCall := fake.createSnapshotArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5
+}
+
+func (fake *FakeVolumeService) CreateSnapshotReturns(result1 *snapshots.Snapshot, result2 error) {
+	fake.createSnapshotMutex.Lock()
+	defer fake.createSnapshotMutex.Unlock()
+	fake.CreateSnapshotStub = nil
+	fake.createSnapshotReturns = struct {
+		result1 *snapshots.Snapshot
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeVolumeService) CreateSnapshotReturnsOnCall(i int, result1 *snapshots.Snapshot, result2 error) {
+	fake.createSnapshotMutex.Lock()
+	defer fake.createSnapshotMutex.Unlock()
+	fake.CreateSnapshotStub = nil
+	if fake.createSnapshotReturnsOnCall == nil {
+		fake.createSnapshotReturnsOnCall = make(map[int]struct {
+			result1 *snapshots.Snapshot
+			result2 error
+		})
+	}
+	fake.createSnapshotReturnsOnCall[i] = struct {
+		result1 *snapshots.Snapshot
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeVolumeService) CreateVolume(arg1 int, arg2 properties.CreateDisk, arg3 string) (*volumes.Volume, error) {
@@ -280,6 +406,70 @@ func (fake *FakeVolumeService) ExtendVolumeSizeReturnsOnCall(i int, result1 erro
 	}{result1}
 }
 
+func (fake *FakeVolumeService) GetSnapshot(arg1 string) (*snapshots.Snapshot, error) {
+	fake.getSnapshotMutex.Lock()
+	ret, specificReturn := fake.getSnapshotReturnsOnCall[len(fake.getSnapshotArgsForCall)]
+	fake.getSnapshotArgsForCall = append(fake.getSnapshotArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.GetSnapshotStub
+	fakeReturns := fake.getSnapshotReturns
+	fake.recordInvocation("GetSnapshot", []interface{}{arg1})
+	fake.getSnapshotMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeVolumeService) GetSnapshotCallCount() int {
+	fake.getSnapshotMutex.RLock()
+	defer fake.getSnapshotMutex.RUnlock()
+	return len(fake.getSnapshotArgsForCall)
+}
+
+func (fake *FakeVolumeService) GetSnapshotCalls(stub func(string) (*snapshots.Snapshot, error)) {
+	fake.getSnapshotMutex.Lock()
+	defer fake.getSnapshotMutex.Unlock()
+	fake.GetSnapshotStub = stub
+}
+
+func (fake *FakeVolumeService) GetSnapshotArgsForCall(i int) string {
+	fake.getSnapshotMutex.RLock()
+	defer fake.getSnapshotMutex.RUnlock()
+	argsForCall := fake.getSnapshotArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeVolumeService) GetSnapshotReturns(result1 *snapshots.Snapshot, result2 error) {
+	fake.getSnapshotMutex.Lock()
+	defer fake.getSnapshotMutex.Unlock()
+	fake.GetSnapshotStub = nil
+	fake.getSnapshotReturns = struct {
+		result1 *snapshots.Snapshot
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeVolumeService) GetSnapshotReturnsOnCall(i int, result1 *snapshots.Snapshot, result2 error) {
+	fake.getSnapshotMutex.Lock()
+	defer fake.getSnapshotMutex.Unlock()
+	fake.GetSnapshotStub = nil
+	if fake.getSnapshotReturnsOnCall == nil {
+		fake.getSnapshotReturnsOnCall = make(map[int]struct {
+			result1 *snapshots.Snapshot
+			result2 error
+		})
+	}
+	fake.getSnapshotReturnsOnCall[i] = struct {
+		result1 *snapshots.Snapshot
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeVolumeService) GetVolume(arg1 string) (*volumes.Volume, error) {
 	fake.getVolumeMutex.Lock()
 	ret, specificReturn := fake.getVolumeReturnsOnCall[len(fake.getVolumeArgsForCall)]
@@ -406,6 +596,134 @@ func (fake *FakeVolumeService) SetDiskMetadataReturnsOnCall(i int, result1 error
 	}{result1}
 }
 
+func (fake *FakeVolumeService) UpdateMetaDataSnapshot(arg1 string, arg2 map[string]interface{}) (map[string]interface{}, error) {
+	fake.updateMetaDataSnapshotMutex.Lock()
+	ret, specificReturn := fake.updateMetaDataSnapshotReturnsOnCall[len(fake.updateMetaDataSnapshotArgsForCall)]
+	fake.updateMetaDataSnapshotArgsForCall = append(fake.updateMetaDataSnapshotArgsForCall, struct {
+		arg1 string
+		arg2 map[string]interface{}
+	}{arg1, arg2})
+	stub := fake.UpdateMetaDataSnapshotStub
+	fakeReturns := fake.updateMetaDataSnapshotReturns
+	fake.recordInvocation("UpdateMetaDataSnapshot", []interface{}{arg1, arg2})
+	fake.updateMetaDataSnapshotMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeVolumeService) UpdateMetaDataSnapshotCallCount() int {
+	fake.updateMetaDataSnapshotMutex.RLock()
+	defer fake.updateMetaDataSnapshotMutex.RUnlock()
+	return len(fake.updateMetaDataSnapshotArgsForCall)
+}
+
+func (fake *FakeVolumeService) UpdateMetaDataSnapshotCalls(stub func(string, map[string]interface{}) (map[string]interface{}, error)) {
+	fake.updateMetaDataSnapshotMutex.Lock()
+	defer fake.updateMetaDataSnapshotMutex.Unlock()
+	fake.UpdateMetaDataSnapshotStub = stub
+}
+
+func (fake *FakeVolumeService) UpdateMetaDataSnapshotArgsForCall(i int) (string, map[string]interface{}) {
+	fake.updateMetaDataSnapshotMutex.RLock()
+	defer fake.updateMetaDataSnapshotMutex.RUnlock()
+	argsForCall := fake.updateMetaDataSnapshotArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeVolumeService) UpdateMetaDataSnapshotReturns(result1 map[string]interface{}, result2 error) {
+	fake.updateMetaDataSnapshotMutex.Lock()
+	defer fake.updateMetaDataSnapshotMutex.Unlock()
+	fake.UpdateMetaDataSnapshotStub = nil
+	fake.updateMetaDataSnapshotReturns = struct {
+		result1 map[string]interface{}
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeVolumeService) UpdateMetaDataSnapshotReturnsOnCall(i int, result1 map[string]interface{}, result2 error) {
+	fake.updateMetaDataSnapshotMutex.Lock()
+	defer fake.updateMetaDataSnapshotMutex.Unlock()
+	fake.UpdateMetaDataSnapshotStub = nil
+	if fake.updateMetaDataSnapshotReturnsOnCall == nil {
+		fake.updateMetaDataSnapshotReturnsOnCall = make(map[int]struct {
+			result1 map[string]interface{}
+			result2 error
+		})
+	}
+	fake.updateMetaDataSnapshotReturnsOnCall[i] = struct {
+		result1 map[string]interface{}
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeVolumeService) WaitForSnapshotToBecomeStatus(arg1 string, arg2 time.Duration, arg3 string) error {
+	fake.waitForSnapshotToBecomeStatusMutex.Lock()
+	ret, specificReturn := fake.waitForSnapshotToBecomeStatusReturnsOnCall[len(fake.waitForSnapshotToBecomeStatusArgsForCall)]
+	fake.waitForSnapshotToBecomeStatusArgsForCall = append(fake.waitForSnapshotToBecomeStatusArgsForCall, struct {
+		arg1 string
+		arg2 time.Duration
+		arg3 string
+	}{arg1, arg2, arg3})
+	stub := fake.WaitForSnapshotToBecomeStatusStub
+	fakeReturns := fake.waitForSnapshotToBecomeStatusReturns
+	fake.recordInvocation("WaitForSnapshotToBecomeStatus", []interface{}{arg1, arg2, arg3})
+	fake.waitForSnapshotToBecomeStatusMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeVolumeService) WaitForSnapshotToBecomeStatusCallCount() int {
+	fake.waitForSnapshotToBecomeStatusMutex.RLock()
+	defer fake.waitForSnapshotToBecomeStatusMutex.RUnlock()
+	return len(fake.waitForSnapshotToBecomeStatusArgsForCall)
+}
+
+func (fake *FakeVolumeService) WaitForSnapshotToBecomeStatusCalls(stub func(string, time.Duration, string) error) {
+	fake.waitForSnapshotToBecomeStatusMutex.Lock()
+	defer fake.waitForSnapshotToBecomeStatusMutex.Unlock()
+	fake.WaitForSnapshotToBecomeStatusStub = stub
+}
+
+func (fake *FakeVolumeService) WaitForSnapshotToBecomeStatusArgsForCall(i int) (string, time.Duration, string) {
+	fake.waitForSnapshotToBecomeStatusMutex.RLock()
+	defer fake.waitForSnapshotToBecomeStatusMutex.RUnlock()
+	argsForCall := fake.waitForSnapshotToBecomeStatusArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *FakeVolumeService) WaitForSnapshotToBecomeStatusReturns(result1 error) {
+	fake.waitForSnapshotToBecomeStatusMutex.Lock()
+	defer fake.waitForSnapshotToBecomeStatusMutex.Unlock()
+	fake.WaitForSnapshotToBecomeStatusStub = nil
+	fake.waitForSnapshotToBecomeStatusReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeVolumeService) WaitForSnapshotToBecomeStatusReturnsOnCall(i int, result1 error) {
+	fake.waitForSnapshotToBecomeStatusMutex.Lock()
+	defer fake.waitForSnapshotToBecomeStatusMutex.Unlock()
+	fake.WaitForSnapshotToBecomeStatusStub = nil
+	if fake.waitForSnapshotToBecomeStatusReturnsOnCall == nil {
+		fake.waitForSnapshotToBecomeStatusReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.waitForSnapshotToBecomeStatusReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeVolumeService) WaitForVolumeToBecomeStatus(arg1 string, arg2 time.Duration, arg3 string) error {
 	fake.waitForVolumeToBecomeStatusMutex.Lock()
 	ret, specificReturn := fake.waitForVolumeToBecomeStatusReturnsOnCall[len(fake.waitForVolumeToBecomeStatusArgsForCall)]
@@ -472,16 +790,24 @@ func (fake *FakeVolumeService) WaitForVolumeToBecomeStatusReturnsOnCall(i int, r
 func (fake *FakeVolumeService) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.createSnapshotMutex.RLock()
+	defer fake.createSnapshotMutex.RUnlock()
 	fake.createVolumeMutex.RLock()
 	defer fake.createVolumeMutex.RUnlock()
 	fake.deleteVolumeMutex.RLock()
 	defer fake.deleteVolumeMutex.RUnlock()
 	fake.extendVolumeSizeMutex.RLock()
 	defer fake.extendVolumeSizeMutex.RUnlock()
+	fake.getSnapshotMutex.RLock()
+	defer fake.getSnapshotMutex.RUnlock()
 	fake.getVolumeMutex.RLock()
 	defer fake.getVolumeMutex.RUnlock()
 	fake.setDiskMetadataMutex.RLock()
 	defer fake.setDiskMetadataMutex.RUnlock()
+	fake.updateMetaDataSnapshotMutex.RLock()
+	defer fake.updateMetaDataSnapshotMutex.RUnlock()
+	fake.waitForSnapshotToBecomeStatusMutex.RLock()
+	defer fake.waitForSnapshotToBecomeStatusMutex.RUnlock()
 	fake.waitForVolumeToBecomeStatusMutex.RLock()
 	defer fake.waitForVolumeToBecomeStatusMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

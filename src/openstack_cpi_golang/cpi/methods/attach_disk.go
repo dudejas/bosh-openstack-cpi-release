@@ -46,11 +46,11 @@ func (a AttachDiskMethod) attachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID, r
 	a.logger.Info("attach_disk", fmt.Sprintf("Execute attach disk ID %s to VM ID %s", diskCID.AsString(), vmCID.AsString()))
 	volumeService, err := a.volumeServiceBuilder.Build()
 	if err != nil {
-		return diskHint, fmt.Errorf("attach_disk: Failed to get volume service (attach_disk): %w", err)
+		return diskHint, fmt.Errorf("attach_disk: Failed to get volume service: %w", err)
 	}
 	diskVolume, err := volumeService.GetVolume(diskCID.AsString())
 	if err != nil {
-		return diskHint, fmt.Errorf("attach_disk: Failed to get volume: %w", err)
+		return diskHint, fmt.Errorf("attach_disk: Failed to get volume with ID %s: %w", diskCID.AsString(), err)
 	}
 	if len(diskVolume.Attachments) == 1 && diskVolume.Attachments[0].ServerID == vmCID.AsString() {
 		a.logger.Info("attach_disk", fmt.Sprintf("Volume ID %s is already attached to VM ID %s", diskCID.AsString(), vmCID.AsString()))
@@ -61,20 +61,20 @@ func (a AttachDiskMethod) attachDisk(vmCID apiv1.VMCID, diskCID apiv1.DiskCID, r
 	}
 	err = a.checkDiskAttach(*diskVolume, vmCID)
 	if err != nil {
-		return diskHint, fmt.Errorf("attach_disk: Disk cannot be attached: %w", err)
+		return diskHint, fmt.Errorf("attach_disk: Disk with ID %s cannot be attached: %w", diskCID.AsString(), err)
 	}
 	// attach disk to VM
 	computeService, err := a.computeServiceBuilder.Build()
 	if err != nil {
-		return diskHint, fmt.Errorf("attach_disk: Failed to get compute service: %w", err)
+		return diskHint, fmt.Errorf("attach_disk: Failed to get compute service for disk ID %s: %w", diskCID.AsString(), err)
 	}
 	server, err := computeService.GetServer(vmCID.AsString())
 	if err != nil {
-		return diskHint, fmt.Errorf("attach_disk: Failed to get VM %s: %w", vmCID.AsString(), err)
+		return diskHint, fmt.Errorf("attach_disk: Failed to get VM %s for disk ID %s: %w", vmCID.AsString(), diskCID.AsString(), err)
 	}
 	mountPoint, err := a.getMountPoint(computeService, *server)
 	if err != nil {
-		return diskHint, fmt.Errorf("attach_disk: Failed to get mount point: %w", err)
+		return diskHint, fmt.Errorf("attach_disk: Failed to get mount point for disk ID %s: %w", diskCID.AsString(), err)
 	}
 	a.logger.Debug("attach_disk", fmt.Sprintf("Attaching volume ID: %s, server: %s, mountPoint: %s", diskCID.AsString(), vmCID.AsString(), mountPoint))
 	volumeAttachment, err := computeService.AttachVolume(server.ID, diskCID.AsString(), mountPoint)

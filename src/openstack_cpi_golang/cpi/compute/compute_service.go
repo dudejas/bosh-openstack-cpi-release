@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-
 	"time"
 
 	"github.com/cloudfoundry/bosh-cpi-go/apiv1"

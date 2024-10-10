@@ -61,7 +61,7 @@ var _ = Describe("AttachDiskMethod Unit Tests", func() {
 			vmCID := apiv1.VMCID{}
 			diskId := apiv1.DiskCID{}
 			err := attachDiskMethod.AttachDisk(vmCID, diskId)
-			Expect(err.Error()).To(Equal("attach_disk: Failed to get volume service (attach_disk): boom"))
+			Expect(err.Error()).To(Equal("attach_disk: Failed to get volume service: boom"))
 		})
 
 		It("fails on get server", func() {
@@ -69,9 +69,9 @@ var _ = Describe("AttachDiskMethod Unit Tests", func() {
 			volumeServiceBuilder.BuildReturns(volumeService, nil)
 			attachDiskMethod := methods.NewAttachDiskMethod(computeServiceBuilder, volumeServiceBuilder, cpiConfig, logger)
 			vmCID := apiv1.VMCID{}
-			diskId := apiv1.DiskCID{}
+			diskId := apiv1.NewDiskCID(volumeId1)
 			err := attachDiskMethod.AttachDisk(vmCID, diskId)
-			Expect(err.Error()).To(Equal("attach_disk: Failed to get volume: boom"))
+			Expect(err.Error()).To(Equal("attach_disk: Failed to get volume with ID vol1-id: boom"))
 		})
 
 		It("fails due to disk attach checks (V1): volume is attached to another VM", func() {
@@ -90,7 +90,7 @@ var _ = Describe("AttachDiskMethod Unit Tests", func() {
 			vmCID := apiv1.NewVMCID(serverId)
 			diskCID := apiv1.NewDiskCID(volumeId1)
 			err := attachDiskMethod.AttachDisk(vmCID, diskCID)
-			Expect(err.Error()).To(Equal(fmt.Sprintf("attach_disk: Disk cannot be attached: volume %s is attached to another VM", volumeId1)))
+			Expect(err.Error()).To(Equal(fmt.Sprintf("attach_disk: Disk with ID vol1-id cannot be attached: volume %s is attached to another VM", volumeId1)))
 		})
 
 		It("success attach (V1): volume is already attached to same VM", func() {
@@ -145,7 +145,7 @@ var _ = Describe("AttachDiskMethod Unit Tests", func() {
 			vmCID := apiv1.NewVMCID(serverId)
 			diskCID := apiv1.NewDiskCID(volumeId1)
 			err := attachDiskMethod.AttachDisk(vmCID, diskCID)
-			Expect(err.Error()).To(Equal(fmt.Sprintf("attach_disk: Disk cannot be attached: volume %s has not status 'available', current status is '%s'", volumeId1, diskStatusNotAvailable)))
+			Expect(err.Error()).To(Equal(fmt.Sprintf("attach_disk: Disk with ID vol1-id cannot be attached: volume %s has not status 'available', current status is '%s'", volumeId1, diskStatusNotAvailable)))
 		})
 
 		It("fails due to compute service build (V1)", func() {
@@ -160,7 +160,7 @@ var _ = Describe("AttachDiskMethod Unit Tests", func() {
 			vmCID := apiv1.NewVMCID(serverId)
 			diskCID := apiv1.NewDiskCID(volumeId1)
 			err := attachDiskMethod.AttachDisk(vmCID, diskCID)
-			Expect(err.Error()).To(Equal("attach_disk: Failed to get compute service: boom"))
+			Expect(err.Error()).To(Equal("attach_disk: Failed to get compute service for disk ID vol1-id: boom"))
 		})
 
 		It("fails due to get VM (V1)", func() {
@@ -176,7 +176,7 @@ var _ = Describe("AttachDiskMethod Unit Tests", func() {
 			vmCID := apiv1.NewVMCID(serverId)
 			diskCID := apiv1.NewDiskCID(volumeId1)
 			err := attachDiskMethod.AttachDisk(vmCID, diskCID)
-			Expect(err.Error()).To(Equal(fmt.Sprintf("attach_disk: Failed to get VM %s: boom", serverId)))
+			Expect(err.Error()).To(Equal(fmt.Sprintf("attach_disk: Failed to get VM %s for disk ID %s: boom", serverId, volumeId1)))
 		})
 
 		It("fails due to VM status is DELETED or TERMINATED (V1)", func() {
