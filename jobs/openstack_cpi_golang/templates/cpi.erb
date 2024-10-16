@@ -3,7 +3,24 @@
 set -e
 
 BOSH_JOBS_DIR=${BOSH_JOBS_DIR:-/var/vcap/jobs}
-GOLANG_CPI_CALLS=("info" "create_stemcell" "delete_stemcell" "create_vm" "delete_vm" "has_vm" "reboot_vm" "calculate_vm_cloud_properties" "create_disk" "set_vm_metadata" "delete_disk" "resize_disk" "attach_disk" "detach_disk" "set_disk_metadata" "get_disks" "snapshot_disk" "delete_snapshot")
+GOLANG_CPI_CALLS=("info" \
+  "create_stemcell" \
+  "delete_stemcell" \
+  "create_vm" \
+  "delete_vm" \
+  "has_vm" \
+  "reboot_vm" \
+  "calculate_vm_cloud_properties" \
+  "create_disk" \
+  "set_vm_metadata" \
+  "delete_disk" \
+  "resize_disk" \
+  "attach_disk" \
+  "detach_disk" \
+  "set_disk_metadata" \
+  "get_disks" \
+  "snapshot_disk" \
+  "delete_snapshot")
 REGEXP="\"method\":\"([^\"]*)\""
 
 STDIN=$(cat /dev/stdin)
@@ -18,7 +35,8 @@ then
             exit $?
         fi
     done
-    ${BOSH_JOBS_DIR}/openstack_cpi_golang/bin/cpi-ruby <<< ${STDIN}
+    echo "input stream defines unknown method"
+    exit 1
 else
     echo "input stream is not defining a method"
     exit 1
