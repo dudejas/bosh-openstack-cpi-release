@@ -35,7 +35,7 @@ then
             exit $?
         fi
     done
-    echo "input stream defines unknown method"
+    echo "input stream defines unknown method: ${BASH_REMATCH[1]}"
     exit 1
 else
     echo "input stream is not defining a method"
